@@ -755,138 +755,6 @@ const BookingLeadsTable = () => {
                 </button>
             </div>
 
-            <div style={{
-                marginBottom: '10px',
-                border: '2px solid gray',
-                padding: '10px',
-                width: 'fit-content',
-                borderRadius: '10px',
-                backgroundColor: '#edeeeeff',
-                fontWeight: '600',
-                boxShadow: 'inset 2px 2px 2px #8a8a8aff '
-            }}>
-
-                <div style={{
-                    display: 'flex',
-                    gap: '13px',
-                    alignItems: 'center',
-                    flexWrap: 'nowrap',
-                }}>
-
-                    <div style={{
-                        display: 'flex',
-                        gap: '3px',
-                        alignItems: 'center',
-                        flexWrap: 'nowrap',
-                    }}>
-                        <label>From:</label><br />
-                        <input
-                            type="date"
-                            value={fromDate}
-                            onChange={(e) => setFromDate(e.target.value)}
-                            style={{
-                                padding: '3px',
-                                borderRadius: "5px",
-                                border: "2px solid rgba(255, 255, 255, 1)",
-                                background: "rgba(255, 255, 255, 0.15)",
-                                color: "black",
-                                backdropFilter: "blur(10px)",
-                                WebkitBackdropFilter: "blur(10px)",
-                                fontSize: "14px",
-                                outline: "none",
-                                transition: "all 0.3s ease",
-                            }}
-                        />
-                    </div>
-
-                    <div style={{
-                        display: 'flex',
-                        gap: '3px',
-                        alignItems: 'center',
-                        flexWrap: 'nowrap',
-                    }}>
-                        <label >To:</label><br />
-                        <input
-                            type="date"
-                            value={toDate}
-                            onChange={(e) => setToDate(e.target.value)}
-                            style={{
-                                padding: '3px',
-                                borderRadius: "5px",
-                                border: "2px solid rgba(255, 255, 255, 1)",
-                                background: "rgba(255, 255, 255, 0.15)",
-                                color: "black",
-                                backdropFilter: "blur(10px)",
-                                WebkitBackdropFilter: "blur(10px)",
-                                fontSize: "14px",
-                                outline: "none",
-                                transition: "all 0.3s ease",
-                            }}
-                        />
-                    </div>
-                </div>
-
-                <div style={{
-                    display: 'flex',
-                    gap: '13px',
-                    marginTop: '10px',
-                    alignItems: 'center',
-                    flexWrap: 'nowrap',
-                    justifyContent: 'space-between'
-                }}>
-                    <div style={{
-                        display: 'flex',
-                        gap: '3px',
-                        alignItems: 'center',
-                        flexWrap: 'nowrap',
-                    }}>
-                        <label style={{ whiteSpace: 'nowrap' }}>FY Year:</label><br />
-                        <select
-                            value={financialYear}
-                            onChange={(e) => setFinancialYear(e.target.value)}
-                            style={{
-                                padding: '3px',
-                                borderRadius: "5px",
-                                border: "2px solid rgba(255, 255, 255, 0.99)",
-                                background: "rgba(255, 255, 255, 0.15)",
-                                color: "black",
-                                fontSize: "14px",
-                                outline: "none",
-                                transition: "all 0.3s ease",
-                            }}
-                        >
-                            <option value="">All</option>
-                            {availableFY.map(fy => (
-                                <option key={fy} value={fy}>{fy}</option>
-                            ))}
-                        </select>
-                    </div>
-
-
-                    <div style={{ alignSelf: 'flex-end' }}>
-                        <button
-                            onClick={() => {
-                                setFromDate('');
-                                setToDate('');
-                                setFinancialYear('');
-                                setFilteredLeads(leads);
-                            }}
-                            style={{
-                                borderRadius: "5px",
-                                backgroundColor: "#f44336",
-                                color: "#ffffff",
-                                cursor: "pointer",
-                                fontWeight: 'bold',
-                                padding: '4px 10px',
-                            }}
-                        >
-                            Clear
-                        </button>
-                    </div>
-                </div>
-
-            </div>
-
             <div style={{ display: 'flex', justifyContent: 'start', gap: '15px' }}>
                 <div style={{ textAlign: 'left' }} className="win-prob-legend">
                     <ul style={{ display: 'inline-block', listStyle: 'none', padding: 0 }}>
@@ -993,6 +861,40 @@ const BookingLeadsTable = () => {
                 >
                     All ({filteredLeads.length}) {formatAmount(allTotal)}
                 </button>
+            </div>
+
+            <div className="filters-container">
+                <div className="date-filters">
+                    <div className="filter-item">
+                        <label>From:</label>
+                        <input className="filterInput" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+                    </div>
+
+                    <div className="filter-item">
+                        <label>To:</label>
+                        <input className="filterInput" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+                    </div>
+
+                    <div className="filter-item">
+                        <label>FY Year:</label>
+                        <select className="filterInput" value={financialYear} onChange={(e) => setFinancialYear(e.target.value)}>
+                            <option value="">All</option>
+                            {availableFY.map(fy => <option key={fy} value={fy}>{fy}</option>)}
+                        </select>
+                    </div>
+
+                    <button
+                        className="clear-btnq"
+                        onClick={() => {
+                            setFromDate('');
+                            setToDate('');
+                            setFinancialYear('');
+                            setFilteredLeads(leads);
+                        }}
+                    >
+                        Clear
+                    </button>
+                </div>
             </div>
 
             <div style={{ position: 'relative' }}>

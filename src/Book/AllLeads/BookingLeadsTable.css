@@ -216,7 +216,89 @@
     box-shadow: 0 3px #1b5e20, 0 5px 10px rgba(0, 0, 0, 0.2);
 }
 
-/* File input hidden, label styled as button */
 .file-label input[type="file"] {
     display: none;
+}
+
+.filters-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 10px;
+    font-weight: 600;
+    justify-content: center;
+}
+
+.date-filters {
+    display: flex;
+    gap: 50px;
+    flex-wrap: wrap;
+}
+
+.fy-clear {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.filter-item {
+    display: flex;
+    gap: 10px;
+    white-space: nowrap;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.clear-btnq {
+    border-radius: 5px;
+    background-color: #fe1504;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    padding: 4px 10px;
+    align-self: flex-end;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+}
+
+.filter-item .filterInput {
+    padding: 7px 10px;
+}
+
+@media screen and (max-width: 500px) {
+    .filters-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .date-filters,
+    .fy-clear {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .clear-btn {
+        align-self: stretch;
+        padding: 5px 10px;
+    }
+
+    .filters-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 10px;
+        padding: 10px;
+        border-radius: 10px;
+        font-weight: 600;
+        width: 100vw;
+    }
+
+    .filter-item .filterInput {
+        width: 50vw;
+    }
+    
 }
