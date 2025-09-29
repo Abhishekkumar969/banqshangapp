@@ -902,7 +902,7 @@ const BookingLeadsTable = () => {
                 <div style={{ display: "flex", width: "100%", gap: '2px' }}>
 
                     {/* Left Table */}
-                    <div style={{ flex: '0 0 150px', overflowX: "auto" }}>
+                    <div style={{ flex: '0 0 80px', overflowX: "auto" }}>
                         <table className="leads-table">
                             <thead>
                                 <tr >
@@ -1056,7 +1056,7 @@ const BookingLeadsTable = () => {
                                                             borderCollapse: 'collapse',
                                                             width: '100%',
                                                             whiteSpace: 'nowrap',
-                                                            border: '2px solid #00000001',
+                                                            border: '2px solid #00000001'
                                                         }}
                                                     >
                                                         <thead>
