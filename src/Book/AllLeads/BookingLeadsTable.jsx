@@ -902,7 +902,7 @@ const BookingLeadsTable = () => {
                 <div style={{ display: "flex", width: "100%", gap: '2px' }}>
 
                     {/* Left Table */}
-                    <div style={{ flex: '0 0 80px', overflowX: "auto" }}>
+                    <div style={{ flex: '0 0 150px', overflowX: "auto" }}>
                         <table className="leads-table">
                             <thead>
                                 <tr >
@@ -1048,7 +1048,7 @@ const BookingLeadsTable = () => {
                                             </td>
                                         ))}
 
-                                        <td key={`${lead.id}-menu-details`} style={{ padding: '3px 0px', flexDirection: 'column', gap: '5px' }}>
+                                        <td key={`${lead.id}-menu-details`} style={{ flexDirection: 'column', gap: '5px' }}>
                                             {lead.selectedMenus ? (
                                                 <>
                                                     <table
@@ -1073,7 +1073,7 @@ const BookingLeadsTable = () => {
                                                                                 : "lightgreen",
                                                                 }}
                                                             >
-                                                                <td style={{ ...headerStyle, color: 'transparent' }}>.</td>
+                                                                <td style={{ ...headerStyle, color: 'transparent' }}>A</td>
                                                             </tr>
                                                         </thead>
 
@@ -1093,7 +1093,24 @@ const BookingLeadsTable = () => {
                                                                                     : "lightgreen",
                                                                     }}
                                                                 >
-                                                                    <td style={{ ...cellStyle, color: 'transparent' }}>{menuData.qty}</td>
+                                                                    <td style={cellStyle}>
+                                                                        {menuData.selectedSubItems && menuData.selectedSubItems.length > 0 ? (
+                                                                            <button
+                                                                                style={{
+                                                                                    padding: '2px 6px',
+                                                                                    fontSize: '12px',
+                                                                                    backgroundColor: 'transparent',
+                                                                                    borderRadius: 4,
+                                                                                    cursor: 'pointer',
+                                                                                    color: 'transparent'
+                                                                                }}
+                                                                            >
+                                                                                View Items ({menuData.selectedSubItems.length})
+                                                                            </button>
+                                                                        ) : (
+                                                                            ""
+                                                                        )}
+                                                                    </td>
                                                                 </tr>
                                                             ))}
                                                         </tbody>
@@ -1175,7 +1192,7 @@ const BookingLeadsTable = () => {
                                                                         width: "100%",
                                                                         marginTop: "0px",
                                                                         whiteSpace: 'nowrap',
-                                                                        border: "2px solid #00000001",
+                                                                        border: "2px solid #000000e8",
 
                                                                     }}
                                                                 >

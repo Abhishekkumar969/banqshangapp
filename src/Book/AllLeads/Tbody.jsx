@@ -6,7 +6,7 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, moveLeadToDrop,
     const [localValue, setLocalValue] = useState({});
     const navigate = useNavigate();
     const [selectedAdvances, setSelectedAdvances] = useState(null);
-    const [modalData, setModalData] = useState(null); 
+    const [modalData, setModalData] = useState(null);
 
     const headerStyle = { textAlign: "center", border: "2px solid #ffffffff", padding: "2px", fontSize: '13px', fontWeight: '700', color: 'white' };
     const cellStyle = { padding: "2px 6px", border: "2px solid #ffffffff" };
