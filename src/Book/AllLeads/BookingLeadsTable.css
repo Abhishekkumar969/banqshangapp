@@ -138,7 +138,7 @@
     padding: 5px;
 }
 
-/* @media (max-width: 768px) {
+@media (max-width: 768px) {
     .leads-header {
         font-size: 1em;
         padding: 10px;
@@ -151,6 +151,7 @@
 
     .win-prob-legend {
         font-size: 0.75rem;
+        /* padding: 8px; */
     }
 
     .sort-button {
@@ -181,7 +182,7 @@
         font-size: 12px;
     }
 
-} */
+}
 
 /* CSS */
 .file-buttons {
@@ -268,7 +269,7 @@
     padding: 7px 10px;
 }
 
-/* @media screen and (max-width: 500px) {
+@media screen and (max-width: 500px) {
     .filters-container {
         flex-direction: column;
         gap: 10px;
@@ -300,4 +301,4 @@
         width: 50vw;
     }
     
-} */
+}
