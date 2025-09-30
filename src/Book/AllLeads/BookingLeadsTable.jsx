@@ -1332,6 +1332,9 @@ const BookingLeadsTable = () => {
                                                 )}
                                             </td>
                                         ))}
+
+                                        <td className="sticky sticky-1" style={{ fontWeight: 'bold' }}>{leads.length - index}.</td>
+
                                     </tr >
                                 ))}
 
