@@ -966,7 +966,6 @@ const BookingLeadsTable = () => {
                                                     textOverflow: 'ellipsis',
                                                     fontWeight: '700',
                                                     padding: '0px 2px 0px 5px',
-                                                    fontSize: '13px'
                                                 }}
                                                 key={`${lead.id}-${field}`}
                                             >
@@ -1013,7 +1012,6 @@ const BookingLeadsTable = () => {
                                                     textOverflow: 'ellipsis',
                                                     fontWeight: '700',
                                                     padding: '0px 2px 0px 5px',
-                                                    fontSize: '13px'
                                                 }}
                                                 key={`${lead.id}-${field}`}
                                             >
