@@ -1624,7 +1624,11 @@ const BookingLeadsTable = () => {
                             {lead.finishTime ? formatTimeToAMPM(lead.finishTime) : '-'}
                         </td> */}
 
-                                        <td key={`${lead.id}-mobiles`}>
+                                        {/* 
+// 
+// 
+ */}
+                                        {/* <td key={`${lead.id}-mobiles`}>
                                             {isEditing(lead.id, 'mobile') ? (
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                                     {['mobile1', 'mobile2'].map((field) => (
@@ -2004,55 +2008,9 @@ const BookingLeadsTable = () => {
                                                     ?.filter(adv => adv.mode !== "Cash")
                                                     .reduce((sum, adv) => sum + Number(adv.amount || 0), 0) || 0
                                             ).toLocaleString("en-IN")}
-                                        </td>
+                                        </td> */}
 
-                                        {['source'].map(field => (
-                                            <td key={`${lead.id}-${field}`}
-                                                style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }}
-                                            >
-                                                <div>
-                                                    {isEditing(lead.id, field) ? (
-                                                        <input
-                                                            key={`${lead.id}-${field}-input`}
-                                                            type={typeof lead[field] === 'number' ? 'number' : 'text'}
-                                                            value={getLocalValue(lead.id, field, lead[field] || '')}
-                                                            onChange={(e) => handleLocalChange(lead.id, field, e.target.value)}
-                                                            onBlur={() => handleBlur(lead.id, field)}
-                                                            autoFocus
-                                                            style={{
-                                                                width: '100%',
-                                                                boxSizing: 'border-box',
-                                                                padding: '4px',
-                                                                fontSize: 'inherit',
-                                                                backgroundColor: 'transparent',
-                                                                border: '1px solid #ccc',
-                                                                borderRadius: '4px',
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        lead[field] ?? '-'
-                                                    )}
-                                                </div>
 
-                                                {lead.source?.toLowerCase() === 'reference' && (
-                                                    <div style={{ marginTop: '6px' }} onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        startEdit(lead.id, 'referredBy');
-                                                    }}>
-                                                        <small style={{ color: '#555' }}>
-                                                            By: <strong>{lead.referredBy || '—'}</strong>
-                                                        </small>
-                                                    </div>
-                                                )}
-                                            </td>
-                                        ))}
-
-                                        <td style={{ display: 'none' }} key={`${lead.id}-delete`}>
-                                            <button
-                                                onClick={() => moveLeadToDrop(lead.id, true)}
-                                                style={{ backgroundColor: "#e74c3c", color: "#fff", border: "none", padding: "10px 15px", cursor: "pointer" }} >  Cancel
-                                            </button>
-                                        </td>
 
                                         <td>
                                             {(lead.id) ? (
@@ -2064,197 +2022,10 @@ const BookingLeadsTable = () => {
                                         </td>
 
                                         <td>
-                                            <button style={{ backgroundColor: "transparent", border: "none", margin: '0px', display: 'flex', justifyContent: 'center' }}>
-                                                <img
-                                                    src="../../assets/whatsappp.png"
-                                                    alt=""
-                                                    style={{ width: '30px', height: '30px' }}
-                                                />
-                                            </button>
-                                        </td>
-
-                                        <td>
                                             <button style={{ backgroundColor: "transparent", color: "#fff", border: "none", borderRadius: "4px", display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                                                 <div style={{ fontSize: '21px' }}>🖨️</div>
                                             </button>
                                         </td>
-
-                                        {/* <LogPopupCell lead={lead} /> */}
-
-                                        {['note'].map(field => (
-                                            <td key={`${lead.id}-${field}`}
-                                                style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }}
-                                            >
-                                                <div>
-                                                    {isEditing(lead.id, field) ? (
-                                                        <input
-                                                            key={`${lead.id}-${field}-input`}
-                                                            type={typeof lead[field] === 'number' ? 'number' : 'text'}
-                                                            value={getLocalValue(lead.id, field, lead[field] || '')}
-                                                            onChange={(e) => handleLocalChange(lead.id, field, e.target.value)}
-                                                            onBlur={() => handleBlur(lead.id, field)}
-                                                            autoFocus
-                                                            style={{
-                                                                width: '100%',
-                                                                boxSizing: 'border-box',
-                                                                padding: '4px',
-                                                                fontSize: 'inherit',
-                                                                backgroundColor: 'transparent',
-                                                                border: '1px solid #ccc',
-                                                                borderRadius: '4px',
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        lead[field] ?? '-'
-                                                    )}
-                                                </div>
-                                            </td>
-                                        ))}
-
-                                        <td
-                                            style={{
-                                                fontWeight: "bold",
-                                                color:
-                                                    (lead.advancePayments?.reduce((sum, a) => sum + Number(a.amount || 0), 0) -
-                                                        (lead.refundPayments?.reduce((sum, r) => sum + Number(r.amount || 0), 0) || 0)) === 0
-                                                        ? "green"
-                                                        : "black",
-                                            }}
-                                        >
-                                            ₹{(
-                                                lead.refundPayments?.reduce((sum, r) => sum + Number(r.amount || 0), 0) || 0
-                                            ).toLocaleString("en-IN")}
-                                        </td>
-
-                                        <td key={`${lead.id}-bookingAmenities`}
-                                            title={Array.isArray(lead.bookingAmenities) ? lead.bookingAmenities.join(', ') : ''}
-                                            style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }}
-                                        >
-                                            {isEditing(lead.id, 'bookingAmenities') ? (
-                                                <input
-                                                    key={`${lead.id}-bookingAmenities-input`}
-                                                    type="text"
-                                                    value={Array.isArray(getLocalValue(lead.id, 'bookingAmenities', lead.bookingAmenities))
-                                                        ? getLocalValue(lead.id, 'bookingAmenities', lead.bookingAmenities).join(', ')
-                                                        : ''}
-                                                    onChange={(e) =>
-                                                        handleLocalChange(
-                                                            lead.id,
-                                                            'bookingAmenities',
-                                                            e.target.value.split(',').map(item => item.trim())
-                                                        )
-                                                    }
-                                                    onBlur={() => handleBlur(lead.id, 'bookingAmenities')}
-                                                    autoFocus
-                                                    style={{
-                                                        width: '100%',
-                                                        boxSizing: 'border-box',
-                                                        padding: '4px',
-                                                        fontSize: 'inherit',
-
-                                                        border: '1px solid #ccc',
-                                                        borderRadius: '4px',
-                                                    }}
-                                                />
-                                            ) : (
-                                                Array.isArray(lead.bookingAmenities) ? lead.bookingAmenities.join(', ') : '-'
-                                            )}
-                                        </td>
-
-                                        <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }} >
-                                            {Array.isArray(lead.customItems)
-                                                ? lead.customItems
-                                                    .filter(item => item.selected)
-                                                    .map((item, index) => (
-                                                        <div key={index}>
-                                                            {item.name}- @ ₹{item.rate} × {item.qty} = ₹{item.total}
-                                                        </div>
-                                                    ))
-                                                : '-'}
-                                        </td>
-
-                                        <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }} >
-                                            {Array.isArray(lead.customMenuCharges)
-                                                ? lead.customMenuCharges
-                                                    .filter(item => item.selected)
-                                                    .map((item, index) => (
-                                                        <div key={index}>
-                                                            {item.name}- @ ₹{item.rate} × {item.qty} = ₹{item.total}
-                                                        </div>
-                                                    ))
-                                                : ' '}
-                                        </td>
-
-                                        {['eventBookedBy'].map((field, index) => (
-                                            <td
-                                                style={{
-                                                    whiteSpace: 'nowrap',
-                                                    maxWidth: '180rem',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis'
-                                                }}
-                                                key={`${lead.id}-${field}`}
-                                            >
-                                                {isEditing(lead.id, field) ? (
-                                                    <input
-                                                        key={`${lead.id}-${field}-input`} // ✅ force unmount/remount on field change
-                                                        type={field.includes('Date') ? 'date' : 'text'}
-                                                        value={getLocalValue(lead.id, field, lead[field] || '')}
-                                                        onChange={(e) => handleLocalChange(lead.id, field, e.target.value)}
-                                                        onBlur={() => {
-                                                            handleBlur(lead.id, field);
-                                                            setTimeout(() => startEdit(null, null), 0); // ✅ exit edit mode
-                                                        }}
-                                                        style={{
-                                                            width: '100%',
-                                                            boxSizing: 'border-box',
-                                                            padding: '7px',
-                                                            fontSize: 'inherit',
-                                                            border: '1px solid #ccc',
-                                                            borderRadius: '4px',
-                                                        }}
-                                                        autoFocus
-                                                    />
-                                                ) : (
-                                                    field.includes('Date') && lead[field]
-                                                        ? new Date(lead[field]).toLocaleDateString('en-GB') // 🔁 Format to DD-MM-YYYY
-                                                        : (
-                                                            (lead[field] === 'Lawn' || lead[field] === 'Back Lawn')
-                                                                ? 'Pool Side'
-                                                                : (lead[field] ?? ' ')
-                                                        )
-                                                )}
-                                            </td>
-                                        ))}
-
-                                        {['commission'].map(field => (
-                                            <td key={`${lead.id}-${field}`} >
-                                                ₹{isEditing(lead.id, field) ? (
-                                                    <input
-                                                        key={`${lead.id}-${field}-input`}
-                                                        type={typeof lead[field] === 'number' ? 'number' : 'text'}
-                                                        value={getLocalValue(lead.id, field, lead[field] || '')}
-                                                        onChange={(e) => handleLocalChange(lead.id, field, e.target.value)}
-                                                        onBlur={() => handleBlur(lead.id, field)}
-                                                        autoFocus
-                                                        style={{
-                                                            width: '100%',
-                                                            boxSizing: 'border-box',
-                                                            padding: '4px',
-                                                            fontSize: 'inherit',
-                                                            border: '1px solid #ccc',
-                                                            borderRadius: '4px',
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    lead[field] !== undefined && lead[field] !== null
-                                                        ? Math.floor(Number(lead[field])).toLocaleString('en-IN')
-                                                        : '0'
-                                                )}
-                                            </td>
-                                        ))}
-
-                                        <td>{lead.id}</td>
 
 
 
