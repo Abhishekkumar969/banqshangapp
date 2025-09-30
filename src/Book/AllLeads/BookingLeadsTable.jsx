@@ -904,108 +904,38 @@ const BookingLeadsTable = () => {
                     {/* Left Table */}
                     <div style={{ flex: '0 0 80px', overflowX: "auto" }}>
                         <table className="leads-table">
-                             <thead>
-                <tr >
-                    <td style={{ backgroundColor: 'white' }} colSpan={10} ></td>
+                            <thead>
+                                <tr >
+                                    <td colSpan={7} style={{ textAlign: 'center', backgroundColor: '#fff', color: 'white', fontWeight: '800', fontSize: '15px', whiteSpace: 'nowrap' }}>
+                                        B. Food Services
+                                    </td>
+                                </tr>
+                            </thead>
 
-                    {/* Collapsed Hall/GST section */}
-                    <td colSpan={3} style={{ textAlign: 'center', color: 'red', backgroundColor: '#61ffeaff', fontWeight: '800', fontSize: '14px' }}>
-                        A. Hall Services
-                    </td>
+                            <thead>
+                                <tr>
+                                    <th onClick={() => requestSort('functionDate')} style={{ cursor: 'pointer', padding: '1px' }}>
+                                        Event Date {sortConfig.key === 'functionDate' ? (sortConfig.direction === 'asc' ? "" : "") : ''}
+                                    </th>
 
-                    <td colSpan={2} style={{ textAlign: 'center', backgroundColor: '#fff461ff', color: 'red', fontWeight: '800', fontSize: '14px', whiteSpace: 'nowrap' }}>
-                        B. Food Services
-                    </td>
-
-                    <td style={{ backgroundColor: 'white' }} colSpan={2} ></td>
-
-                    <td style={{ color: 'black', backgroundColor: '#04ff42ff', fontSize: '15px', fontWeight: '800', whiteSpace: 'nowrap' }}>
-                        A+B Total Sales
-                    </td>
-
-                    <td style={{ color: 'black', backgroundColor: '#4beefaff', fontSize: '15px', fontWeight: '800', whiteSpace: 'nowrap' }}>
-                        Total Advance
-                    </td>
-                    <td style={{ color: 'black', backgroundColor: '#ff7272ff', fontSize: '15px', fontWeight: '800', whiteSpace: 'nowrap' }}>
-                        Total Dues
-                    </td>
-
-                    <td colSpan={3} style={{ backgroundColor: 'white' }}  ></td>
-
-                    <td style={{ backgroundColor: 'white' }} colSpan={8} ></td>
-                </tr>
-            </thead>
-
-            <thead>
-                <tr>
-                    {['Sl'].map(header => (<th className="sticky sticky-1" key={header}>{header}</th>))}
-
-                    {['Party Name'].map(header => (<th key={header}>{header}</th>))}
-
-                    <th onClick={() => requestSort('enquiryDate')} style={{ cursor: 'pointer' }}>
-                        Booked On {sortConfig.key === 'enquiryDate' ? (sortConfig.direction === 'asc' ? "▲" : "▼") : ''}
-                    </th>
-
-                    {['Month', 'Venue type', 'Event', 'Day/Night', 'Start Time',
-                        'Finish Time', 'Contact Number', 'Hall Charges',
-                        'Applied GST', 'GST', 'Menu', 'Meals', 'Sub Total', 'Discount'
-                    ].map(header => (
-                        <th key={header}>{header}</th>
-                    ))}
-
-
-                    {['Cash', 'Bank'].map(header => (
-                        <th key={header}>{header}</th>
-                    ))}
-
-                    {['Source'
-                    ].map(header => (
-                        <th key={header}>{header}</th>
-                    ))}
-
-                    <th style={{ fontSize: '21px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'center' }} >  {'✏️'} </div>
-                    </th>
-
-                    <th>
-                        <button style={{ backgroundColor: "#66363606", color: "#fff", border: "none", borderRadius: "4px", margin: '0 auto', display: 'flex', padding: '0px', justifyContent: 'center' }}>
-                            <img
-                                src="../../assets/whatsappp.png"
-                                alt=""
-                                style={{ width: '28px', height: '28px' }}
-                            />
-                        </button>
-                    </th>
-
-                    <th style={{ fontSize: '21px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'center' }} >  {'🖨️'} </div>
-                    </th>
-
-                    <th>
-                        <button style={{ backgroundColor: "#66363606", color: "#fff", border: "none", borderRadius: "4px", margin: '0 auto', display: 'flex', padding: '0px', justifyContent: 'center' }}>
-                            <img
-                                src="../../assets/logs.png"
-                                alt=""
-                                style={{ width: '28px', height: '28px' }}
-                            />
-                        </button>
-                    </th>
-
-                    {['Note...'].map(header => (
-                        <th key={header}>{header}</th>
-                    ))}
-
-                    {['Total Refund'].map(header => (
-                        <th key={header}>{header}</th>
-                    ))}
-
-                    {[
-                        'Complimentary Items', 'Chargeable Items', 'Custom Menu Items', ' Event Booked By', 'commission', ''
-                    ].map(header => (
-                        <th key={header}>{header}</th>
-                    ))}
-                </tr>
-            </thead>
+                                    {['Party Name'].map(header => (<th key={header}>{header}</th>))}
+                                    <th>
+                                        <button style={{ backgroundColor: "#66363606", color: "#fff", border: "none", borderRadius: "4px", margin: '0 auto', display: 'flex', padding: '0px', justifyContent: 'center' }}>
+                                            <img
+                                                src="../../assets/whatsappp.png"
+                                                alt=""
+                                                style={{ width: '0px', height: '28px' }}
+                                            />
+                                        </button>
+                                    </th>
+                                    <th style={{ fontSize: '21px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'center' }} >  {'🖨️'} </div>
+                                    </th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                </tr>
+                            </thead>
 
                             <tbody>
                                 {sortedLeads.map((lead, index) => (
@@ -1082,7 +1012,7 @@ const BookingLeadsTable = () => {
                                                     textOverflow: 'ellipsis',
                                                     fontWeight: '700',
                                                     padding: '0px 2px 0px 5px',
-                                                    fontSize: '13px'
+                                                    fontSize: '15px'
                                                 }}
                                                 key={`${lead.id}-${field}`}
                                             >
