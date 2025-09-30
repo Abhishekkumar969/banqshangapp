@@ -686,9 +686,6 @@ const BookingLeadsTable = () => {
 
     const [localValue, setLocalValue] = useState({});
 
-    const headerStyle = { textAlign: "center", padding: "2px", border: "2px solid transparent", fontSize: '13px', fontWeight: '700', color: 'black' };
-    const cellStyle = { padding: "2px", border: "2px solid transparent" };
-
     const getLocalValue = (leadId, field, fallback) => {
         return localValue[leadId]?.[field] !== undefined ? localValue[leadId][field] : fallback;
     };
@@ -715,6 +712,10 @@ const BookingLeadsTable = () => {
         const [year, month, day] = dateStr.split('-');
         return `${day}-${month}-${year}`;
     };
+
+     const headerStyle = { textAlign: "center", border: "2px solid #ffffffff", padding: "2px", fontSize: '13px', fontWeight: '700', color: 'white' };
+    const cellStyle = { padding: "2px 6px", border: "2px solid #ffffffff" };
+
 
     return (
         <div className="leads-table-container">
@@ -1003,7 +1004,6 @@ const BookingLeadsTable = () => {
                                             </td>
                                         ))}
 
-
                                         {['name'].map((field, index) => (
                                             <td
                                                 style={{
@@ -1048,7 +1048,7 @@ const BookingLeadsTable = () => {
                                             </td>
                                         ))}
 
-                                        <td key={`${lead.id}-menu-details`} style={{ flexDirection: 'column', gap: '5px' }}>
+                                        {/* <td key={`${lead.id}-menu-details`} style={{ flexDirection: 'column', gap: '5px' }}>
                                             {lead.selectedMenus ? (
                                                 <>
                                                     <table
@@ -1056,7 +1056,7 @@ const BookingLeadsTable = () => {
                                                             borderCollapse: 'collapse',
                                                             width: '100%',
                                                             whiteSpace: 'nowrap',
-                                                            border: '2px solid #00000001',
+                                                            border: '2px solid #000000ff',
                                                             boxShadow: 'none'
                                                         }}
                                                     >
@@ -1074,7 +1074,7 @@ const BookingLeadsTable = () => {
                                                                                 : "lightgreen",
                                                                 }}
                                                             >
-                                                                <td style={{ ...headerStyle, color: 'transparent' }}>A</td>
+                                                                <td style={{ ...headerStyle, color: 'red' }}>A</td>
                                                             </tr>
                                                         </thead>
 
@@ -1100,10 +1100,10 @@ const BookingLeadsTable = () => {
                                                                                 style={{
                                                                                     padding: '2px 6px',
                                                                                     fontSize: '12px',
-                                                                                    backgroundColor: 'transparent',
+                                                                                    backgroundColor: 'blue',
                                                                                     borderRadius: 4,
                                                                                     cursor: 'pointer',
-                                                                                    color: 'transparent',
+                                                                                    color: 'red',
                                                                                     boxShadow: 'none'
                                                                                 }}
                                                                             >
@@ -1122,7 +1122,79 @@ const BookingLeadsTable = () => {
                                             ) : (
                                                 ""
                                             )}
-                                        </td>
+                                        </td> */}
+
+                                        <td key={`${lead.id}-menu-details`} style={{ flexDirection: 'column', gap: '5px' }}>
+                            {lead.selectedMenus ? (
+                                <>
+                                    <table
+                                        style={{
+                                            borderCollapse: 'collapse',
+                                            width: '100%',
+                                            whiteSpace: 'nowrap',
+                                            border: '2px solid #000000ff',
+                                        }}
+                                    >
+                                        <thead>
+                                            <tr>
+                                                <th style={headerStyle}>Menu Name</th>
+                                                <th style={headerStyle}>Rate</th>
+                                                <th style={headerStyle}>PAX</th>
+                                                <th style={headerStyle}>Extra Plates</th>
+                                                <th style={headerStyle}>Menu Items</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            {Object.entries(lead.selectedMenus).map(([menuName, menuData], idx) => (
+                                                <tr
+                                                    key={idx}
+                                                    style={{
+                                                        whiteSpace: "nowrap",
+                                                        backgroundColor:
+                                                            lead.venueType === "Lawn" ||
+                                                                lead.venueType === "Pool Side" ||
+                                                                lead.venueType === "Back Lawn"
+                                                                ? "#f7ff62ff"
+                                                                : lead.venueType === "Hall with Front & Back Lawn"
+                                                                    ? "#bce1ffff"
+                                                                    : "lightgreen",
+                                                    }}
+                                                >
+                                                    <td style={cellStyle}>{menuName}</td>
+                                                    <td style={cellStyle}>₹{menuData.rate}</td>
+                                                    <td style={cellStyle}>{menuData.noOfPlates}</td>
+                                                    <td style={cellStyle}>{menuData.extraPlates}</td>
+                                                    <td style={cellStyle}>
+                                                        {menuData.selectedSubItems && menuData.selectedSubItems.length > 0 ? (
+                                                            <button
+                                                                style={{
+                                                                    padding: '2px 6px',
+                                                                    fontSize: '12px',
+                                                                    backgroundColor: '#4dd219ff',
+                                                                    borderRadius: 4,
+                                                                    cursor: 'pointer',
+                                                                    color: 'black'
+                                                                }}
+                                                                // onClick={() => setModalData(menuData.selectedSubItems)}
+                                                            >
+                                                                View Items ({menuData.selectedSubItems.length})
+                                                            </button>
+                                                        ) : (
+                                                            ""
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+
+
+                                </>
+                            ) : (
+                                ""
+                            )}
+                        </td>
 
                                         <td key={`${lead.id}-mobiles`}>
                                             {isEditing(lead.id, 'mobile') ? (
@@ -1139,7 +1211,6 @@ const BookingLeadsTable = () => {
                                                                 boxSizing: 'border-box',
                                                                 padding: '4px',
                                                                 fontSize: 'inherit',
-
                                                                 border: '1px solid #ccc',
                                                                 borderRadius: '4px',
                                                             }}
@@ -1154,7 +1225,7 @@ const BookingLeadsTable = () => {
                                                                 key={`${lead.id}-${field}`}
 
                                                                 style={{
-                                                                    color: 'transparent',
+                                                                    color: 'red',
                                                                     textDecoration: 'none',
                                                                     fontWeight: 'bold',
                                                                     display: 'flex',
@@ -1213,7 +1284,7 @@ const BookingLeadsTable = () => {
                                                                                             : "lightgreen",
                                                                             }}
                                                                         >
-                                                                            <td colSpan={6} style={{ ...headerStyle, textAlign: "center", color: 'transparent', backgroundColor: 'transparent' }}>
+                                                                            <td colSpan={6} style={{ ...headerStyle, textAlign: "center", color: 'red', backgroundColor: 'blue' }}>
                                                                                 {dayName} ({dayData.date ? new Date(dayData.date).toLocaleDateString() : "No date"})
                                                                             </td>
                                                                         </tr>
@@ -1266,8 +1337,8 @@ const BookingLeadsTable = () => {
                                                                                                     style={{
                                                                                                         padding: '2px 6px',
                                                                                                         fontSize: '12px',
-                                                                                                        backgroundColor: '#4dd21903',
-                                                                                                        color: 'transparent',
+                                                                                                        backgroundColor: 'blue',
+                                                                                                        color: 'red',
                                                                                                         borderRadius: 4,
                                                                                                         cursor: 'pointer'
                                                                                                     }}
@@ -1288,15 +1359,15 @@ const BookingLeadsTable = () => {
                                         </td>
 
                                         < td >
-                                            <div style={{ color: 'transparent' }}>
+                                            <div style={{ color: 'red' }}>
                                                 ₹{lead.advancePayments?.reduce((sum, adv) => sum + Number(adv.amount || 0), 0) || 0}
                                             </div>
                                             <div>
                                                 <button
                                                     style={{
                                                         padding: "4px 8px", cursor: "pointer",
-                                                        background: "transparent",
-                                                        color: 'transparent'
+                                                        background: "blue",
+                                                        color: 'red'
                                                     }}
                                                 >
                                                     View Advances
