@@ -1432,7 +1432,7 @@ const BookingLeadsTable = () => {
                                         {/*  */}
 
 
-
+{/* 
                                         <td className="sticky sticky-1" style={{ fontWeight: 'bold' }}>{leads.length - index}.</td>
 
                                         {['name'].map((field, index) => (
@@ -1614,7 +1614,7 @@ const BookingLeadsTable = () => {
                                                         : (lead[field] ?? '')
                                                 )}
                                             </td>
-                                        ))}
+                                        ))} */}
 
                                         {/* <td key={`${lead.id}-startTime`}>
                             {lead.startTime ? formatTimeToAMPM(lead.startTime) : '-'}
@@ -1628,7 +1628,8 @@ const BookingLeadsTable = () => {
 // 
 // 
  */}
-                                        {/* <td key={`${lead.id}-mobiles`}>
+
+                                        <td key={`${lead.id}-mobiles`}>
                                             {isEditing(lead.id, 'mobile') ? (
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                                     {['mobile1', 'mobile2'].map((field) => (
@@ -2008,9 +2009,9 @@ const BookingLeadsTable = () => {
                                                     ?.filter(adv => adv.mode !== "Cash")
                                                     .reduce((sum, adv) => sum + Number(adv.amount || 0), 0) || 0
                                             ).toLocaleString("en-IN")}
-                                        </td> */}
+                                        </td>
 
-
+                                        {/* 
 
                                         <td>
                                             {(lead.id) ? (
@@ -2025,7 +2026,7 @@ const BookingLeadsTable = () => {
                                             <button style={{ backgroundColor: "transparent", color: "#fff", border: "none", borderRadius: "4px", display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                                                 <div style={{ fontSize: '21px' }}>🖨️</div>
                                             </button>
-                                        </td>
+                                        </td> */}
 
 
 
