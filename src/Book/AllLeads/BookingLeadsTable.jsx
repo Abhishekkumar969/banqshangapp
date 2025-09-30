@@ -966,6 +966,7 @@ const BookingLeadsTable = () => {
                                                     textOverflow: 'ellipsis',
                                                     fontWeight: '700',
                                                     padding: '0px 2px 0px 5px',
+                                                    fontSize: '13px'
                                                 }}
                                                 key={`${lead.id}-${field}`}
                                             >
@@ -1012,6 +1013,7 @@ const BookingLeadsTable = () => {
                                                     textOverflow: 'ellipsis',
                                                     fontWeight: '700',
                                                     padding: '0px 2px 0px 5px',
+                                                    fontSize: '13px'
                                                 }}
                                                 key={`${lead.id}-${field}`}
                                             >
@@ -1054,7 +1056,8 @@ const BookingLeadsTable = () => {
                                                             borderCollapse: 'collapse',
                                                             width: '100%',
                                                             whiteSpace: 'nowrap',
-                                                            border: '2px solid #00000001'
+                                                            border: '2px solid #00000001',
+                                                            boxShadow: 'none'
                                                         }}
                                                     >
                                                         <thead>
@@ -1100,7 +1103,8 @@ const BookingLeadsTable = () => {
                                                                                     backgroundColor: 'transparent',
                                                                                     borderRadius: 4,
                                                                                     cursor: 'pointer',
-                                                                                    color: 'transparent'
+                                                                                    color: 'transparent',
+                                                                                    boxShadow: 'none'
                                                                                 }}
                                                                             >
                                                                                 View Items ({menuData.selectedSubItems.length})
