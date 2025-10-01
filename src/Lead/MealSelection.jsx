@@ -35,6 +35,17 @@ const MealSelection = forwardRef(({ meals, setMeals, functionDate, dayNight }, r
 
                 newMenuData[meal] = { categories };
             }
+            // 🚀 Merge Dinner into Lunch
+            if (newMenuData["Lunch"] && newMenuData["Dinner"]) {
+                const lunchCats = newMenuData["Lunch"].categories || {};
+                const dinnerCats = newMenuData["Dinner"].categories || {};
+
+                newMenuData["Lunch"].categories = {
+                    ...lunchCats,
+                    ...dinnerCats,
+                };
+            }
+
             setMenuData(newMenuData);
         };
         fetchMenu();

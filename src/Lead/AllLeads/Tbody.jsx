@@ -430,7 +430,6 @@ const Tbody = ({ leads, isEditing, editing, handleFieldChange, handleEdit, handl
                     <td> <button onClick={() => sendToBookings(lead)} style={{ backgroundColor: "#2ecc71", color: "#fff", border: "none", padding: "10px 15px", borderRadius: "4px", whiteSpace: 'nowrap' }}> Book Now </button> </td>
                     <td><button onClick={() => handlePrint(lead)} style={{ backgroundColor: "#00725c", color: "#fff", border: "none", padding: "10px 15px", borderRadius: "4px" }}> Print </button> </td>
 
-
                     <td key={`${lead.id}-bookingAmenities`}
                         title={Array.isArray(lead.bookingAmenities) ? lead.bookingAmenities.join(', ') : ''}
                         style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }}

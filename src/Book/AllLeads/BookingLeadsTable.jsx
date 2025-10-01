@@ -686,8 +686,8 @@ const BookingLeadsTable = () => {
 
     const [localValue, setLocalValue] = useState({});
 
-    const headerStyle = { textAlign: "center", padding: "2px", border: "2px solid transparent", fontSize: '13px', fontWeight: '700', color: 'black' };
-    const cellStyle = { padding: "2px", border: "2px solid transparent" };
+    const headerStyle = { textAlign: "center", padding: "2px", border: "2px solid transparent", fontSize: '13px', fontWeight: '700', color: 'transparent', boxShadow: 'none' };
+    const cellStyle = { padding: "2px", border: "2px solid transparent", boxShadow: 'none' };
 
     const getLocalValue = (leadId, field, fallback) => {
         return localValue[leadId]?.[field] !== undefined ? localValue[leadId][field] : fallback;
@@ -906,7 +906,7 @@ const BookingLeadsTable = () => {
                         <table className="leads-table">
                             <thead>
                                 <tr >
-                                    <td colSpan={7} style={{ textAlign: 'center', backgroundColor: '#fff', color: 'white', fontWeight: '800', fontSize: '15px', whiteSpace: 'nowrap' }}>
+                                    <td colSpan={37} style={{ textAlign: 'center', backgroundColor: '#fdfdfdff', color: 'white', fontWeight: '800', fontSize: '15px', whiteSpace: 'nowrap' }}>
                                         B. Food Services
                                     </td>
                                 </tr>
@@ -919,8 +919,9 @@ const BookingLeadsTable = () => {
                                     </th>
 
                                     {['Party Name'].map(header => (<th key={header}>{header}</th>))}
+
                                     <th>
-                                        <button style={{ backgroundColor: "#66363606", color: "#fff", border: "none", borderRadius: "4px", margin: '0 auto', display: 'flex', padding: '0px', justifyContent: 'center' }}>
+                                        <button style={{ backgroundColor: "#66363606", color: "#fff", border: "none", borderRadius: "4px", margin: '0 auto', display: 'flex', padding: '0px', justifyContent: 'center', opacity: 0 }}>
                                             <img
                                                 src="../../assets/whatsappp.png"
                                                 alt=""
@@ -929,11 +930,9 @@ const BookingLeadsTable = () => {
                                         </button>
                                     </th>
                                     <th style={{ fontSize: '21px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'center' }} >  {'🖨️'} </div>
+                                        <div style={{ display: 'flex', justifyContent: 'center', opacity: 0 }} >  {'🖨️'} </div>
                                     </th>
-                                    <th></th>
-                                    <th></th>
-                                    <th></th>
+                                    <th colSpan="32"></th>
                                 </tr>
                             </thead>
 
@@ -965,7 +964,7 @@ const BookingLeadsTable = () => {
                                                     textOverflow: 'ellipsis',
                                                     fontWeight: '700',
                                                     padding: '0px 2px 0px 5px',
-                                                    fontSize: '13px'
+                                                    fontSize: '14px'
                                                 }}
                                                 key={`${lead.id}-${field}`}
                                             >
@@ -1002,7 +1001,6 @@ const BookingLeadsTable = () => {
                                             </td>
                                         ))}
 
-
                                         {['name'].map((field, index) => (
                                             <td
                                                 style={{
@@ -1010,7 +1008,6 @@ const BookingLeadsTable = () => {
                                                     maxWidth: '180rem',
                                                     overflow: 'hidden',
                                                     textOverflow: 'ellipsis',
-                                                    fontWeight: '700',
                                                     padding: '0px 2px 0px 5px',
                                                     fontSize: '15px'
                                                 }}
@@ -1059,9 +1056,21 @@ const BookingLeadsTable = () => {
                                                         }}
                                                     >
                                                         <thead>
-                                                            <tr>
-                                                                <th style={headerStyle}>Menu Name</th>
-                                                                <th style={headerStyle}>Rate</th>
+                                                            <tr
+                                                                style={{
+                                                                    whiteSpace: "nowrap",
+                                                                    backgroundColor:
+                                                                        lead.venueType === "Lawn" ||
+                                                                            lead.venueType === "Pool Side" ||
+                                                                            lead.venueType === "Back Lawn"
+                                                                            ? "#f7ff62ff"
+                                                                            : lead.venueType === "Hall with Front & Back Lawn"
+                                                                                ? "#bce1ffff"
+                                                                                : "lightgreen",
+                                                                }}
+                                                            >
+                                                                <td style={headerStyle}>Menu Name</td>
+                                                                <td style={headerStyle}>Rate</td>
                                                             </tr>
                                                         </thead>
 
@@ -1079,6 +1088,7 @@ const BookingLeadsTable = () => {
                                                                                 : lead.venueType === "Hall with Front & Back Lawn"
                                                                                     ? "#bce1ffff"
                                                                                     : "lightgreen",
+                                                                        color: 'transparent'
                                                                     }}
                                                                 >
                                                                     <td style={cellStyle}>{menuName}</td>
@@ -1088,10 +1098,10 @@ const BookingLeadsTable = () => {
                                                                                 style={{
                                                                                     padding: '2px 6px',
                                                                                     fontSize: '12px',
-                                                                                    backgroundColor: '#4dd219ff',
+                                                                                    backgroundColor: 'transparent',
                                                                                     borderRadius: 4,
                                                                                     cursor: 'pointer',
-                                                                                    color: 'black'
+                                                                                    color: 'transparent'
                                                                                 }}
                                                                             >
                                                                                 View Items ({menuData.selectedSubItems.length})
@@ -1183,6 +1193,7 @@ const BookingLeadsTable = () => {
                                                                         marginTop: "0px",
                                                                         whiteSpace: 'nowrap',
                                                                         border: "2px solid #000000e8",
+                                                                        color: 'transparent'
 
                                                                     }}
                                                                 >
@@ -1199,6 +1210,7 @@ const BookingLeadsTable = () => {
                                                                                         : lead.venueType === "Hall with Front & Back Lawn"
                                                                                             ? "#bce1ffff"
                                                                                             : "lightgreen",
+                                                                                color: 'transparent'
                                                                             }}
                                                                         >
                                                                             <td colSpan={6} style={{ ...headerStyle, textAlign: "center", color: 'transparent', backgroundColor: 'transparent' }}>
@@ -1217,7 +1229,8 @@ const BookingLeadsTable = () => {
                                                                                             ? "#bce1ffff"
                                                                                             : "lightgreen",
                                                                             }}
-                                                                        >                                                                            <td style={{ ...headerStyle, color: 'transparent', backgroundColor: 'transparent' }}>Items</td>
+                                                                        >
+                                                                            <td style={{ ...headerStyle, color: 'transparent', backgroundColor: 'transparent' }}>Items</td>
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody>
@@ -1310,13 +1323,14 @@ const BookingLeadsTable = () => {
                                                                 boxSizing: 'border-box',
                                                                 padding: '4px',
                                                                 fontSize: 'inherit',
-                                                                backgroundColor: 'transparent',
                                                                 border: '1px solid #ccc',
                                                                 borderRadius: '4px',
+                                                                backgroundColor: 'transparent',
+                                                                color: 'transparent'
                                                             }}
                                                         />
                                                     ) : (
-                                                        lead[field] ?? '-'
+                                                        lead[field] ?? ' '
                                                     )}
                                                 </div>
 
@@ -1333,108 +1347,30 @@ const BookingLeadsTable = () => {
                                             </td>
                                         ))}
 
-                                        <td className="sticky sticky-1" style={{ fontWeight: 'bold' }}>{leads.length - index}.</td>
-
-
                                         {/* 
 // 
 // 
-// 
- */}
+*/}
+                                        <td className="sticky sticky-1" style={{
+                                            fontWeight: 'bold',
+                                            backgroundColor: 'transparent',
+                                            color: 'transparent'
+                                        }}>{leads.length - index}.</td>
 
 
-                                        <td className="sticky sticky-1" style={{ fontWeight: 'bold' }}>{leads.length - index}.</td>
-
-                                        {['name'].map((field, index) => (
-                                            <td
-                                                style={{
-                                                    whiteSpace: 'nowrap',
-                                                    maxWidth: '180rem',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis'
-                                                }}
-                                                key={`${lead.id}-${field}`}
-                                            >
-                                                {isEditing(lead.id, field) ? (
-                                                    <input
-                                                        key={`${lead.id}-${field}-input`} // ✅ force unmount/remount on field change
-                                                        type={field.includes('Date') ? 'date' : 'text'}
-                                                        value={getLocalValue(lead.id, field, lead[field] || '')}
-                                                        onChange={(e) => handleLocalChange(lead.id, field, e.target.value)}
-                                                        onBlur={() => {
-                                                            handleBlur(lead.id, field);
-                                                            setTimeout(() => startEdit(null, null), 0); // ✅ exit edit mode
-                                                        }}
-                                                        style={{
-                                                            width: '100%',
-                                                            boxSizing: 'border-box',
-                                                            padding: '7px',
-                                                            fontSize: 'inherit',
-
-                                                            border: '1px solid #ccc',
-                                                            borderRadius: '4px',
-                                                        }}
-                                                        autoFocus
-                                                    />
-                                                ) : (
-                                                    field === 'name'
-                                                        ? `${lead.prefix || ''} ${lead.name || '-'}`.trim()
-                                                        : field.includes('Date') && lead[field]
-                                                            ? new Date(lead[field]).toLocaleDateString('en-GB')
-                                                            : (lead[field] ?? '-')
-                                                )}
-                                            </td>
-                                        ))}
-
-                                        {['enquiryDate'].map((field, index) => (
-                                            <td
-                                                style={{
-                                                    whiteSpace: 'nowrap',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    fontWeight: '700',
-                                                    padding: '0px 2px 0px 5px',
-                                                    fontSize: '13px'
-                                                }}
-                                                key={`${lead.id}-${field}`}
-                                            >
-                                                <>
-                                                    {field.includes('Date') ? formatDate(lead[field]) : (lead[field] ?? '-')}
-
-                                                    {lead.meals &&
-                                                        (() => {
-                                                            const funcDate = lead[field] ? formatDate(lead[field]) : null;
-
-                                                            const uniqueMealDates = [
-                                                                ...new Set(
-                                                                    Object.values(lead.meals)
-                                                                        .filter(dayData => dayData?.date)
-                                                                        .map(dayData => formatDate(dayData.date))
-                                                                ),
-                                                            ];
-
-                                                            return uniqueMealDates
-                                                                .filter(d => d !== funcDate)
-                                                                .map((d, i) => (
-                                                                    <div
-                                                                        key={i}
-                                                                        style={{
-                                                                            color: "brown",
-                                                                            marginTop: "2px",
-                                                                        }}
-                                                                    >
-                                                                        {d}
-                                                                    </div>
-                                                                ));
-                                                        })()}
-                                                </>
-                                            </td>
-                                        ))}
+                                        <td className="sticky sticky-1" style={{
+                                            fontWeight: 'bold',
+                                            backgroundColor: 'transparent',
+                                            color: 'transparent'
+                                        }}>{leads.length - index}.</td>
 
                                         {['functionDate'].map((field, index) => (
                                             <>
                                                 {field === 'functionDate' && (
-                                                    <td
+                                                    <td style={{
+                                                        backgroundColor: 'transparent',
+                                                        color: 'transparent'
+                                                    }}
                                                         key={field + '-month'}
                                                     >
                                                         {lead.functionDate
@@ -1451,7 +1387,9 @@ const BookingLeadsTable = () => {
                                                     whiteSpace: 'nowrap',
                                                     maxWidth: '180rem',
                                                     overflow: 'hidden',
-                                                    textOverflow: 'ellipsis'
+                                                    textOverflow: 'ellipsis',
+                                                    backgroundColor: 'transparent',
+                                                    color: 'transparent'
                                                 }}
                                                 key={`${lead.id}-${field}`}
                                             >
@@ -1493,7 +1431,9 @@ const BookingLeadsTable = () => {
                                                     whiteSpace: 'nowrap',
                                                     maxWidth: '180rem',
                                                     overflow: 'hidden',
-                                                    textOverflow: 'ellipsis'
+                                                    textOverflow: 'ellipsis',
+                                                    backgroundColor: 'transparent',
+                                                    color: 'transparent'
                                                 }}
                                                 key={`${lead.id}-${field}`}
                                             >
@@ -1544,6 +1484,8 @@ const BookingLeadsTable = () => {
 
                                                                 border: '1px solid #ccc',
                                                                 borderRadius: '4px',
+                                                                backgroundColor: 'transparent',
+                                                                color: 'transparent'
                                                             }}
                                                         />
                                                     ))}
@@ -1563,14 +1505,15 @@ const BookingLeadsTable = () => {
                                                                     }
                                                                 }}
                                                                 style={{
-                                                                    color: 'black',
                                                                     textDecoration: 'none',
                                                                     cursor: 'pointer',
                                                                     fontWeight: 'bold',
                                                                     display: 'flex',
                                                                     alignItems: 'center',
                                                                     gap: '6px',
-                                                                    margin: '3px 0px'
+                                                                    margin: '3px 0px',
+                                                                    backgroundColor: 'transparent',
+                                                                    color: 'transparent'
                                                                 }}
                                                             >
                                                                 <span role="img" aria-label="call"></span> {lead[field]}
@@ -1584,7 +1527,10 @@ const BookingLeadsTable = () => {
                                         </td>
 
                                         {['hallCharges', 'gstBase', 'gstAmount'].map(field => (
-                                            <td key={`${lead.id}-${field}`}>
+                                            <td style={{
+                                                backgroundColor: 'transparent',
+                                                color: 'transparent'
+                                            }} key={`${lead.id}-${field}`}>
                                                 ₹{isEditing(lead.id, field) ? (
                                                     <input
                                                         key={`${lead.id}-${field}-input`}
@@ -1598,9 +1544,10 @@ const BookingLeadsTable = () => {
                                                             boxSizing: 'border-box',
                                                             padding: '4px',
                                                             fontSize: 'inherit',
-
                                                             border: '1px solid #ccc',
                                                             borderRadius: '4px',
+                                                            backgroundColor: 'transparent',
+                                                            color: 'transparent'
                                                         }}
                                                     />
                                                 ) : (
@@ -1611,186 +1558,11 @@ const BookingLeadsTable = () => {
                                             </td>
                                         ))}
 
-                                        <td key={`${lead.id}-menu-details`} style={{ flexDirection: 'column', gap: '5px' }}>
-                                            {lead.selectedMenus ? (
-                                                <>
-                                                    <table
-                                                        style={{
-                                                            borderCollapse: 'collapse',
-                                                            width: '100%',
-                                                            whiteSpace: 'nowrap',
-                                                            border: '2px solid #000000ff',
-                                                        }}
-                                                    >
-                                                        <thead>
-                                                            <tr>
-                                                                <th style={headerStyle}>Menu Name</th>
-                                                                <th style={headerStyle}>Rate</th>
-                                                                <th style={headerStyle}>PAX</th>
-                                                                <th style={headerStyle}>Extra Plates</th>
-                                                                <th style={headerStyle}>Menu Items</th>
-                                                            </tr>
-                                                        </thead>
-
-                                                        <tbody>
-                                                            {Object.entries(lead.selectedMenus).map(([menuName, menuData], idx) => (
-                                                                <tr
-                                                                    key={idx}
-                                                                    style={{
-                                                                        whiteSpace: "nowrap",
-                                                                        backgroundColor:
-                                                                            lead.venueType === "Lawn" ||
-                                                                                lead.venueType === "Pool Side" ||
-                                                                                lead.venueType === "Back Lawn"
-                                                                                ? "#f7ff62ff"
-                                                                                : lead.venueType === "Hall with Front & Back Lawn"
-                                                                                    ? "#bce1ffff"
-                                                                                    : "lightgreen",
-                                                                    }}
-                                                                >
-                                                                    <td style={cellStyle}>{menuName}</td>
-                                                                    <td style={cellStyle}>₹{menuData.rate}</td>
-                                                                    <td style={cellStyle}>{menuData.noOfPlates}</td>
-                                                                    <td style={cellStyle}>{menuData.extraPlates}</td>
-                                                                    <td style={cellStyle}>
-                                                                        {menuData.selectedSubItems && menuData.selectedSubItems.length > 0 ? (
-                                                                            <button
-                                                                                style={{
-                                                                                    padding: '2px 6px',
-                                                                                    fontSize: '12px',
-                                                                                    backgroundColor: '#4dd219ff',
-                                                                                    borderRadius: 4,
-                                                                                    cursor: 'pointer',
-                                                                                    color: 'black'
-                                                                                }}
-                                                                            >
-                                                                                View Items ({menuData.selectedSubItems.length})
-                                                                            </button>
-                                                                        ) : (
-                                                                            ""
-                                                                        )}
-                                                                    </td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-
-
-                                                </>
-                                            ) : (
-                                                ""
-                                            )}
-                                        </td>
-
-                                        <td key={`${lead.id}-meals`}>
-                                            {lead.meals ? (
-                                                <>
-                                                    {Object.entries(lead.meals)
-                                                        .filter(([_, dayData]) =>
-                                                            Object.entries(dayData).some(
-                                                                ([mealName, mealInfo]) => mealName !== "date" && mealInfo?.total
-                                                            )
-                                                        )
-                                                        .sort(([a], [b]) => parseInt(a.replace(/\D/g, ""), 10) - parseInt(b.replace(/\D/g, ""), 10))
-                                                        .map(([dayName, dayData], dayIdx) => {
-                                                            const mealOrder = ["Breakfast", "Lunch", "Dinner"];
-
-                                                            return (
-                                                                <table
-                                                                    key={dayIdx}
-                                                                    style={{
-                                                                        borderCollapse: "collapse",
-                                                                        width: "100%",
-                                                                        marginTop: "0px",
-                                                                        whiteSpace: 'nowrap',
-                                                                        border: "2px solid #000000ff",
-                                                                    }}
-                                                                >
-                                                                    <thead>
-                                                                        <tr>
-                                                                            <th colSpan={7} style={{ ...headerStyle, textAlign: "center" }}>
-                                                                                {dayName} ({dayData.date ? new Date(dayData.date).toLocaleDateString() : "No date"})
-                                                                            </th>
-                                                                        </tr>
-                                                                        <tr>
-                                                                            <th style={headerStyle}>Meal</th>
-                                                                            <th style={headerStyle}>Option</th>
-                                                                            <th style={headerStyle}>Time</th>
-                                                                            <th style={headerStyle}>PAX</th>
-                                                                            <th style={headerStyle}>Extra Plates</th>
-                                                                            <th style={headerStyle}>Rate</th>
-                                                                            <th style={headerStyle}>Items</th>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                        {Object.entries(dayData)
-                                                                            .filter(([mealName]) => mealName !== "date")
-                                                                            .sort(([mealA], [mealB]) => {
-                                                                                const idxA = mealOrder.indexOf(mealA);
-                                                                                const idxB = mealOrder.indexOf(mealB);
-                                                                                if (idxA === -1 && idxB === -1) return mealA.localeCompare(mealB);
-                                                                                if (idxA === -1) return 1;
-                                                                                if (idxB === -1) return -1;
-                                                                                return idxA - idxB;
-                                                                            })
-                                                                            .map(([mealName, mealInfo], mealIdx) => {
-                                                                                const formatTime = (timeStr) => {
-                                                                                    if (!timeStr) return "";
-                                                                                    let [hour, minute] = timeStr.split(":").map(Number);
-                                                                                    const ampm = hour >= 12 ? "PM" : "AM";
-                                                                                    hour = hour % 12 || 12;
-                                                                                    return `${hour}:${String(minute).padStart(2, "0")} ${ampm}`;
-                                                                                };
-
-                                                                                return (
-                                                                                    <tr
-                                                                                        key={mealIdx}
-                                                                                        style={{
-                                                                                            whiteSpace: "nowrap",
-                                                                                            backgroundColor:
-                                                                                                lead.venueType === "Lawn" ||
-                                                                                                    lead.venueType === "Pool Side" ||
-                                                                                                    lead.venueType === "Back Lawn"
-                                                                                                    ? "#f7ff62ff"
-                                                                                                    : lead.venueType === "Hall with Front & Back Lawn"
-                                                                                                        ? "#bce1ffff"
-                                                                                                        : "lightgreen",
-                                                                                        }}
-                                                                                    >
-                                                                                        <td style={cellStyle}>{mealName}</td>
-                                                                                        <td style={cellStyle}>{mealInfo.option}</td>
-                                                                                        <td style={cellStyle}>{formatTime(mealInfo.startTime)} - {formatTime(mealInfo.endTime)}</td>
-                                                                                        <td style={cellStyle}>{mealInfo.pax}</td>
-                                                                                        <td style={cellStyle}>{mealInfo.extraPlates || "0"}</td>
-                                                                                        <td style={cellStyle}>₹{mealInfo.rate}</td>
-                                                                                        <td style={cellStyle}>
-                                                                                            {mealInfo.selectedItems && mealInfo.selectedItems.length > 0 ? (
-                                                                                                <button
-                                                                                                    style={{
-                                                                                                        padding: '2px 6px',
-                                                                                                        fontSize: '12px',
-                                                                                                        backgroundColor: '#4dd219ff',
-                                                                                                        color: 'black',
-                                                                                                        borderRadius: 4,
-                                                                                                        cursor: 'pointer'
-                                                                                                    }}
-                                                                                                >
-                                                                                                    View Items ({mealInfo.selectedItems.length})
-                                                                                                </button>
-                                                                                            ) : ""}
-                                                                                        </td>
-                                                                                    </tr>
-                                                                                );
-                                                                            })}
-                                                                    </tbody>
-                                                                </table>
-                                                            );
-                                                        })}
-                                                </>
-                                            ) : " "}
-                                        </td>
-
-                                        <td key={`${lead.id}-subtotal`}>
+                                        <td key={`${lead.id}-subtotal`}
+                                            style={{
+                                                backgroundColor: 'transparent',
+                                                color: 'transparent'
+                                            }}>
                                             {lead.selectedMenus || lead.meals
                                                 ? (() => {
                                                     const menuTotal = lead.selectedMenus
@@ -1812,7 +1584,10 @@ const BookingLeadsTable = () => {
                                         </td>
 
                                         {['discount'].map(field => (
-                                            <td key={`${lead.id}-${field}`} >
+                                            <td style={{
+                                                backgroundColor: 'transparent',
+                                                color: 'transparent'
+                                            }} key={`${lead.id}-${field}`} >
                                                 ₹{isEditing(lead.id, field) ? (
                                                     <input
                                                         key={`${lead.id}-${field}-input`}
@@ -1828,6 +1603,8 @@ const BookingLeadsTable = () => {
                                                             fontSize: 'inherit',
                                                             border: '1px solid #ccc',
                                                             borderRadius: '4px',
+                                                            backgroundColor: 'transparent',
+                                                            color: 'transparent'
                                                         }}
                                                     />
                                                 ) : (
@@ -1839,7 +1616,11 @@ const BookingLeadsTable = () => {
                                         ))}
 
                                         {['grandTotal'].map(field => (
-                                            <td key={`${lead.id}-${field}`} style={{ backgroundColor: '#04ff42ff', fontWeight: '800' }}>
+                                            <td key={`${lead.id}-${field}`} style={{
+                                                fontWeight: '800',
+                                                backgroundColor: 'transparent',
+                                                color: 'transparent'
+                                            }}>
                                                 ₹{isEditing(lead.id, field) ? (
                                                     <input
                                                         key={`${lead.id}-${field}-input`}
@@ -1865,7 +1646,11 @@ const BookingLeadsTable = () => {
                                             </td>
                                         ))}
 
-                                        < td >
+                                        < td style={{
+
+                                            backgroundColor: 'transparent',
+                                            color: 'transparent'
+                                        }}>
                                             <div>
                                                 ₹{lead.advancePayments?.reduce((sum, adv) => sum + Number(adv.amount || 0), 0) || 0}
                                             </div>
@@ -1873,7 +1658,9 @@ const BookingLeadsTable = () => {
                                                 <button
                                                     style={{
                                                         padding: "4px 8px", cursor: "pointer",
-                                                        background: "linear-gradient(180deg, #2359b6ff, #78a9ffff)",
+
+                                                        backgroundColor: 'transparent',
+                                                        color: 'transparent'
                                                     }}
                                                 >
                                                     View Advances
@@ -1881,7 +1668,11 @@ const BookingLeadsTable = () => {
                                             </div>
                                         </td>
 
-                                        <td style={{ color: 'black', backgroundColor: '#ff7272ff' }}>
+                                        <td style={{
+
+                                            backgroundColor: 'transparent',
+                                            color: 'transparent'
+                                        }}>
                                             ₹{Math.floor(
                                                 (Number(lead.grandTotal) || 0) -
                                                 (lead.advancePayments?.reduce((sum, adv) => sum + Number(adv.amount || 0), 0) || 0) +
@@ -1889,7 +1680,11 @@ const BookingLeadsTable = () => {
                                             ).toLocaleString('en-IN')}
                                         </td>
 
-                                        <td>
+                                        <td style={{
+
+                                            backgroundColor: 'transparent',
+                                            color: 'transparent'
+                                        }}>
                                             ₹{(
                                                 lead.advancePayments
                                                     ?.filter(adv => adv.mode === "Cash")
@@ -1897,7 +1692,11 @@ const BookingLeadsTable = () => {
                                             ).toLocaleString("en-IN")}
                                         </td>
 
-                                        <td>
+                                        <td style={{
+
+                                            backgroundColor: 'transparent',
+                                            color: 'transparent'
+                                        }}>
                                             ₹{(
                                                 lead.advancePayments
                                                     ?.filter(adv => adv.mode !== "Cash")
@@ -1907,7 +1706,12 @@ const BookingLeadsTable = () => {
 
                                         {['source'].map(field => (
                                             <td key={`${lead.id}-${field}`}
-                                                style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }}
+                                                style={{
+                                                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px',
+
+                                                    backgroundColor: 'transparent',
+                                                    color: 'transparent'
+                                                }}
                                             >
                                                 <div>
                                                     {isEditing(lead.id, field) ? (
@@ -1922,9 +1726,11 @@ const BookingLeadsTable = () => {
                                                                 boxSizing: 'border-box',
                                                                 padding: '4px',
                                                                 fontSize: 'inherit',
-                                                                backgroundColor: 'transparent',
                                                                 border: '1px solid #ccc',
                                                                 borderRadius: '4px',
+
+                                                                backgroundColor: 'transparent',
+                                                                color: 'transparent'
                                                             }}
                                                         />
                                                     ) : (
@@ -1937,7 +1743,11 @@ const BookingLeadsTable = () => {
                                                         e.stopPropagation();
                                                         startEdit(lead.id, 'referredBy');
                                                     }}>
-                                                        <small style={{ color: '#555' }}>
+                                                        <small style={{
+
+                                                            backgroundColor: 'transparent',
+                                                            color: 'transparent'
+                                                        }}>
                                                             By: <strong>{lead.referredBy || '—'}</strong>
                                                         </small>
                                                     </div>
@@ -1947,13 +1757,13 @@ const BookingLeadsTable = () => {
 
                                         <td style={{ display: 'none' }} key={`${lead.id}-delete`}>
                                             <button
-                                                style={{ backgroundColor: "#e74c3c", color: "#fff", border: "none", padding: "10px 15px", cursor: "pointer" }} >  Cancel
+                                                style={{ backgroundColor: "#e74c3c", color: "#fff", border: "none", padding: "10px 15px", cursor: "pointer", zIndex: '-1' }} >  Cancel
                                             </button>
                                         </td>
 
                                         <td>
                                             {(lead.id) ? (
-                                                <button  style={{ backgroundColor: "transparent", color: "#fff", border: "none", borderRadius: "4px", margin: '0px' }}>
+                                                <button style={{ backgroundColor: "transparent", color: "#fff", border: "none", borderRadius: "4px", margin: '0px', opacity: 0 }}>
                                                     <div style={{ fontSize: '21px' }} >✏️</div>
                                                 </button>) : (
                                                 ''
@@ -1961,7 +1771,7 @@ const BookingLeadsTable = () => {
                                         </td>
 
                                         <td>
-                                            <button  style={{ backgroundColor: "transparent", border: "none", margin: '0px', display: 'flex', justifyContent: 'center' }}>
+                                            <button style={{ backgroundColor: "transparent", border: "none", margin: '0px', display: 'flex', justifyContent: 'center', opacity: 0 }}>
                                                 <img
                                                     src="../../assets/whatsappp.png"
                                                     alt=""
@@ -1971,7 +1781,7 @@ const BookingLeadsTable = () => {
                                         </td>
 
                                         <td>
-                                            <button  style={{ backgroundColor: "transparent", color: "#fff", border: "none", borderRadius: "4px", display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                            <button style={{ backgroundColor: "transparent", color: "#fff", border: "none", borderRadius: "4px", display: 'flex', justifyContent: 'center', alignItems: 'center', opacity: 0 }}>
                                                 <div style={{ fontSize: '21px' }}>🖨️</div>
                                             </button>
                                         </td>
@@ -1979,7 +1789,7 @@ const BookingLeadsTable = () => {
 
                                         {['note'].map(field => (
                                             <td key={`${lead.id}-${field}`}
-                                                style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }}
+                                                style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px', color: 'transparent', backgroundColor: 'transparent' }}
                                             >
                                                 <div>
                                                     {isEditing(lead.id, field) ? (
@@ -2010,11 +1820,7 @@ const BookingLeadsTable = () => {
                                         <td
                                             style={{
                                                 fontWeight: "bold",
-                                                color:
-                                                    (lead.advancePayments?.reduce((sum, a) => sum + Number(a.amount || 0), 0) -
-                                                        (lead.refundPayments?.reduce((sum, r) => sum + Number(r.amount || 0), 0) || 0)) === 0
-                                                        ? "green"
-                                                        : "black",
+                                                color: 'transparent', backgroundColor: 'transparent'
                                             }}
                                         >
                                             ₹{(
@@ -2024,7 +1830,7 @@ const BookingLeadsTable = () => {
 
                                         <td key={`${lead.id}-bookingAmenities`}
                                             title={Array.isArray(lead.bookingAmenities) ? lead.bookingAmenities.join(', ') : ''}
-                                            style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }}
+                                            style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px', color: 'transparent', backgroundColor: 'transparent' }}
                                         >
                                             {isEditing(lead.id, 'bookingAmenities') ? (
                                                 <input
@@ -2057,7 +1863,7 @@ const BookingLeadsTable = () => {
                                             )}
                                         </td>
 
-                                        <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }} >
+                                        <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px', color: 'transparent', backgroundColor: 'transparent' }} >
                                             {Array.isArray(lead.customItems)
                                                 ? lead.customItems
                                                     .filter(item => item.selected)
@@ -2069,7 +1875,7 @@ const BookingLeadsTable = () => {
                                                 : '-'}
                                         </td>
 
-                                        <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }} >
+                                        <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px', color: 'transparent', backgroundColor: 'transparent' }} >
                                             {Array.isArray(lead.customMenuCharges)
                                                 ? lead.customMenuCharges
                                                     .filter(item => item.selected)
@@ -2087,7 +1893,7 @@ const BookingLeadsTable = () => {
                                                     whiteSpace: 'nowrap',
                                                     maxWidth: '180rem',
                                                     overflow: 'hidden',
-                                                    textOverflow: 'ellipsis'
+                                                    textOverflow: 'ellipsis', color: 'transparent', backgroundColor: 'transparent'
                                                 }}
                                                 key={`${lead.id}-${field}`}
                                             >
@@ -2124,7 +1930,7 @@ const BookingLeadsTable = () => {
                                         ))}
 
                                         {['commission'].map(field => (
-                                            <td key={`${lead.id}-${field}`} >
+                                            <td style={{ color: 'transparent', backgroundColor: 'transparent' }} key={`${lead.id}-${field}`} >
                                                 ₹{isEditing(lead.id, field) ? (
                                                     <input
                                                         key={`${lead.id}-${field}-input`}
@@ -2139,7 +1945,7 @@ const BookingLeadsTable = () => {
                                                             padding: '4px',
                                                             fontSize: 'inherit',
                                                             border: '1px solid #ccc',
-                                                            borderRadius: '4px',
+                                                            borderRadius: '4px', color: 'transparent', backgroundColor: 'transparent'
                                                         }}
                                                     />
                                                 ) : (
@@ -2150,8 +1956,7 @@ const BookingLeadsTable = () => {
                                             </td>
                                         ))}
 
-                                        <td>{lead.id}</td>
-
+                                        <td style={{ color: 'transparent', backgroundColor: 'transparent' }}>{lead.id}</td>
 
                                     </tr >
                                 ))}
