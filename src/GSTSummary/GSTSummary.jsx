@@ -23,55 +23,59 @@ const GSTSummary = () => {
 
     useEffect(() => {
         const fetchData = async () => {
-            const snapshot = await getDocs(collection(db, 'prebookings'));
-            const bookings = [];
-            const fySet = new Set();
+            setLoading(true);
+            try {
+                const snapshot = await getDocs(collection(db, 'prebookings'));
+                const bookings = [];
+                const fySet = new Set();
 
-            snapshot.forEach(doc => {
-                const d = doc.data();
+                snapshot.forEach(doc => {
+                    const d = doc.data();
 
-                if (d.functionDate) {
-                    const funcDate = parseDate(d.functionDate);
-                    const today = new Date();
-                    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+                    if (!d.advancePayments || d.advancePayments.length === 0) return;
 
-                    if (funcDate > lastMonthEnd) return;
-                }
-
-                if (Array.isArray(d.advancePayments)) {
                     d.advancePayments.forEach((payment, index) => {
-                        if (payment.mode !== 'Cash' && payment.amount && payment.receiptDate) {
-                            const dateObj = parseDate(payment.receiptDate);
-                            let fyYear = dateObj.getMonth() + 1 >= 4
-                                ? dateObj.getFullYear()
-                                : dateObj.getFullYear() - 1;
-                            fySet.add(fyYear);
+                        if (!payment.amount || !payment.receiptDate) return;
 
-                            bookings.push({
-                                name: d.name || 'Unknown',
-                                functionDate: d.functionDate || "",
-                                date: payment.receiptDate,
-                                mode: payment.mode,
-                                amount: payment.amount,
-                                slNo: payment.slNo || "",
-                                bookingId: doc.id + '-' + index,
-                                dateObj
-                            });
-                        }
+                        // Skip Cash payments
+                        if (payment.mode === 'Cash') return;
+
+                        const dateObj = parseDate(payment.receiptDate);
+
+                        // Determine financial year
+                        const fyYear = dateObj.getMonth() + 1 >= 4
+                            ? dateObj.getFullYear()
+                            : dateObj.getFullYear() - 1;
+                        fySet.add(fyYear);
+
+                        bookings.push({
+                            name: d.partyName || d.name || 'Unknown',
+                            functionDate: d.functionDate || "",
+                            date: payment.receiptDate,
+                            mode: payment.mode,
+                            amount: payment.amount,
+                            slNo: payment.slNo || "",
+                            bookingId: doc.id + '-' + index,
+                            dateObj
+                        });
                     });
+                });
+
+                const yearsArray = Array.from(fySet).sort((a, b) => b - a);
+                setData(bookings);
+                setFinancialYears(yearsArray);
+
+                if (yearsArray.length > 0) {
+                    setFinancialYear(yearsArray[0]);
                 }
-            });
 
-            const yearsArray = Array.from(fySet).sort((a, b) => b - a);
-            setData(bookings);
-            setFinancialYears(yearsArray);
-
-            if (yearsArray.length > 0) {
-                setFinancialYear(yearsArray[0]);
+            } catch (err) {
+                console.error("Error fetching prebookings:", err);
+            } finally {
+                setLoading(false);
             }
-
-            setLoading(false);
         };
+
         fetchData();
     }, []);
 

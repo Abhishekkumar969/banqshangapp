@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { collection, getDocs, doc, updateDoc, arrayUnion, serverTimestamp, setDoc, deleteField } from 'firebase/firestore';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { collection, onSnapshot, doc, updateDoc, arrayUnion, serverTimestamp, setDoc, deleteField } from 'firebase/firestore';
 import { db } from '../firebaseConfig.js';
 import '../styles/DecorationTable.css';
 import BackButton from "../components/BackButton.jsx";
@@ -16,43 +16,58 @@ const DecorationTable = () => {
   const [sortOrder, setSortOrder] = useState("desc");
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const decorationSnap = await getDocs(collection(db, "decoration"));
-        const decorations = decorationSnap.docs.map(docItem => ({
-          id: docItem.id,
-          source: "decoration",
-          ...docItem.data(),
-          finalDate: docItem.data().date
-        }));
+    const unsub = onSnapshot(
+      collection(db, "decoration"),
+      (snapshot) => {
+        try {
+          const decorations = snapshot.docs.map((docItem) => ({
+            id: docItem.id,
+            source: "decoration",
+            ...docItem.data(),
+            finalDate: docItem.data().date,
+          }));
 
-        const merged = [];
-        const seenKeys = new Set();
-        const makeKey = (name, contact, eventType, date) =>
-          `${(name || "").toLowerCase()}|${(contact || "").replace(/\s+/g, "")}|${(eventType || "").toLowerCase()}|${date ? new Date(date).toISOString().split("T")[0] : ""}`;
+          const merged = [];
+          const seenKeys = new Set();
 
-        decorations.forEach(v => {
-          const key = makeKey(v.customerName, v.contactNo, v.eventType || v.typeOfEvent, v.finalDate);
-          if (!seenKeys.has(key)) {
-            seenKeys.add(key);
-            merged.push(v);
-          }
-        });
+          const makeKey = (name, contact, eventType, date) =>
+            `${(name || "").toLowerCase()}|${(contact || "")
+              .replace(/\s+/g, "")}|${(eventType || "").toLowerCase()}|${date ? new Date(date).toISOString().split("T")[0] : ""
+            }`;
 
-        merged.sort((a, b) => {
-          const dateA = a.finalDate ? new Date(a.finalDate) : new Date(0);
-          const dateB = b.finalDate ? new Date(b.finalDate) : new Date(0);
+          decorations.forEach((v) => {
+            const key = makeKey(
+              v.customerName,
+              v.contactNo,
+              v.eventType || v.typeOfEvent,
+              v.finalDate
+            );
+            if (!seenKeys.has(key)) {
+              seenKeys.add(key);
+              merged.push(v);
+            }
+          });
 
-          if (sortOrder === "asc") return dateA - dateB;
-          else return dateB - dateA;
-        });
+          merged.sort((a, b) => {
+            const dateA = a.finalDate ? new Date(a.finalDate) : new Date(0);
+            const dateB = b.finalDate ? new Date(b.finalDate) : new Date(0);
 
-        setAllBookings(merged);
-      } catch (error) {
-        console.error("❌ Error fetching data:", error);
+            if (sortOrder === "asc") return dateA - dateB;
+            else return dateB - dateA;
+          });
+
+          setAllBookings(merged);
+        } catch (error) {
+          console.error("❌ Error processing snapshot:", error);
+        }
+      },
+      (error) => {
+        console.error("❌ Error in onSnapshot:", error);
       }
-    };
-    fetchData();
+    );
+
+    // cleanup listener jab component unmount ho
+    return () => unsub();
   }, [sortOrder]);
 
   const convertTo12Hour = (timeStr) => {
@@ -155,7 +170,7 @@ const DecorationTable = () => {
       <span
         style={{
           flex: 1,
-          borderBottom: "1px dotted brown",
+          borderBottom: "1px dotted #ff7104ff",
           minHeight: "18px",
           display: "inline-block",
           fontWeight: 700, // ✅ bold value
@@ -182,11 +197,12 @@ const DecorationTable = () => {
           width: "750px",
           margin: "0 auto",
           fontFamily: "Times New Roman, serif",
-          color: "brown",
+          color: "#ff7104ff",
           fontSize: "14px",
           lineHeight: "1.4",
         }}
       >
+
         {/* HEADER */}
         <h2 style={{ textAlign: "center", margin: 0, fontWeight: "bold", fontSize: "30px", wordSpacing: '5px' }}>
           Maurya Event
@@ -206,13 +222,13 @@ const DecorationTable = () => {
               </span>
             </span>
             <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }} >
-              <h3 style={{ textAlign: "center", margin: 0, border: "1px solid brown", display: "inline-block", padding: "4px 15px", fontSize: "15px", borderRadius: '5px' }}>
+              <h3 style={{ textAlign: "center", margin: 0, border: "1px solid #ff7104ff", display: "inline-block", padding: "4px 15px", fontSize: "15px", borderRadius: '5px' }}>
                 EVENT BOOKING ESTIMATE
               </h3>
             </div>
             <span>
               Date:{" "}
-              <span style={{ display: "inline-block", borderBottom: "1px dotted brown", minWidth: "120px", fontWeight: 'bold' }}>
+              <span style={{ display: "inline-block", borderBottom: "1px dotted #ff7104ff", minWidth: "120px", fontWeight: 'bold' }}>
                 {v?.date ? new Date(v.date).toLocaleDateString("en-GB") : ""}
               </span>
             </span>
@@ -250,7 +266,7 @@ const DecorationTable = () => {
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", marginBottom: "8px", alignItems: "center", marginTop: "15px" }} >
-          <h3 style={{ textAlign: "center", margin: 0, border: "1px solid brown", display: "inline-block", padding: "4px 15px", fontSize: "15px", borderRadius: '5px' }}>
+          <h3 style={{ textAlign: "center", margin: 0, border: "1px solid #ff7104ff", display: "inline-block", padding: "4px 15px", fontSize: "15px", borderRadius: '5px' }}>
             TOTAL PACKAGE COST
           </h3>
         </div>
@@ -268,19 +284,19 @@ const DecorationTable = () => {
             borderCollapse: "collapse",
             marginTop: 0,
             fontSize: "13px",
-            border: "1px solid brown",
+            border: "1px solid #ff7104ff",
           }}
         >
           <thead>
-            <tr style={{ color: "brown", background: "#fff" }}>
-              <th style={{ border: "1px solid brown", padding: "5px" }}>S. No.</th>
-              <th style={{ border: "1px solid brown", padding: "5px" }}>SERVICES</th>
-              <th style={{ border: "1px solid brown", padding: "5px" }}>REMARKS</th>
-              <th style={{ border: "1px solid brown", padding: "5px" }}>QTY</th>
+            <tr style={{ color: "#ff7104ff", background: "#fff" }}>
+              <th style={{ border: "1px solid #ff7104ff", padding: "5px" }}>S. No.</th>
+              <th style={{ border: "1px solid #ff7104ff", padding: "5px" }}>SERVICES</th>
+              <th style={{ border: "1px solid #ff7104ff", padding: "5px" }}>REMARKS</th>
+              <th style={{ border: "1px solid #ff7104ff", padding: "5px" }}>QTY</th>
               {showRates && (
                 <>
-                  <th style={{ border: "1px solid brown", padding: "5px" }}>RATE</th>
-                  <th style={{ border: "1px solid brown", padding: "5px" }}>TOTAL</th>
+                  <th style={{ border: "1px solid #ff7104ff", padding: "5px" }}>RATE</th>
+                  <th style={{ border: "1px solid #ff7104ff", padding: "5px" }}>TOTAL</th>
                 </>
               )}
             </tr>
@@ -289,16 +305,16 @@ const DecorationTable = () => {
             {services.length > 0 ? (
               services.map((s, i) => (
                 <tr key={i}>
-                  <td style={{ textAlign: "center", padding: "5px", border: "1px solid brown", color: "brown" }}>{i + 1}</td>
-                  <td style={{ padding: "5px", border: "1px solid brown", color: "brown" }}>{s.name}</td>
-                  <td style={{ padding: "5px", border: "1px solid brown", color: "brown" }}>{s.remarks}</td>
-                  <td style={{ padding: "5px", border: "1px solid brown", color: "brown" }}>{s.qty}</td>
+                  <td style={{ textAlign: "center", padding: "5px", border: "1px solid #ff7104ff", color: "#ff7104ff" }}>{i + 1}</td>
+                  <td style={{ padding: "5px", border: "1px solid #ff7104ff", color: "#ff7104ff" }}>{s.name}</td>
+                  <td style={{ padding: "5px", border: "1px solid #ff7104ff", color: "#ff7104ff" }}>{s.remarks}</td>
+                  <td style={{ padding: "5px", border: "1px solid #ff7104ff", color: "#ff7104ff" }}>{s.qty}</td>
                   {showRates && (
                     <>
-                      <td style={{ padding: "5px", border: "1px solid brown", color: "brown" }}>
+                      <td style={{ padding: "5px", border: "1px solid #ff7104ff", color: "#ff7104ff" }}>
                         {s.rate ? Number(s.rate).toLocaleString("en-IN") : 0}
                       </td>
-                      <td style={{ padding: "5px", border: "1px solid brown", color: "brown" }}>
+                      <td style={{ padding: "5px", border: "1px solid #ff7104ff", color: "#ff7104ff" }}>
                         {s.total ? Number(s.total).toLocaleString("en-IN") : 0}
                       </td>
                     </>
@@ -309,7 +325,7 @@ const DecorationTable = () => {
               <tr>
                 <td
                   colSpan={showRates ? 6 : 4}
-                  style={{ textAlign: "center", padding: "10px", border: "1px solid brown" }}
+                  style={{ textAlign: "center", padding: "10px", border: "1px solid #ff7104ff" }}
                 >
                   No services added
                 </td>
@@ -346,23 +362,19 @@ const DecorationTable = () => {
           Terms & Conditions:
         </h4>
         <ol style={{ fontSize: "12px", paddingLeft: "20px", marginTop: 0 }}>
-          <li>GST 18% Extra as applicable.</li>
           <li>50% advance & rest 50% before function date (Atleast 1 Week before Function Date).</li>
-          <li>DJ & Sound Music will not allowed after 10:00 PM.</li>
           <li>Booking Cancellation / Changing of Date will be acceptable on subject to available / Consideration.</li>
           <li>No amount will be refunded, if booking will be cancel within 1 month from function date.</li>
-          <li>Any physical damage will be responsible & paid by customer.</li>
-          <li>Security charges will be applicable @Rs. 10,000/- if Required.</li>
         </ol>
 
         {/* SIGNATURE */}
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: "100px", textAlign: "center" }}>
           <div style={{ flex: 1 }}>
-            <div style={{ borderTop: "1px dotted brown", width: "60%", margin: "0 auto 8px auto" }} />
+            <div style={{ borderTop: "1px dotted #ff7104ff", width: "60%", margin: "0 auto 8px auto" }} />
             <p style={{ margin: 0 }}>Event Booked By</p>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ borderTop: "1px dotted brown", width: "60%", margin: "0 auto 8px auto" }} />
+            <div style={{ borderTop: "1px dotted #ff7104ff", width: "60%", margin: "0 auto 8px auto" }} />
             <p style={{ margin: 0 }}>Guest’s Signature</p>
           </div>
         </div>
@@ -526,6 +538,162 @@ function BookingRow({
   const totalPayOut = royaltyPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   const remainingPayout = totalRoyalty - totalPayOut;
 
+  const formatDate = (date) => {
+    if (!date) return "-";
+
+    const d = new Date(date);
+
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const year = d.getUTCFullYear();
+
+    return `${day}-${month}-${year}`;
+  };
+
+  const handlePrintPayment = useCallback((receipt, adv, index) => {
+    const content = `
+  <html>
+  <head>
+    <title>Receipt - #${receipt.slNo} (Advance ${index + 1})</title>
+    <style>
+      body {
+        font-family: 'Calibri', sans-serif;
+        color: #3c0000;
+        font-size: 20px;
+        padding: 30px 40px;
+      }
+      .main-title {
+        text-align: center;
+        font-size: 38px;
+        font-weight: bold;
+        margin-top: 5px;
+        color: maroon;
+      }
+      .sub-header {
+        text-align: center;
+        font-size: 15px;
+        margin: 1px 0;
+      }
+      .line-group {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+      }
+      .section {
+        margin: 10px 0;
+        display: flex;
+        gap: 8px;
+      }
+      .underline {
+        flex-grow: 1;
+        border-bottom: 1px dotted #000;
+        min-width: 150px;
+      }
+      .short-underline {
+        display: inline-block;
+        border-bottom: 1px dotted #000;
+        min-width: 100px;
+      }
+      .rs-combo {
+        display: flex;
+        align-items: center;
+        margin-top: 30px;
+      }
+      .circle-rs {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: transparent;
+        color: #3c0000;
+        font-size: 30px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .amount-box {
+        border: 1px solid maroon;
+        padding: 6px 14px;
+        font-weight: bold;
+        min-width: 100px;
+        font-size: 30px;
+      }
+      .signature {
+        font-weight: bold;
+        font-size: 18px;
+        text-align: right;
+        margin-top: 40px;
+      }
+      .italic { 
+      font-style: italic; 
+      }
+      .payment-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0px;
+}
+
+    </style>
+  </head>
+  <body>
+   <div style="border: 1px solid maroon; padding: 1px">
+    <div style="border: 1px solid maroon; padding: 30px">
+      <div class="main-title">Maurya Event</div>
+      <div class="sub-header">Boring Road Harihar Chamber, Patna - 800001</div>
+      <div class="sub-header">Mob: 9835320076 | 📧 shivasharma7541@gmail.com</div>
+
+      <div class="line-group">
+        <div>No. <span>${receipt.slNo}</span></div>
+        <div>Date: <span class="short-underline">${new Date(adv.date).toLocaleDateString()}</span></div>
+      </div>
+
+      <div class="section italic">Received with thanks from: <div class="underline">${receipt.customerName}</div></div>
+      <div class="section italic"><span>Mob.:</span><div class="underline">${receipt.contactNo || '-'}</div></div>
+      <div class="section italic">
+        for event of: <div class="underline">${receipt.eventType || '-'}</div>
+        <span style="margin-left:auto;">Event Date: <span class="short-underline">${formatDate(receipt.date)}</span></span>
+      </div>
+
+      <!-- Payment Row -->
+<div class="payment-row">
+  <div class="rs-combo">
+    <div class="circle-rs">₹</div>
+    <div class="amount-box">${adv.amount}/-</div>
+  </div>
+
+  <div class="signature">
+    Issued By: <span class="short-underline">${receipt.receiverd || receipt.senderd || ''}</span>
+  </div>
+</div>
+
+    </div>
+   </div>
+  </body>
+  </html>
+  `;
+
+    // iframe print
+    let iframe = document.getElementById("print-frame");
+    if (!iframe) {
+      iframe = document.createElement("iframe");
+      iframe.id = "print-frame";
+      iframe.style.display = "none";
+      document.body.appendChild(iframe);
+    }
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(content);
+    doc.close();
+
+    iframe.onload = function () {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    };
+  }, []);
+
+
   return (
     <tr>
       <td>{filteredCount - idx}</td>
@@ -547,7 +715,28 @@ function BookingRow({
       <td>₹{v.summary?.discount || 0}</td>
       <td>₹{v.summary?.gstAmount || 0}</td>
       <td style={{ backgroundColor: '#d1ff98ff' }}><strong>₹{grandTotal}</strong></td>
-      <td>{v.advance?.map((a, i) => <span key={i}>₹{a.amount} ({new Date(a.date).toLocaleDateString()}) - </span>)}</td>
+      <td>
+        {v.advance?.map((a, i) => (
+          <span key={i} style={{ marginBottom: "5px" }}>
+            <span>₹{a.amount} ({new Date(a.date).toLocaleDateString()})</span>
+            <button
+              onClick={() => handlePrintPayment(v, a, i)}
+              style={{
+                marginLeft: "10px",
+                background: "#b52e2e",
+                color: "#fff",
+                padding: "3px 8px",
+                border: "none",
+                borderRadius: "4px",
+                fontSize: "12px",
+              }}
+            >
+              Print
+            </button>
+          </span>
+        ))}
+      </td>
+
       <td><strong>₹{advanceTotal}</strong></td>
       <td style={{ backgroundColor: '#fdbbb1ff' }}><strong>₹{remaining}</strong></td>
 
