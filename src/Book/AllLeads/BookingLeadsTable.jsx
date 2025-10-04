@@ -164,14 +164,13 @@ const BookingLeadsTable = () => {
 
     useEffect(() => {
         const unsubscribe = onSnapshot(collection(db, "prebookings"), (querySnapshot) => {
-            let allBookings = [];
+            const allBookings = []; // ✅ always start clean on each snapshot
 
             querySnapshot.docs.forEach((docSnap) => {
-                const monthYear = docSnap.id; // e.g. "Sep2025"
-                const bookingsMap = docSnap.data(); // map of bookings
+                const monthYear = docSnap.id;
+                const bookingsMap = docSnap.data();
 
-                // Flatten map into array
-                Object.entries(bookingsMap).forEach(([bookingId, bookingData]) => {
+                Object.entries(bookingsMap || {}).forEach(([bookingId, bookingData]) => {
                     allBookings.push({
                         id: bookingId,
                         monthYear,
@@ -181,17 +180,20 @@ const BookingLeadsTable = () => {
                 });
             });
 
+            // ✅ Remove duplicates by unique id
+            const uniqueBookings = Array.from(
+                new Map(allBookings.map(item => [item.id, item])).values()
+            );
+
             const today = new Date();
 
-            // Upcoming vs Past
-            const upcoming = allBookings.filter(
+            const upcoming = uniqueBookings.filter(
                 (lead) => new Date(lead.functionDate) >= today
             );
-            const past = allBookings.filter(
+            const past = uniqueBookings.filter(
                 (lead) => new Date(lead.functionDate) < today
             );
 
-            // Sort upcoming
             const sortedUpcoming = upcoming.sort((a, b) => {
                 const dateA = new Date(a.functionDate);
                 const dateB = new Date(b.functionDate);
@@ -199,14 +201,16 @@ const BookingLeadsTable = () => {
             });
 
             const finalList = [...sortedUpcoming, ...past];
+
             setLeads(finalList);
             setFilteredLeads(finalList);
         }, (error) => {
             console.error("Error fetching leads:", error);
         });
 
-        return () => unsubscribe(); // cleanup listener on unmount
+        return () => unsubscribe();
     }, [sortDirection]);
+
 
     useEffect(() => {
         const today = new Date();
@@ -991,7 +995,7 @@ const BookingLeadsTable = () => {
             <div className="filters-container">
                 <div className="date-filters">
 
-                    <div style={{ marginBottom: "10px", display:"none" }}>
+                    <div style={{ marginBottom: "10px", display: 'none' }}>
                         <input
                             type="file"
                             accept=".xlsx, .xls, .csv"
