@@ -6,6 +6,7 @@ import Tbody from './Tbody';
 import BackButton from "../../components/BackButton";
 import { getAuth } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 
 const BookingLeadsTable = () => {
     const navigate = useNavigate();
@@ -716,6 +717,130 @@ const BookingLeadsTable = () => {
         return `${day}-${month}-${year}`;
     };
 
+    const handleImport = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            const bstr = evt.target.result;
+            const wb = XLSX.read(bstr, { type: "binary" });
+            const wsname = wb.SheetNames[0];
+            const ws = wb.Sheets[wsname];
+
+            // Convert sheet to JSON
+            const data = XLSX.utils.sheet_to_json(ws, { defval: "" });
+            console.log("Imported Data:", data);
+
+            for (const row of data) {
+                try {
+                    const leadId = row.ID || Date.now().toString();
+                    const monthYear = row.functionDate ? formatMonthYear(row.functionDate) : "Unknown";
+
+                    // Parse bookingAmenities as array
+                    const bookingAmenities = row.bookingAmenities
+                        ? row.bookingAmenities.split(",").map(item => item.trim())
+                        : [];
+
+                    // Parse customItems string to array of objects
+                    const customItems = row.customItems
+                        ? row.customItems.split("|").map((item, index) => {
+                            const match = item.match(/(.+?)\s*\((\d+)\s*x\s*(\d+)\)\s*=\s*(\d+)/);
+                            if (!match) return null;
+                            return {
+                                id: index + 1,
+                                name: match[1].trim(),
+                                qty: Number(match[2]),
+                                rate: Number(match[3]),
+                                selected: true,
+                                total: Number(match[4])
+                            };
+                        }).filter(Boolean)
+                        : [];
+
+                    // Parse customMenuCharges string to array of objects
+                    const customMenuCharges = row.customMenuCharges
+                        ? row.customMenuCharges.split("|").map((item, index) => {
+                            const match = item.match(/(.+?)\s*\((\d+)\s*x\s*(\d+)\)\s*=\s*(\d+)/);
+                            if (!match) return null;
+                            return {
+                                id: index + 1,
+                                name: match[1].trim(),
+                                qty: Number(match[2]),
+                                rate: Number(match[3]),
+                                selected: true,
+                                total: Number(match[4])
+                            };
+                        }).filter(Boolean)
+                        : [];
+
+                    // Parse selectedMenus if it's in string format (example: "Golden Veg: 360 x 1600 = 576000")
+                    const selectedMenus = {};
+                    if (row.selectedMenus) {
+                        row.selectedMenus.split("|").forEach((menu, idx) => {
+                            const match = menu.match(/(.+?):\s*(\d+)\s*x\s*(\d+)\s*=\s*(\d+)/);
+                            if (match) {
+                                selectedMenus[match[1].trim()] = {
+                                    noOfPlates: Number(match[2]),
+                                    rate: Number(match[3]),
+                                    total: Number(match[4]),
+                                    extraPlates: Number(row.extraPlates || 0),
+                                    selectedSubItems: [] // You can add subitems parsing if needed
+                                };
+                            }
+                        });
+                    }
+
+                    // Construct final Firestore object
+                    const leadData = {
+                        name: row.name,
+                        prefix: row.prefix,
+                        mobile1: row.mobile1,
+                        mobile2: row.mobile2,
+                        enquiryDate: row.enquiryDate,
+                        functionDate: row.functionDate,
+                        functionType: row.functionType,
+                        venueType: row.venueType,
+                        noOfPlates: row.noOfPlates,
+                        extraPlates: row.extraPlates,
+                        hallCharges: row.hallCharges,
+                        gstBase: row.gstBase,
+                        gstAmount: row.gstAmount,
+                        discount: row.discount,
+                        grandTotal: row.grandTotal,
+                        totalAmount: row.totalAmount,
+                        startTime: row.startTime,
+                        finishTime: row.finishTime,
+                        eventBookedBy: row.eventBookedBy,
+                        source: row.source,
+                        note: row.note,
+                        bookingAmenities,
+                        meals: row.meals || {},
+                        selectedMenus,
+                        customItems,
+                        customMenuCharges,
+                        updatedAt: new Date()
+                    };
+
+                    const leadRef = doc(db, "prebookings", monthYear);
+                    await setDoc(leadRef, { [leadId]: leadData }, { merge: true });
+                    console.log(`Imported lead ${leadId}`);
+                } catch (err) {
+                    console.error("Error importing row:", err);
+                }
+            }
+        };
+        reader.readAsBinaryString(file);
+    };
+
+    const formatMonthYear = (dateStr) => {
+        if (!dateStr) return "Unknown";
+        const d = new Date(dateStr);
+        const month = d.toLocaleString("default", { month: "short" });
+        const year = d.getFullYear();
+        return `${month}${year}`;
+    };
+
     return (
         <div className="leads-table-container">
             <div style={{ marginBottom: '30px' }}> <BackButton />  </div>
@@ -865,6 +990,16 @@ const BookingLeadsTable = () => {
 
             <div className="filters-container">
                 <div className="date-filters">
+
+                    <div style={{ marginBottom: "10px" }}>
+                        <input
+                            type="file"
+                            accept=".xlsx, .xls, .csv"
+                            onChange={handleImport}
+                            style={{ cursor: "pointer" }}
+                        />
+                    </div>
+
                     <div className="filter-item">
                         <label>From:</label>
                         <input className="filterInput" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
