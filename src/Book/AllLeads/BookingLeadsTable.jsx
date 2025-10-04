@@ -1003,7 +1003,7 @@ const BookingLeadsTable = () => {
             <div className="filters-container">
                 <div className="date-filters">
 
-                    <div style={{ marginBottom: "10px" }}>
+                    <div style={{ marginBottom: "10px", display:"none"}}>
                         <input
                             type="file"
                             accept=".xlsx, .xls, .csv"
