@@ -996,7 +996,7 @@ const BookingLeadsTable = () => {
                             type="file"
                             accept=".xlsx, .xls, .csv"
                             onChange={handleImport}
-                            style={{ cursor: "pointer" }}
+                            style={{ cursor: "pointer", display:"none"}}
                         />
                     </div>
 
