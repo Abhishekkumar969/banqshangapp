@@ -303,6 +303,7 @@ const BookingLeadsTable = () => {
     };
 
     const handleFieldChange = async (id, field, value) => {
+        // Optimistically update local state
         setLeads(prev => prev.map(lead =>
             lead.id === id ? { ...lead, [field]: value } : lead
         ));
@@ -310,16 +311,23 @@ const BookingLeadsTable = () => {
             lead.id === id ? { ...lead, [field]: value } : lead
         ));
 
-        try {
-            await updateLead(id, { [field]: value });
-        } catch (err) {
-            console.error("Firestore update failed:", err);
-        }
-
         setEditingField(prev => ({
             ...prev,
             [id]: { ...prev[id], [field]: false }
         }));
+
+        try {
+            await updateLead(id, { [field]: value });
+        } catch (err) {
+            console.error("Firestore update failed:", err);
+            // Rollback if needed
+            setLeads(prev => prev.map(lead =>
+                lead.id === id ? { ...lead, [field]: lead[field] } : lead
+            ));
+            setFilteredLeads(prev => prev.map(lead =>
+                lead.id === id ? { ...lead, [field]: lead[field] } : lead
+            ));
+        }
     };
 
     const handleDateChange = (id, index, date) => {
