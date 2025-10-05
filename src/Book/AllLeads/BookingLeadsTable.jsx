@@ -445,7 +445,7 @@ const BookingLeadsTable = () => {
 <body>
     <div class="section-header" style="position: relative; text-align: center;">
         Event Booking Estimate
-        <span style="position: absolute; right: 10px;">${bookingDate}</span>
+        <span style="position: absolute; right: 10px;">Booked on: ${bookingDate}</span>
     </div>
 
     <table style="font-weight: bold">
