@@ -34,7 +34,6 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, moveLeadToDrop,
         );
     };
 
-
     const getLocalValue = (leadId, field, fallback) => {
         return localValue[leadId]?.[field] !== undefined ? localValue[leadId][field] : fallback;
     };
@@ -310,32 +309,6 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, moveLeadToDrop,
                                 <>
                                     {field.includes('Date') ? formatDate(lead[field]) : (lead[field] ?? '-')}
 
-                                    {lead.meals &&
-                                        (() => {
-                                            const funcDate = lead[field] ? formatDate(lead[field]) : null;
-
-                                            const uniqueMealDates = [
-                                                ...new Set(
-                                                    Object.values(lead.meals)
-                                                        .filter(dayData => dayData?.date)
-                                                        .map(dayData => formatDate(dayData.date))
-                                                ),
-                                            ];
-
-                                            return uniqueMealDates
-                                                .filter(d => d !== funcDate)
-                                                .map((d, i) => (
-                                                    <div
-                                                        key={i}
-                                                        style={{
-                                                            color: "brown",
-                                                            marginTop: "2px",
-                                                        }}
-                                                    >
-                                                        {d}
-                                                    </div>
-                                                ));
-                                        })()}
                                 </>
                             </td>
                         ))}
@@ -627,7 +600,7 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, moveLeadToDrop,
                                                     <thead>
                                                         <tr>
                                                             <th colSpan={7} style={{ ...headerStyle, textAlign: "center" }}>
-                                                                {dayName} ({dayData.date ? new Date(dayData.date).toLocaleDateString() : "No date"})
+                                                                {dayName} ({dayData.date ? formatDate(dayData.date) : "No date"})
                                                             </th>
                                                         </tr>
                                                         <tr>

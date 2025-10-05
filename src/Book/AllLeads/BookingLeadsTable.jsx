@@ -1003,7 +1003,7 @@ const BookingLeadsTable = () => {
             <div className="filters-container">
                 <div className="date-filters">
 
-                    <div style={{ marginBottom: "10px", display:"none"}}>
+                    <div style={{ marginBottom: "10px", display: 'none' }}>
                         <input
                             type="file"
                             accept=".xlsx, .xls, .csv"
@@ -1103,8 +1103,9 @@ const BookingLeadsTable = () => {
                                             transition: "all 0.3s ease",
                                         }}
                                     >
-                                        {['functionDate'].map((field, index) => (
+                                        {['functionDate'].map((field) => (
                                             <td
+                                                key={`${lead.id}-${field}`}
                                                 style={{
                                                     whiteSpace: 'nowrap',
                                                     overflow: 'hidden',
@@ -1113,10 +1114,10 @@ const BookingLeadsTable = () => {
                                                     padding: '0px 2px 0px 5px',
                                                     fontSize: '14px'
                                                 }}
-                                                key={`${lead.id}-${field}`}
                                             >
                                                 <>
-                                                    {field.includes('Date') ? formatDate(lead[field]) : (lead[field] ?? '-')}
+                                                    {/* Function Date */}
+                                                    {lead[field] ? formatDate(lead[field]) : '-'}
 
                                                     {lead.meals &&
                                                         (() => {
@@ -1143,7 +1144,9 @@ const BookingLeadsTable = () => {
                                                                         {d}
                                                                     </div>
                                                                 ));
-                                                        })()}
+                                                        })()
+                                                    }
+
                                                 </>
                                             </td>
                                         ))}
@@ -1503,7 +1506,6 @@ const BookingLeadsTable = () => {
                                             backgroundColor: 'transparent',
                                             color: 'transparent'
                                         }}>{leads.length - index}.</td>
-
 
                                         <td className="sticky sticky-1" style={{
                                             fontWeight: 'bold',
