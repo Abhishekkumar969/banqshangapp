@@ -490,7 +490,15 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
     <html>
     <head>
         <title>Booking Estimate_${lead.functionDate ? new Date(lead.functionDate).toLocaleDateString('en-GB').split('/').join('-') : ''}</title>
+
+
         <style>
+
+@page {
+  size: A4;
+  margin: 10mm;
+}
+
             body { font-family: Arial; padding: 30px; line-height: 1.4; border: 2px solid red; color:#00054b }
             h2 { text-align: center; color: red; font-weight: bold; text-decoration: underline; font-size: 24px; }
             .section { margin-top: 15px; }
@@ -1445,16 +1453,6 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
     );
 };
 
-<style>
-@page {
-  size: A4;
-  margin: 10mm;
-}
-body {
-  font-family: Arial, sans-serif;
-  padding: 10mm;
-  color: #00054b;
-}
-</style>
+
 
 export default BookingLeadsTable; 
