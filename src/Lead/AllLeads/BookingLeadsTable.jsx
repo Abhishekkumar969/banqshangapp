@@ -613,7 +613,7 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
         iframe.contentWindow.print();
 
         // cleanup
-        setTimeout(() => document.body.removeChild(iframe), 1000);
+       // setTimeout(() => document.body.removeChild(iframe), 1000);
 
     };
 
@@ -1452,6 +1452,7 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
         </div>
     );
 };
+
 
 
 
