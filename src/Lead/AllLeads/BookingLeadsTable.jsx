@@ -1445,4 +1445,16 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
     );
 };
 
+<style>
+@page {
+  size: A4;
+  margin: 10mm;
+}
+body {
+  font-family: Arial, sans-serif;
+  padding: 10mm;
+  color: #00054b;
+}
+</style>
+
 export default BookingLeadsTable; 
