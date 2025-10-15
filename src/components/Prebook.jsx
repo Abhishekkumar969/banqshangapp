@@ -17,11 +17,40 @@ const bannerImages = [
 const Prebook = () => {
   const navigate = useNavigate();
   const [showCalendar, setShowCalendar] = useState(false);
-  // const [showLogoutPopup, setShowLogoutPopup] = useState(false);
   const [userAppType, setUserAppType] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userName, setUserName] = useState('');
   const [showDownload, setShowDownload] = useState(false);
+  const [vendor, setVendor] = useState(null);
+  const [decoration, setDecoration] = useState(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          const userRef = doc(db, 'usersAccess', user.email);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            setUserAppType(data.accessToApp); // set the app type
+            if (data.accessToApp === "C") {
+              setVendor(data); // store the vendor data for app type C
+            }
+            if (data.accessToApp === "E") {
+              setDecoration(data); // store the vendor data for app type C
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching user data:", err);
+        }
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
 
   useEffect(() => {
     const fetchUserName = async () => {
@@ -123,7 +152,7 @@ const Prebook = () => {
         <div>
           <button
             className="logout-btn top-bar-header"
-            onClick={confirmLogout} 
+            onClick={confirmLogout}
           >
             Logout
           </button>
@@ -146,7 +175,7 @@ const Prebook = () => {
       </div>
 
       {/* BOOKINGS */}
-      {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
+      {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
         <>
           {/* Booking Services */}
           <div className="service-section">
@@ -162,7 +191,7 @@ const Prebook = () => {
       )}
 
       {/* RECEIPTS */}
-      {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
+      {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
         <>
           {/* Money Receipt */}
           <div className="service-section">
@@ -178,7 +207,7 @@ const Prebook = () => {
       )}
 
       {/* ACCOUNTANT */}
-      {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
+      {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
         <>
           {/* Vendor Section */}
           <div className="service-section">
@@ -192,14 +221,15 @@ const Prebook = () => {
       )}
 
       {/* UTILITIES */}
-      {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
+      {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
         <>
           {/* Utilities */}
           <div className="service-section">
             <h3 className="service-section-text">Utilities</h3>
             <div className="service-grid">
-              <ServiceBox label="Calendar" onClick={() => setShowCalendar(true)} icon="📅" />
+              <ServiceBox label="Profile" onClick={() => navigate('/AdminProfile')} icon="👤" />
               <ServiceBox label="Menu Items" onClick={() => navigate('/MenuItems')} icon="🍽" />
+              <ServiceBox label="Calendar" onClick={() => setShowCalendar(true)} icon="📅" />
               <ServiceBox label="GST  Summary" onClick={() => navigate('/GSTSummary')} icon="💹" />
             </div>
           </div>
@@ -207,36 +237,71 @@ const Prebook = () => {
       )}
 
       {/* VENDOR */}
-      {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G' || userAppType === 'C') && (
+      {(userAppType === 'A' || userAppType === 'D') && (
         <>
-          {/* Vendor Section */}
           <div className="service-section">
             <h3 className="service-section-text">Vendor</h3>
             <div className="service-grid">
-              <ServiceBox label="Form" onClick={() => navigate('/VendorOtherForm')} icon="📝" />
+              <ServiceBox label="UpComings" onClick={() => navigate('/VendorTable')} icon="📇" />
+              <ServiceBox label="Booked" onClick={() => navigate('/VendorBookedTable')} icon="🗂️" />
+              <ServiceBox label="Dropped" onClick={() => navigate('/VendorDeoppedTable')} icon="🗑️" />
+            </div>
+          </div>
+        </>
+      )}
 
-              <ServiceBox label="New Orders" onClick={() => navigate('/VendorTable')} icon="📇" />
-              <ServiceBox label="Booked Orders" onClick={() => navigate('/VendorBookedTable')} icon="🗂️" />
+      {/* VENDOR */}
+      {userAppType === 'C' && (
+        <div className="service-section">
+          <h3 className="service-section-text">Vendor</h3>
+          <div className="service-grid">
+            <ServiceBox label="Profile" onClick={() => navigate('/VendorProfile')} icon="👤" />
+            {vendor?.functionTypes?.length > 0 && (
+              <>
+                <ServiceBox label="Form" onClick={() => navigate('/VendorOtherForm')} icon="📝" />
+                <ServiceBox label="UpComings" onClick={() => navigate('/VendorTable')} icon="📇" />
+                <ServiceBox label="Booked" onClick={() => navigate('/VendorBookedTable')} icon="🗂️" />
+                <ServiceBox label="Dropped" onClick={() => navigate('/VendorDeoppedTable')} icon="🗑️" />
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* DECORATION */}
+      {(userAppType === 'A' || userAppType === 'D') && (
+        <>
+          <div className="service-section">
+            <h3 className="service-section-text">Decoration</h3>
+            <div className="service-grid">
+              <ServiceBox label="UpComings" onClick={() => navigate('/DecorationTable')} icon="📇" />
+              <ServiceBox label="Booked" onClick={() => navigate('/DecorationBookedTable')} icon="🗂️" />
+              <ServiceBox label="Dropped" onClick={() => navigate('/DecorationDeoppedTable')} icon="🗑️" />
             </div>
           </div>
         </>
       )}
 
       {/* DECORATION */}
-      {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
-        <>
-          <div className="service-section">
-            <h3 className="service-section-text">Decoration</h3>
-            <div className="service-grid">
-              <ServiceBox label="Form" onClick={() => navigate('/DecorationForm')} icon="📝" />
-              <ServiceBox label="Details" onClick={() => navigate('/DecorationTable')} icon="🗂️" />
-            </div>
+      {userAppType === 'E' && (
+        <div className="service-section">
+          <h3 className="service-section-text">Decoration</h3>
+          <div className="service-grid">
+            <ServiceBox label="Profile" onClick={() => navigate('/DecorationProfile')} icon="👤" />
+            {decoration?.functionTypes?.length > 0 && (
+              <>
+                <ServiceBox label="Form" onClick={() => navigate('/DecorationOtherForm')} icon="📝" />
+                <ServiceBox label="UpComings" onClick={() => navigate('/DecorationTable')} icon="📇" />
+                <ServiceBox label="Booked" onClick={() => navigate('/DecorationBookedTable')} icon="🗂️" />
+                <ServiceBox label="Dropped" onClick={() => navigate('/DecorationDeoppedTable')} icon="🗑️" />
+              </>
+            )}
           </div>
-        </>
+        </div>
       )}
 
       {/* Catering */}
-      {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
+      {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
         <>
           <div className="service-section">
             <h3 className="service-section-text">Catering</h3>

@@ -228,6 +228,12 @@ const MealSelection = forwardRef(({ meals, setMeals, functionDate, dayNight }, r
                                                     <label style={{ display: 'flex', alignItems: 'center' }}>Qty:</label>
                                                     <input style={{ width: '40vw' }} type="text" placeholder="" value={data.pax || ""} onChange={e => handleChange(dayKey, meal, "pax", e.target.value.replace(/[^0-9]/g, ""))} />
                                                 </div>
+
+                                                <div className="meal-inputs" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
+                                                    <label style={{ display: 'flex', alignItems: 'center' }}>Extra Plates:</label>
+                                                    <input style={{ width: '40vw' }} type="text" placeholder="" value={data.extraPlates || ""} onChange={e => handleChange(dayKey, meal, "extraPlates", e.target.value.replace(/[^0-9]/g, ""))} />
+                                                </div>
+
                                                 <div className="meal-inputs" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
                                                     <label style={{ display: 'flex', alignItems: 'center' }}></label>
                                                     <span>Total: ₹{data.total?.toFixed(0) || 0}</span>

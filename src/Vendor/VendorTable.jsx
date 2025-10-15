@@ -1,5 +1,7 @@
+// Upcoming 
+
 import React, { useEffect, useState } from 'react';
-import { collection, getDocs, doc, updateDoc, arrayUnion, serverTimestamp, setDoc, deleteField } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, arrayUnion, serverTimestamp, setDoc, deleteField } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import '../styles/VendorTable.css';
 import BackButton from "../components/BackButton";
@@ -15,66 +17,92 @@ const VendorTable = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                // Fetch vendors
-                const vendorSnap = await getDocs(collection(db, "vendor"));
-                const vendors = vendorSnap.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                    finalDate: doc.data().date
-                }));
+        const vendorCollection = collection(db, "vendor");
+        const prebookingsCollection = collection(db, "prebookings");
 
-                // Make vendor keys
+        // Real-time listeners
+        const unsubscribeVendor = onSnapshot(
+            vendorCollection,
+            (vendorSnap) => {
+                const vendors = [];
+                vendorSnap.docs.forEach((monthDoc) => {
+                    const monthData = monthDoc.data().data || monthDoc.data() || {};
+                    Object.keys(monthData).forEach((key) => {
+                        const v = monthData[key];
+                        vendors.push({
+                            id: key,
+                            month: monthDoc.id,
+                            ...v,
+                            finalDate: v.date,
+                        });
+                    });
+                });
+
                 const vendorKeys = new Set();
                 const makeKey = (name, contact, eventType, date) =>
-                    `${(name || "").toLowerCase()}|${(contact || "").replace(/\s+/g, "")}|${(eventType || "").toLowerCase()}|${date ? new Date(date).toISOString().split("T")[0] : ""}`;
+                    `${(name || "").trim().toLowerCase()}|${(contact || "")
+                        .replace(/\s+/g, "")
+                        .replace(/[^\d]/g, "")}|${(eventType || "").trim().toLowerCase()}|${date ? new Date(date).toISOString().split("T")[0] : ""}`;
 
-                vendors.forEach(v => {
+                vendors.forEach((v) => {
                     const key = makeKey(v.customerName, v.contactNo, v.eventType || v.typeOfEvent, v.finalDate);
                     vendorKeys.add(key);
                 });
 
-                // Fetch prebookings
-                const preSnap = await getDocs(collection(db, "prebookings"));
-                const prebookings = preSnap.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                }));
+                // Now listen to prebookings
+                const unsubscribePre = onSnapshot(
+                    prebookingsCollection,
+                    (preSnap) => {
+                        const prebookings = [];
+                        preSnap.docs.forEach((monthDoc) => {
+                            const monthData = monthDoc.data().data || monthDoc.data() || {};
+                            Object.keys(monthData).forEach((key) => {
+                                const pre = monthData[key];
+                                prebookings.push({
+                                    id: key,
+                                    month: monthDoc.id,
+                                    ...pre,
+                                });
+                            });
+                        });
 
-                // Filter only those prebookings which are NOT in vendorKeys
-                const filteredPre = prebookings.filter(pre => {
-                    const contact = [pre.mobile1, pre.mobile2].filter(Boolean).join("/");
-                    const key = makeKey(pre.name, contact, pre.functionType, pre.functionDate);
-                    return !vendorKeys.has(key); // ❌ agar vendor me hai toh skip
-                }).map(pre => ({
-                    id: pre.id,
-                    customerName: pre.name,
-                    contactNo: pre.mobile1,
-                    address: pre.address || " ",
-                    eventType: pre.functionType,
-                    venueType: pre.venueType,
-                    date: pre.functionDate,
-                    finalDate: pre.functionDate,
-                    startTime: "16:00",
-                    endTime: "21:00",
-                    source: "Shangrila",
-                }));
+                        // Filter prebookings not in vendors
+                        const filteredPre = prebookings
+                            .filter((pre) => {
+                                const contact = [pre.mobile1, pre.mobile2].find(Boolean) || "";
+                                const key = makeKey(pre.name, contact, pre.functionType, pre.functionDate);
+                                return !vendorKeys.has(key);
+                            })
+                            .map((pre) => ({
+                                id: pre.id,
+                                customerName: pre.name,
+                                contactNo: pre.mobile1 || pre.mobile2 || "",
+                                address: pre.address || " ",
+                                eventType: pre.functionType,
+                                venueType: pre.venueType,
+                                date: pre.functionDate,
+                                finalDate: pre.functionDate,
+                                startTime: "16:00",
+                                endTime: "21:00",
+                                source: "Shangrila",
+                            }));
 
-                // Sort latest first
-                filteredPre.sort((a, b) => {
-                    const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || a.finalDate || 0);
-                    const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || b.finalDate || 0);
-                    return dateB - dateA;
-                });
+                        // Sort latest first
+                        filteredPre.sort((a, b) => new Date(b.finalDate || 0) - new Date(a.finalDate || 0));
 
-                setAllBookings(filteredPre);
+                        setAllBookings(filteredPre);
+                    },
+                    (error) => console.error("❌ Error fetching prebookings real-time:", error)
+                );
 
-            } catch (error) {
-                console.error("❌ Error fetching data:", error);
-            }
-        };
-        fetchData();
+                // Cleanup prebookings listener
+                return () => unsubscribePre();
+            },
+            (error) => console.error("❌ Error fetching vendor real-time:", error)
+        );
+
+        // Cleanup vendor listener
+        return () => unsubscribeVendor();
     }, []);
 
     const sortedBookings = [...allBookings].sort((a, b) => {
@@ -166,26 +194,112 @@ const VendorTable = () => {
                                         <td>{v.eventType}</td>
                                         <td>{v.venueType}</td>
                                         <td>{convertTo12Hour(v.startTime)} - {convertTo12Hour(v.endTime)}</td>
+
                                         <td>
-                                            {!v.dropReason && <button onClick={() => navigate("/Vendor", { state: { vendorData: v } })} style={{ backgroundColor: v.source === 'vendor' ? '#4CAF50' : '#2196F3', color: 'white', padding: '6px 10px', borderRadius: '6px' }}>{v.source === 'vendor' ? '✏️Update' : '📘 Book'}</button>}
-                                            {v.dropReason ?
-                                                <button onClick={async () => {
-                                                    try { const ref = doc(db, 'vendor', v.id); await updateDoc(ref, { dropReason: deleteField(), dropAt: deleteField() }); alert("✅ Booking restored!"); }
-                                                    catch (err) { console.error(err); alert("Failed to restore booking."); }
-                                                }} style={{ backgroundColor: '#FF9800', color: 'white', padding: '6px 10px', borderRadius: '6px', marginLeft: '5px' }}>📘 Book Again</button> :
-                                                <button onClick={async () => {
-                                                    const reason = prompt("Enter drop reason:");
-                                                    if (reason) {
+                                            {/* Update / Book button */}
+                                            {!v.dropReason && (
+                                                <button
+                                                    onClick={() => navigate("/Vendor", { state: { vendorData: v } })}
+                                                    style={{
+                                                        backgroundColor: v.source === "vendor" ? "#4CAF50" : "#2196F3",
+                                                        color: "white",
+                                                        padding: "6px 10px",
+                                                        borderRadius: "6px",
+                                                    }}
+                                                >
+                                                    {v.source === "vendor" ? "✏️ Update" : "📘 Book"}
+                                                </button>
+                                            )}
+
+                                            {/* Drop / Book Again buttons */}
+                                            {v.dropReason ? (
+                                                // Book Again
+                                                <button
+                                                    onClick={async () => {
                                                         try {
-                                                            const ref = doc(db, 'vendor', v.id);
-                                                            if (v.source !== 'vendor') await setDoc(ref, { ...v, source: 'vendor', dropReason: reason, createdAt: serverTimestamp() });
-                                                            else await updateDoc(ref, { dropReason: reason, dropAt: serverTimestamp() });
-                                                            alert("✅ Drop reason saved!");
-                                                        } catch (err) { console.error(err); alert("Failed to save drop reason."); }
-                                                    }
-                                                }} style={{ backgroundColor: '#f44336', color: 'white', padding: '6px 10px', borderRadius: '6px', marginLeft: '5px' }}>⛔ Drop</button>
-                                            }
+                                                            const monthKey = new Date(v.finalDate).toLocaleString("en-US", {
+                                                                month: "short",
+                                                                year: "numeric",
+                                                            }).replace(" ", ""); // e.g., "Apr2025"
+
+                                                            const ref = doc(db, "vendor", monthKey);
+                                                            await updateDoc(ref, {
+                                                                [`${v.id}.dropReason`]: deleteField(),
+                                                                [`${v.id}.dropAt`]: deleteField(),
+                                                            });
+
+                                                            alert("✅ Booking restored!");
+                                                        } catch (err) {
+                                                            console.error(err);
+                                                            alert("❌ Failed to restore booking.");
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        backgroundColor: "#FF9800",
+                                                        color: "white",
+                                                        padding: "6px 10px",
+                                                        borderRadius: "6px",
+                                                        marginLeft: "5px",
+                                                    }}
+                                                >
+                                                    📘 Book Again
+                                                </button>
+                                            ) : (
+                                                // Drop
+                                                <button
+                                                    onClick={async () => {
+                                                        const reason = prompt("Enter drop reason:");
+                                                        if (!reason) return;
+
+                                                        try {
+                                                            const monthKey = new Date(v.finalDate).toLocaleString("en-US", {
+                                                                month: "short",
+                                                                year: "numeric",
+                                                            }).replace(" ", ""); // e.g., "Apr2025"
+
+                                                            const ref = doc(db, "vendor", monthKey);
+
+                                                            if (v.source !== "vendor") {
+                                                                // Booking not yet in vendor, create month doc & add drop reason
+                                                                await setDoc(
+                                                                    ref,
+                                                                    {
+                                                                        [v.id]: {
+                                                                            ...v,
+                                                                            source: "vendor",
+                                                                            dropReason: reason,
+                                                                            createdAt: serverTimestamp(),
+                                                                        },
+                                                                    },
+                                                                    { merge: true }
+                                                                );
+                                                            } else {
+                                                                // Booking already exists, update drop reason inside month doc
+                                                                await updateDoc(ref, {
+                                                                    [`${v.id}.dropReason`]: reason,
+                                                                    [`${v.id}.dropAt`]: serverTimestamp(),
+                                                                });
+                                                            }
+
+                                                            // alert("✅ Drop reason saved!");
+                                                        } catch (err) {
+                                                            console.error(err);
+                                                            alert("❌ Failed to save drop reason.");
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        backgroundColor: "#f44336",
+                                                        color: "white",
+                                                        padding: "6px 10px",
+                                                        borderRadius: "6px",
+                                                        marginLeft: "5px",
+                                                    }}
+                                                >
+                                                    ⛔ Drop
+                                                </button>
+                                            )}
                                         </td>
+
                                     </tr>
                                 )
                             })}

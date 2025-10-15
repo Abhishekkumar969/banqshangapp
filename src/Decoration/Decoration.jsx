@@ -1,67 +1,13 @@
+// Hidden
+
 import React, { useEffect, useState } from "react";
 import styles from "../styles/Decoration.module.css";
 import { useLocation } from "react-router-dom";
-import { doc, updateDoc, collection, addDoc, serverTimestamp, getDoc, runTransaction } from "firebase/firestore";
+import { doc, serverTimestamp, runTransaction, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import BackButton from "../components/BackButton";
 import { useNavigate } from "react-router-dom";
-import { getAuth } from "firebase/auth";
-
-const engagementServices = [
-    "Stage Decoration banquet & Lawn Area",
-    "Gate Decoration banquet & Lawn area",
-    "passage Decoration banquet & Lawn area",
-    "Mandap Decoration banquet & Lawn area ",
-    "side walls Decoration banquet & Lawn area ",
-    "haldi & Mehandi decoration banquet & Lawn area ",
-    "Sangeet Decoration banquet & Lawn area ",
-    "Birthday Decoration banquet & Lawn area ",
-    "Engagement Decoration banquet & Lawn area ",
-    "Tilak Decoration banquet & Lawn area ",
-    "Nikha Decoration banquet & Lawn area ",
-    "Outdoor Decoration",
-];
-
-const weddingServices = [
-    "Stage Decoration banquet & Lawn Area",
-    "Gate Decoration banquet & Lawn area",
-    "passage Decoration banquet & Lawn area",
-    "Mandap Decoration banquet & Lawn area ",
-    "side walls Decoration banquet & Lawn area ",
-    "haldi & Mehandi decoration banquet & Lawn area ",
-    "Sangeet Decoration banquet & Lawn area ",
-    "Birthday Decoration banquet & Lawn area ",
-    "Engagement Decoration banquet & Lawn area ",
-    "Tilak Decoration banquet & Lawn area ",
-    "Nikha Decoration banquet & Lawn area ",
-    "Outdoor Decoration",
-];
-
-const defaultServices = [
-    "Stage Decoration banquet & Lawn Area",
-    "Gate Decoration banquet & Lawn area",
-    "passage Decoration banquet & Lawn area",
-    "Mandap Decoration banquet & Lawn area ",
-    "side walls Decoration banquet & Lawn area ",
-    "haldi & Mehandi decoration banquet & Lawn area ",
-    "Sangeet Decoration banquet & Lawn area ",
-    "Birthday Decoration banquet & Lawn area ",
-    "Engagement Decoration banquet & Lawn area ",
-    "Tilak Decoration banquet & Lawn area ",
-    "Nikha Decoration banquet & Lawn area ",
-    "Outdoor Decoration",
-];
-
-const predefinedEvents = [
-    "Wedding",
-    "Reception",
-    "Engagement",
-    "Birthday",
-    "Anniversary",
-    "Tilak",
-    "Corporate Party",
-    "Haldi & Mehandi"
-];
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const Decoration = () => {
     const location = useLocation();
@@ -74,13 +20,44 @@ const Decoration = () => {
     const [eventSearchQuery, setEventSearchQuery] = useState("");
     const [formErrors, setFormErrors] = useState({});
     const [showValidationPopup, setShowValidationPopup] = useState(false);
-    const [hasLoadedEditData, setHasLoadedEditData] = useState(false);
     const [isGSTManuallyEdited, setIsGSTManuallyEdited] = useState(false);
     const navigate = useNavigate();
     const [isSaving, setIsSaving] = useState(false);
     const [summaryFields, setSummaryFields] = useState({ totalPackageCost: "", overAllPackageCost: "", discount: "", gstApplicableAmount: "", gstAmount: "", grandTotal: "", });
     const [enableRoyalty, setEnableRoyalty] = useState(false);
     const [selectAll, setSelectAll] = useState(false);
+    const [decoration, setDecoration] = useState(null);
+    const [predefinedEvents, setPredefinedEvents] = useState([]);
+
+    useEffect(() => {
+        const auth = getAuth();
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user?.email) {
+                try {
+                    const q = query(
+                        collection(db, "usersAccess"),
+                        where("email", "==", user.email)
+                    );
+                    const snapshot = await getDocs(q);
+                    if (!snapshot.empty) {
+                        const docSnap = snapshot.docs[0];
+                        setDecoration({ id: docSnap.id, ...docSnap.data() });
+                    }
+                } catch (err) {
+                    console.error("Error fetching decoration:", err);
+                }
+            }
+        });
+        return () => unsubscribe();
+    }, []);
+
+    useEffect(() => {
+        if (decoration?.functionTypes?.length > 0) {
+            setPredefinedEvents(decoration.functionTypes);
+        } else {
+            setPredefinedEvents(["Not inserted"]);
+        }
+    }, [decoration]);
 
     useEffect(() => {
         if (location.state?.decorationData) {
@@ -114,40 +91,34 @@ const Decoration = () => {
     }, [services, selectAll]);
 
     useEffect(() => {
-        if (hasLoadedEditData) return;
+        if (!decoration) return;
 
-        const event = (customEvent || form.typeOfEvent || '').toLowerCase();
-        let baseServices = [];
-        if (event === 'engagement') baseServices = engagementServices;
-        else if (event === 'wedding') baseServices = weddingServices;
-        else baseServices = defaultServices;
+        // Pick which event type to use — custom event overrides dropdown
+        const selectedEvent = customEvent || form.typeOfEvent;
+        if (!selectedEvent) return;
 
-        setServices(prevServices =>
-            baseServices.map(s => {
-                const existing = prevServices.find(ps => ps.name === s);
-
-                return existing
-                    ? {
-                        ...existing,
-                        royaltyPercent: enableRoyalty
-                            ? (existing.royaltyPercent || 30)
-                            : 0,
-                        royaltyAmount: ((parseFloat(existing.total) || 0) *
-                            (enableRoyalty ? (existing.royaltyPercent || 30) : 0)) / 100,
-                    }
-                    : {
-                        name: s,
-                        remarks: '',
-                        qty: '',
-                        rate: '',
-                        venueType: '',
-                        total: '',
-                        royaltyPercent: enableRoyalty ? 30 : 0,
-                        royaltyAmount: 0,
-                    };
-            })
+        // Match event exactly (case-insensitive) from predefinedEvents
+        const matchedKey = decoration.functionTypes?.find(
+            (evt) => evt.toLowerCase() === selectedEvent.toLowerCase()
         );
-    }, [form.typeOfEvent, customEvent, hasLoadedEditData, enableRoyalty]);
+
+        // Get items list from decoration.items
+        const eventItems = decoration.items?.[matchedKey] || [];
+
+        // Update services array dynamically based on event
+        setServices(
+            eventItems.map((name) => ({
+                name,
+                remarks: "",
+                qty: "",
+                rate: "",
+                total: "",
+                venueType: "",
+                royaltyPercent: enableRoyalty ? 30 : 0,
+                royaltyAmount: 0,
+            }))
+        );
+    }, [form.typeOfEvent, customEvent, decoration, enableRoyalty]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -189,177 +160,99 @@ const Decoration = () => {
     };
 
     useEffect(() => {
-        const total = services.reduce((sum, s) => {
-            const amount = parseFloat(s.total);
-            return sum + (isNaN(amount) ? 0 : amount);
-        }, 0);
-
-        const overAllPackageCost = parseFloat(summaryFields.overAllPackageCost) || 0;
+        const totalFromServices = services.reduce((sum, s) => sum + (parseFloat(s.total) || 0), 0);
+        const overAllCost = parseFloat(summaryFields.overAllPackageCost) || 0;
         const discount = parseFloat(summaryFields.discount) || 0;
+        const baseAmount = overAllCost > 0 ? overAllCost - discount : totalFromServices - discount;
 
-        const baseAmount =
-            overAllPackageCost > 0
-                ? overAllPackageCost - discount
-                : total - discount;
-
-        const autoGSTApplicable = baseAmount;
-
-        const manualGSTStr = summaryFields.gstApplicableAmount?.toString().trim();
-        const manualGST = parseFloat(manualGSTStr);
-        const useManual = isGSTManuallyEdited;
-
-        // ✅ fix here
-        const gstApplicable = useManual
-            ? (!isNaN(manualGST) && manualGSTStr !== "" ? manualGST : 0)
-            : autoGSTApplicable;
+        // ✅ Use GST only if manually edited; otherwise leave blank
+        const gstApplicable = isGSTManuallyEdited
+            ? parseFloat(summaryFields.gstApplicableAmount) || 0
+            : 0;  // do NOT default to baseAmount
 
         const gstAmount = gstApplicable * 0.18;
         const grandTotal = baseAmount + gstAmount;
 
-        const format = (val) =>
-            isNaN(val) || val === ""
-                ? ""
-                : parseFloat(val) % 1 === 0
-                    ? val.toString()
-                    : parseFloat(val).toFixed(2);
+        const format = (val) => isNaN(val) ? "" : Number(val.toFixed(2));
 
-        setSummaryFields((prev) => ({
+        setSummaryFields(prev => ({
             ...prev,
-            totalPackageCost:
-                overAllPackageCost > 0 ? format(overAllPackageCost) : format(total),
+            totalPackageCost: format(overAllCost > 0 ? overAllCost : totalFromServices),
+            gstApplicableAmount: isGSTManuallyEdited ? prev.gstApplicableAmount : "", // stays blank if not manual
             gstAmount: format(gstAmount),
             grandTotal: format(grandTotal),
-            ...(useManual
-                ? {}
-                : { gstApplicableAmount: format(autoGSTApplicable) }),
         }));
-    }, [
-        services,
-        summaryFields.discount,
-        summaryFields.overAllPackageCost,
-        summaryFields.gstApplicableAmount,
-        isGSTManuallyEdited,
-    ]);
+
+    }, [services, summaryFields.overAllPackageCost, summaryFields.discount, summaryFields.gstApplicableAmount, isGSTManuallyEdited]);
 
     useEffect(() => {
-        if (editData) {
-            const gstAppAmtRaw = editData.summary?.gstApplicableAmount;
-            const gstAppAmtStr = gstAppAmtRaw?.toString().trim();
+        if (!editData || !decoration) return;
 
-            const manuallySet = gstAppAmtStr !== "" && gstAppAmtStr !== "0" && !isNaN(parseFloat(gstAppAmtStr));
+        const gstAppAmtRaw = editData.summary?.gstApplicableAmount;
+        const gstAppAmtStr = gstAppAmtRaw?.toString().trim();
 
-            setIsGSTManuallyEdited(manuallySet);
+        // ✅ Only mark as manually edited if GST is non-empty AND non-zero
+        const manuallySet = gstAppAmtStr !== "" && gstAppAmtStr !== "0" && !isNaN(parseFloat(gstAppAmtStr));
+        setIsGSTManuallyEdited(manuallySet);
 
-            setSummaryFields({
-                totalPackageCost: editData.summary?.totalPackageCost || "",
-                overAllPackageCost: editData.summary?.overAllPackageCost || "",
-                discount: editData.summary?.discount || "",
-                gstApplicableAmount: manuallySet ? gstAppAmtStr : "",
-                gstAmount: editData.summary?.gstAmount || "",
-                grandTotal: editData.summary?.grandTotal || "",
-            });
-
-            setForm({
-                customerName: editData.customerName || "",
-                address: editData.address || "",
-                venueType: editData.venueType || "",
-                contactNo: editData.contactNo || "",
-                typeOfEvent: editData.eventType || "",
-                date: editData.date || "",
-                startTime: editData.startTime || "",
-                endTime: editData.endTime || "",
-                bookedOn: editData.bookedOn || new Date().toISOString().split("T")[0],
-            });
-
-            const eventType = (editData.eventType || "").toLowerCase();
-            let defaultList = [];
-
-            if (eventType === "engagement") defaultList = engagementServices;
-            else if (eventType === "wedding") defaultList = weddingServices;
-            else defaultList = defaultServices;
-
-            const savedServices = editData.services || [];
-            const savedServiceNames = savedServices.map(s => s.name);
-
-            const merged = [
-                ...savedServices.map(s => ({
-                    ...s,
-                    royaltyPercent:
-                        s.royaltyPercent !== undefined
-                            ? s.royaltyPercent
-                            : (enableRoyalty ? 30 : 0),
-                    royaltyAmount:
-                        ((parseFloat(s.total) || 0) *
-                            (s.royaltyPercent !== undefined
-                                ? s.royaltyPercent
-                                : (enableRoyalty ? 30 : 0))) / 100,
-                })),
-                ...defaultList
-                    .filter(name => !savedServiceNames.includes(name))
-                    .map(name => ({
-                        name,
-                        remarks: "",
-                        qty: "",
-                        rate: "",
-                        venueType: "",
-                        total: "",
-                        royaltyPercent: enableRoyalty ? 30 : 0,
-                        royaltyAmount: 0,
-                    }))
-            ];
-
-            setServices(merged);
-            setHasLoadedEditData(true);
-        }
-    }, [editData, enableRoyalty]);
-
-    const updateWithLog = async (decorationId, newData) => {
-        const auth = getAuth();
-        const currentUser = auth.currentUser;
-
-        if (!currentUser) {
-            throw new Error("No logged-in user found");
-        }
-
-        // Reference to the decoration document
-        const decorationRef = doc(db, "decoration", decorationId);
-
-        // Fetch existing decoration data
-        const decorationSnap = await getDoc(decorationRef);
-        if (!decorationSnap.exists()) {
-            throw new Error("decoration document does not exist");
-        }
-        const oldData = decorationSnap.data();
-
-        // Compute changes
-        let changes = {};
-        for (let key in newData) {
-            if (oldData[key] !== newData[key]) {
-                changes[key] = { old: oldData[key] || "", new: newData[key] };
-            }
-        }
-
-        // Fetch current user's info from the top-level usersAccess collection
-        const userRef = doc(db, "usersAccess", currentUser.email);
-        const userSnap = await getDoc(userRef);
-        const userData = userSnap.exists() ? userSnap.data() : {};
-
-        const logId = `updateLog_${Date.now()}`;
-        const logEntry = {
-            at: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
-            by: {
-                email: currentUser.email,
-                name: userData.name || "Unknown User"
-            },
-            changes
-        };
-
-        // Update the decoration document with new data + log entry
-        await updateDoc(decorationRef, {
-            ...newData,
-            [logId]: logEntry
+        setSummaryFields({
+            totalPackageCost: editData.summary?.totalPackageCost || "",
+            overAllPackageCost: editData.summary?.overAllPackageCost || "",
+            discount: editData.summary?.discount || "",
+            // ✅ If GST is empty or "0", leave it blank; otherwise use stored value
+            gstApplicableAmount: manuallySet ? gstAppAmtStr : "",
+            gstAmount: editData.summary?.gstAmount || "",
+            grandTotal: editData.summary?.grandTotal || "",
         });
-    };
+
+        setForm({
+            customerName: editData.customerName || "",
+            address: editData.address || "",
+            venueType: editData.venueType || "",
+            contactNo: editData.contactNo || "",
+            typeOfEvent: editData.eventType || "",
+            date: editData.date || "",
+            startTime: editData.startTime || "",
+            endTime: editData.endTime || "",
+            banquetName: editData.banquetName || "Shangri-la Palace", // ✅ added this line
+            bookedOn: editData.bookedOn || new Date().toISOString().split("T")[0],
+        });
+
+        // Services mapping (same as before)
+        const eventName = (editData.eventType || "").toLowerCase();
+        let eventKey = "";
+        if (eventName.includes("engagement")) eventKey = decoration.functionTypes[0] || "";
+        else if (eventName.includes("wedding")) eventKey = decoration.functionTypes[1] || "";
+        else eventKey = decoration.functionTypes[0] || "";
+
+        const dynamicServices = decoration.items?.[eventKey] || [];
+        const savedServices = editData.services || [];
+        const savedServiceNames = savedServices.map(s => s.name);
+
+        const merged = [
+            ...savedServices.map(s => ({
+                ...s,
+                royaltyPercent: s.royaltyPercent !== undefined ? s.royaltyPercent : (enableRoyalty ? 30 : 0),
+                royaltyAmount: ((parseFloat(s.total) || 0) *
+                    (s.royaltyPercent !== undefined ? s.royaltyPercent : (enableRoyalty ? 30 : 0))) / 100,
+            })),
+            ...dynamicServices
+                .filter(name => !savedServiceNames.includes(name))
+                .map(name => ({
+                    name,
+                    remarks: "",
+                    qty: "",
+                    rate: "",
+                    venueType: "",
+                    total: "",
+                    royaltyPercent: enableRoyalty ? 30 : 0,
+                    royaltyAmount: 0,
+                }))
+        ];
+
+        setServices(merged);
+
+    }, [editData, decoration, enableRoyalty]);
 
     const handleSave = async () => {
         const newErrors = {};
@@ -379,52 +272,94 @@ const Decoration = () => {
 
         setIsSaving(true);
 
-        const filteredServicesToSave = services.filter(srv =>
-            srv.isSelected &&
-            (srv.name?.toString().trim() || "") !== "" &&
-            ((srv.total?.toString().trim() || "") !== "" || (srv.remarks?.toString().trim() || "") !== "")
-        );
-
-        const decorationData = {
-            ...form,
-            eventType: customEvent.trim() || form.typeOfEvent,
-            services: filteredServicesToSave,
-            summary: summaryFields,
-        };
-
         try {
-            if (editData && editData.id && editData.source === "decoration") {
-                // just update, don't touch sl no
-                await updateWithLog(editData.id, {
-                    ...decorationData,
-                    updatedAt: new Date().toISOString()
-                });
-            } else {
-                // 🔹 Transaction to safely increment and fetch counter
-                const slCounterRef = doc(db, "settings", "slCounter");
+            const filteredServicesToSave = services.filter(
+                (srv) =>
+                    (srv.name?.toString().trim() || "") !== "" &&
+                    ((srv.total?.toString().trim() || "") !== "" || (srv.remarks?.toString().trim() || "") !== "")
+            );
 
-                const newSlNo = await runTransaction(db, async (transaction) => {
-                    const slDoc = await transaction.get(slCounterRef);
+            const bookedDate = form.bookedDate ? new Date(form.bookedDate) : new Date();
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const monthYear = `${monthNames[bookedDate.getMonth()]}${bookedDate.getFullYear()}`;
 
-                    if (!slDoc.exists()) {
-                        throw new Error("slCounter document does not exist!");
+            // ✅ Get current user
+            const auth = getAuth();
+            const currentUser = auth.currentUser;
+            if (!currentUser) throw new Error("No logged-in user found");
+
+            // ✅ Add user email to the decorationData
+            const decorationData = {
+                ...form,
+                eventType: customEvent.trim() || form.typeOfEvent,
+                services: filteredServicesToSave,
+                summary: summaryFields,
+                updatedAt: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
+                userEmail: currentUser.email // <-- this line added
+            };
+
+            const monthDocRef = doc(db, "decoration", monthYear);
+
+            if (editData && editData.id) {
+                // EDIT MODE
+                await runTransaction(db, async (transaction) => {
+                    const monthSnapTx = await transaction.get(monthDocRef);
+                    const oldData = monthSnapTx.exists() ? monthSnapTx.data()[editData.id] || {} : {};
+
+                    const changes = {};
+                    for (let key in decorationData) {
+                        if (oldData[key] !== decorationData[key]) {
+                            changes[key] = { old: oldData[key] || "", new: decorationData[key] };
+                        }
                     }
 
-                    const current = slDoc.data().decoration ?? 0;
-                    const next = current + 1;
+                    const logId = `updateLog_${Date.now()}`;
+                    const logEntry = {
+                        at: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
+                        by: { email: currentUser.email },
+                        changes,
+                    };
 
-                    transaction.update(slCounterRef, { decoration: next });
+                    transaction.set(
+                        monthDocRef,
+                        { [editData.id]: { ...decorationData, [logId]: logEntry } },
+                        { merge: true }
+                    );
+                });
+            } else {
+                // NEW BOOKING
+                const newId = crypto.randomUUID();
+                let slNo = null;
 
-                    return next;
+                await runTransaction(db, async (transaction) => {
+                    const counterRef = doc(db, "settings", "slCounter");
+                    const counterSnap = await transaction.get(counterRef);
+
+                    if (!counterSnap.exists()) {
+                        slNo = 1;
+                        transaction.set(counterRef, { globalEvents: slNo });
+                    } else {
+                        const current = counterSnap.data().globalEvents ?? 0;
+                        slNo = current + 1;
+                        transaction.update(counterRef, { globalEvents: slNo });
+                    }
+
+                    const newDecorationData = {
+                        ...decorationData,
+                        slNo,
+                        createdAt: serverTimestamp(),
+                    };
+
+                    transaction.set(
+                        monthDocRef,
+                        { [newId]: newDecorationData },
+                        { merge: true }
+                    );
                 });
 
-                // 🔹 Save decoration with Sl No.
-                await addDoc(collection(db, "decoration"), {
-                    ...decorationData,
-                    slNo: newSlNo,
-                    createdAt: serverTimestamp()
-                });
+                console.log("✅ New booking saved with slNo:", slNo);
             }
+
             navigate(-1);
         } catch (error) {
             console.error("❌ Error saving decoration data:", error);
@@ -434,26 +369,40 @@ const Decoration = () => {
         }
     };
 
+    // Hidden
     return (
         <div className={styles.decorationWrapper}>
             <div style={{ marginBottom: '30px' }}>
                 <BackButton />
             </div>
 
-            <h4 className={styles.decorationHeader}>Maurya Event</h4>
-            <p className={styles.decorationSubheader}>
-                Boring Road Harihar Chamber, Patna - 800001<br />
-                Mob: 9835320076 | 📧 shivasharma7541@gmail.com
-            </p>
+            {decoration ? (
+                <>
+                    <h4 className={styles.decorationHeader}>
+                        {decoration.firmName || "Decoration Firm Name"}
+                    </h4>
+                    <p className={styles.decorationSubheader}>
+                        {decoration.address || "Decoration Address"}<br />
+                        📞 {decoration.contactNo || "Contact Number"} | 📧 {decoration.email || "Email"}
+                    </p>
+                </>
+            ) : (
+                <p className={styles.message}>Loading decoration info...</p>
+            )}
+
 
             {showValidationPopup && (
                 <div className={styles.topPopup}>⚠️ Please fill all the required fields</div>
             )}
 
             <div className={styles.formSection}>
-
                 <label>Name :</label>
-                <input name="customerName" value={form.customerName || ""} onChange={handleChange} disabled />
+                <input
+                    name="customerName"
+                    value={form.customerName || ""}
+                    onChange={handleChange}
+                    disabled
+                />
                 {formErrors.customerName && <p className={styles.errorMsg}>{formErrors.customerName}</p>}
 
                 <label>Contact No. :</label>
@@ -476,7 +425,12 @@ const Decoration = () => {
                 <input name="venueType" value={form.venueType} onChange={handleChange} />
 
                 <label>Booked On :</label>
-                <input type="date" name="bookedOn" value={form.bookedOn} onChange={handleChange} />
+                <input
+                    type="date"
+                    name="bookedOn"
+                    value={form.bookedOn}
+                    onChange={handleChange}
+                />
 
                 <label>Address :</label>
                 <input name="address" value={form.address} onChange={handleChange} />
@@ -487,10 +441,21 @@ const Decoration = () => {
                 </button>
                 {formErrors.typeOfEvent && <p className={styles.errorMsg}>{formErrors.typeOfEvent}</p>}
 
+                <label>Banquet Name:</label>
+                <input
+                    name="banquetName"
+                    value={form.banquetName || " "}
+                    onChange={handleChange}
+                    disabled
+                />
+                {formErrors.banquetName && (
+                    <p className={styles.errorMsg}>{formErrors.banquetName}</p>
+                )}
+
+
                 {enableRoyalty && <>
                     <label>Note (PayOut) :</label>
-                    <input name="note" value={form.note} onChange={handleChange} /> </>
-                }
+                    <input name="note" value={form.note} onChange={handleChange} /> </>}
 
             </div>
 
@@ -593,6 +558,7 @@ const Decoration = () => {
                                         }}
                                     />
                                 </td>
+
                                 <td>
                                     <input
                                         type="text"
@@ -657,12 +623,16 @@ const Decoration = () => {
                     onChange={(e) => {
                         let val = e.target.value.replace(/[^0-9.]/g, "");
                         if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
-                        setSummaryFields((prev) => ({ ...prev, overAllPackageCost: val }));
+                        setSummaryFields((prev) => ({
+                            ...prev,
+                            overAllPackageCost: val
+                        }));
                     }}
                 />
 
+
                 <label>Calculated Package Cost:</label>
-                <input type="text" value={summaryFields.totalPackageCost} readOnly />
+                <input type="number" value={summaryFields.totalPackageCost} readOnly />
 
                 <label>Discount:</label>
                 <input
@@ -676,18 +646,20 @@ const Decoration = () => {
                     }}
                 />
 
+
                 <label>GST Applicable Amount:</label>
                 <input
                     type="text"
                     inputMode="decimal"
-                    value={summaryFields.gstApplicableAmount}
+                    value={summaryFields.gstApplicableAmount ?? ""}
                     onChange={(e) => {
                         let val = e.target.value.replace(/[^0-9.]/g, "");
                         if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
-                        setSummaryFields({ ...summaryFields, gstApplicableAmount: val });
-                        setIsGSTManuallyEdited(true);
+                        setSummaryFields(prev => ({ ...prev, gstApplicableAmount: val }));
+                        setIsGSTManuallyEdited(true); // important!
                     }}
                 />
+
 
                 <label>GST (18%):</label>
                 <input type="text" value={summaryFields.gstAmount} readOnly />
@@ -695,7 +667,6 @@ const Decoration = () => {
                 <label>Grand Total:</label>
                 <input type="text" value={summaryFields.grandTotal} readOnly />
             </div>
-
 
             <button
                 onClick={handleSave}
@@ -728,23 +699,25 @@ const Decoration = () => {
                         </div>
                         <div className={styles.popupList}>
                             {predefinedEvents
-                                .filter((event) =>
-                                    event.toLowerCase().includes(eventSearchQuery.toLowerCase())
-                                )
+                                .filter(event => event.toLowerCase().includes(eventSearchQuery.toLowerCase()))
                                 .map((event, i) => (
                                     <div
                                         key={i}
                                         className={styles.popupItem}
                                         onClick={() => {
-                                            setForm({ ...form, typeOfEvent: event });
-                                            setCustomEvent('');
-                                            setShowEventPopup(false);
+                                            if (event !== "Not inserted") {
+                                                setForm({ ...form, typeOfEvent: event });
+                                                setCustomEvent('');
+                                                setShowEventPopup(false);
+                                            }
                                         }}
+                                        style={{ cursor: event === "Not inserted" ? "not-allowed" : "pointer", opacity: event === "Not inserted" ? 0.5 : 1 }}
                                     >
                                         {event}
                                     </div>
                                 ))}
                         </div>
+
                         <div className={styles.popupCustomEvent}>
                             <input
                                 placeholder="Or enter custom event"
@@ -764,6 +737,7 @@ const Decoration = () => {
             )}
         </div>
     );
+
 };
 
 export default Decoration;

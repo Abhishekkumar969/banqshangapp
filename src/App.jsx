@@ -24,14 +24,19 @@ import ReceiverCollectionsPage from './pages/ReceiverCollectionsPage';
 import Accountant from './Accountant/Accountant';
 import AccountantForm from './Accountant/AccountantForm';
 
+import VendorProfile from './Vendor/VendorProfile';
 import Vendor from './Vendor/Vendor';
 import VendorOtherForm from './Vendor/VendorOtherForm';
 import VendorTable from './Vendor/VendorTable';
 import VendorBookedTable from './Vendor/VendorBookedTable';
+import VendorDeoppedTable from './Vendor/VendorDeoppedTable';
 
+import DecorationProfile from './Decoration/DecorationProfile';
 import Decoration from './Decoration/Decoration';
+import DecorationOtherForm from './Decoration/DecorationOtherForm';
 import DecorationTable from './Decoration/DecorationTable';
 import DecorationBookedTable from './Decoration/DecorationBookedTable';
+import DecorationDeoppedTable from './Decoration/DecorationDeoppedTable';
 
 import LoginPage from "./auth/LoginPage";
 import ApprovalPage from './MoneyReceipt/ApprovalPage';
@@ -46,6 +51,8 @@ import UserAccessPanel from './pages/UserAccessPanel';
 import StatsPage from './pages/Stats';
 
 import MenuItems from './pages/MenuItems';
+import AdminProfile from './pages/AdminProfile';
+
 
 function AppRoutes() {
   const navigate = useNavigate();
@@ -87,22 +94,26 @@ function AppRoutes() {
 
         <Route path="/bookingLead" element={<PrivateRoute><BookingLead /></PrivateRoute>} />
         <Route path="/leads" element={<PrivateRoute><BookingLeadsTable /></PrivateRoute>} />
-        
+
         <Route path="/Booking" element={<PrivateRoute><Booking /></PrivateRoute>} />
         <Route path="/BookingTable" element={<PrivateRoute><BookingTable /></PrivateRoute>} />
 
         <Route path="/Accountant" element={<PrivateRoute><Accountant /></PrivateRoute>} />
         <Route path="/AccountantForm" element={<PrivateRoute><AccountantForm /></PrivateRoute>} />
 
-
+        <Route path="/VendorProfile" element={<PrivateRoute><VendorProfile /></PrivateRoute>} />
         <Route path="/Vendor" element={<PrivateRoute><Vendor /></PrivateRoute>} />
         <Route path="/VendorOtherForm" element={<PrivateRoute><VendorOtherForm /></PrivateRoute>} />
         <Route path="/VendorTable" element={<PrivateRoute><VendorTable /></PrivateRoute>} />
         <Route path="/VendorBookedTable" element={<PrivateRoute><VendorBookedTable /></PrivateRoute>} />
+        <Route path="/VendorDeoppedTable" element={<PrivateRoute><VendorDeoppedTable /></PrivateRoute>} />
 
         <Route path="/Decoration" element={<PrivateRoute><Decoration /></PrivateRoute>} />
+        <Route path="/DecorationBookedTable" element={<PrivateRoute><DecorationBookedTable /></PrivateRoute>} />
+        <Route path="/DecorationDeoppedTable" element={<PrivateRoute><DecorationDeoppedTable /></PrivateRoute>} />
+        <Route path="/DecorationOtherForm" element={<PrivateRoute><DecorationOtherForm /></PrivateRoute>} />
+        <Route path="/DecorationProfile" element={<PrivateRoute><DecorationProfile /></PrivateRoute>} />
         <Route path="/DecorationTable" element={<PrivateRoute><DecorationTable /></PrivateRoute>} />
-        <Route path="/DecorationBookedTable" element={<PrivateRoute><DecorationBookedTable/></PrivateRoute>} />
 
         <Route path="/ReceiverCollectionsPage" element={<PrivateRoute><ReceiverCollectionsPage /></PrivateRoute>} />
         <Route path="/UserAccessPanel" element={<PrivateRoute><UserAccessPanel /></PrivateRoute>} />
@@ -115,7 +126,8 @@ function AppRoutes() {
         <Route path="/CateringAssigned" element={<PrivateRoute><CateringAssigned /></PrivateRoute>} />
 
         <Route path="/MenuItems" element={<PrivateRoute><MenuItems /></PrivateRoute>} />
-
+        <Route path="/AdminProfile" element={<PrivateRoute><AdminProfile /></PrivateRoute>} />
+        
         <Route path="/login" element={<LoginPage />} />
       </Routes>
     </>

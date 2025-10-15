@@ -222,19 +222,15 @@
 
 .filters-container {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+    padding: 10px 0px;
+    justify-content: space-between;
     margin-bottom: 10px;
-    padding: 10px;
-    border-radius: 10px;
-    font-weight: 600;
-    justify-content: center;
 }
 
 .date-filters {
     display: flex;
-    gap: 50px;
-    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 30px;
 }
 
 .fy-clear {
@@ -300,19 +296,20 @@
     .filter-item .filterInput {
         width: 50vw;
     }
-    
+
 }
 
 .import-btn {
-  background: #4caf50;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  margin: 5px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
+    background: #4caf50;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    margin: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
 }
+
 .import-btn:hover {
-  background: #45a049;
+    background: #45a049;
 }

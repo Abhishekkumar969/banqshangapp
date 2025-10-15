@@ -1,7 +1,5 @@
-// Hidden
-
 import React, { useEffect, useState } from "react";
-import styles from "../styles/Vendor.module.css";
+import styles from "../styles/Decoration.module.css";
 import { useLocation } from "react-router-dom";
 import { doc, serverTimestamp, runTransaction, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebaseConfig";
@@ -9,7 +7,7 @@ import BackButton from "../components/BackButton";
 import { useNavigate } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
-const Vendor = () => {
+const Decoration = () => {
     const location = useLocation();
     const [editData, setEditData] = useState(null);
     const [form, setForm] = useState({ customerName: "", venueType: "", address: "", contactNo: "", typeOfEvent: "", date: "", startTime: "", endTime: "", bookedOn: " " });
@@ -26,7 +24,7 @@ const Vendor = () => {
     const [summaryFields, setSummaryFields] = useState({ totalPackageCost: "", overAllPackageCost: "", discount: "", gstApplicableAmount: "", gstAmount: "", grandTotal: "", });
     const [enableRoyalty, setEnableRoyalty] = useState(false);
     const [selectAll, setSelectAll] = useState(false);
-    const [vendor, setVendor] = useState(null);
+    const [decoration, setDecoration] = useState(null);
     const [predefinedEvents, setPredefinedEvents] = useState([]);
 
     useEffect(() => {
@@ -41,10 +39,10 @@ const Vendor = () => {
                     const snapshot = await getDocs(q);
                     if (!snapshot.empty) {
                         const docSnap = snapshot.docs[0];
-                        setVendor({ id: docSnap.id, ...docSnap.data() });
+                        setDecoration({ id: docSnap.id, ...docSnap.data() });
                     }
                 } catch (err) {
-                    console.error("Error fetching vendor:", err);
+                    console.error("Error fetching decoration:", err);
                 }
             }
         });
@@ -52,16 +50,21 @@ const Vendor = () => {
     }, []);
 
     useEffect(() => {
-        if (vendor?.functionTypes?.length > 0) {
-            setPredefinedEvents(vendor.functionTypes);
-        } else {
-            setPredefinedEvents(["Not inserted"]);
+        if (decoration) {
+            if (decoration.functionTypes?.length > 0) {
+                setPredefinedEvents(decoration.functionTypes);
+            } else {
+                // No function types → navigate to decorationProfile
+                setPredefinedEvents(["Not inserted"]);
+                alert("⚠️ Please Refresh & fill your Profile first.");
+                navigate("/DecorationProfile");
+            }
         }
-    }, [vendor]);
+    }, [decoration, navigate]);
 
     useEffect(() => {
-        if (location.state?.vendorData) {
-            setEditData(location.state.vendorData);
+        if (location.state?.decorationData) {
+            setEditData(location.state.decorationData);
         }
     }, [location.state]);
 
@@ -91,19 +94,19 @@ const Vendor = () => {
     }, [services, selectAll]);
 
     useEffect(() => {
-        if (!vendor) return;
+        if (!decoration) return;
 
         // Pick which event type to use — custom event overrides dropdown
         const selectedEvent = customEvent || form.typeOfEvent;
         if (!selectedEvent) return;
 
         // Match event exactly (case-insensitive) from predefinedEvents
-        const matchedKey = vendor.functionTypes?.find(
+        const matchedKey = decoration.functionTypes?.find(
             (evt) => evt.toLowerCase() === selectedEvent.toLowerCase()
         );
 
-        // Get items list from vendor.items
-        const eventItems = vendor.items?.[matchedKey] || [];
+        // Get items list from decoration.items
+        const eventItems = decoration.items?.[matchedKey] || [];
 
         // Update services array dynamically based on event
         setServices(
@@ -118,7 +121,8 @@ const Vendor = () => {
                 royaltyAmount: 0,
             }))
         );
-    }, [form.typeOfEvent, customEvent, vendor, enableRoyalty]);
+    }, [form.typeOfEvent, customEvent, decoration, enableRoyalty]);
+
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -186,7 +190,7 @@ const Vendor = () => {
     }, [services, summaryFields.overAllPackageCost, summaryFields.discount, summaryFields.gstApplicableAmount, isGSTManuallyEdited]);
 
     useEffect(() => {
-        if (!editData || !vendor) return;
+        if (!editData || !decoration) return;
 
         const gstAppAmtRaw = editData.summary?.gstApplicableAmount;
         const gstAppAmtStr = gstAppAmtRaw?.toString().trim();
@@ -214,18 +218,18 @@ const Vendor = () => {
             date: editData.date || "",
             startTime: editData.startTime || "",
             endTime: editData.endTime || "",
-            banquetName: editData.banquetName || "Shangri-la Palace", // ✅ added this line
+            banquetName: editData.banquetName || "", // ✅ added this line
             bookedOn: editData.bookedOn || new Date().toISOString().split("T")[0],
         });
 
         // Services mapping (same as before)
         const eventName = (editData.eventType || "").toLowerCase();
         let eventKey = "";
-        if (eventName.includes("engagement")) eventKey = vendor.functionTypes[0] || "";
-        else if (eventName.includes("wedding")) eventKey = vendor.functionTypes[1] || "";
-        else eventKey = vendor.functionTypes[0] || "";
+        if (eventName.includes("engagement")) eventKey = decoration.functionTypes[0] || "";
+        else if (eventName.includes("wedding")) eventKey = decoration.functionTypes[1] || "";
+        else eventKey = decoration.functionTypes[0] || "";
 
-        const dynamicServices = vendor.items?.[eventKey] || [];
+        const dynamicServices = decoration.items?.[eventKey] || [];
         const savedServices = editData.services || [];
         const savedServiceNames = savedServices.map(s => s.name);
 
@@ -250,9 +254,10 @@ const Vendor = () => {
                 }))
         ];
 
+
         setServices(merged);
 
-    }, [editData, vendor, enableRoyalty]);
+    }, [editData, decoration, enableRoyalty]);
 
     const handleSave = async () => {
         const newErrors = {};
@@ -288,8 +293,8 @@ const Vendor = () => {
             const currentUser = auth.currentUser;
             if (!currentUser) throw new Error("No logged-in user found");
 
-            // ✅ Add user email to the vendorData
-            const vendorData = {
+            // ✅ Add user email to the decorationData
+            const decorationData = {
                 ...form,
                 eventType: customEvent.trim() || form.typeOfEvent,
                 services: filteredServicesToSave,
@@ -298,7 +303,7 @@ const Vendor = () => {
                 userEmail: currentUser.email // <-- this line added
             };
 
-            const monthDocRef = doc(db, "vendor", monthYear);
+            const monthDocRef = doc(db, "decoration", monthYear);
 
             if (editData && editData.id) {
                 // EDIT MODE
@@ -307,9 +312,9 @@ const Vendor = () => {
                     const oldData = monthSnapTx.exists() ? monthSnapTx.data()[editData.id] || {} : {};
 
                     const changes = {};
-                    for (let key in vendorData) {
-                        if (oldData[key] !== vendorData[key]) {
-                            changes[key] = { old: oldData[key] || "", new: vendorData[key] };
+                    for (let key in decorationData) {
+                        if (oldData[key] !== decorationData[key]) {
+                            changes[key] = { old: oldData[key] || "", new: decorationData[key] };
                         }
                     }
 
@@ -322,7 +327,7 @@ const Vendor = () => {
 
                     transaction.set(
                         monthDocRef,
-                        { [editData.id]: { ...vendorData, [logId]: logEntry } },
+                        { [editData.id]: { ...decorationData, [logId]: logEntry } },
                         { merge: true }
                     );
                 });
@@ -344,15 +349,15 @@ const Vendor = () => {
                         transaction.update(counterRef, { globalEvents: slNo });
                     }
 
-                    const newVendorData = {
-                        ...vendorData,
+                    const newDecorationData = {
+                        ...decorationData,
                         slNo,
                         createdAt: serverTimestamp(),
                     };
 
                     transaction.set(
                         monthDocRef,
-                        { [newId]: newVendorData },
+                        { [newId]: newDecorationData },
                         { merge: true }
                     );
                 });
@@ -362,47 +367,41 @@ const Vendor = () => {
 
             navigate(-1);
         } catch (error) {
-            console.error("❌ Error saving vendor data:", error);
-            alert("❌ Failed to save vendor booking.");
+            console.error("❌ Error saving decoration data:", error);
+            alert("❌ Failed to save decoration booking.");
         } finally {
             setIsSaving(false);
         }
     };
 
-    // Hidden
     return (
-        <div className={styles.vendorWrapper}>
+        <div className={styles.decorationWrapper}>
             <div style={{ marginBottom: '30px' }}>
                 <BackButton />
             </div>
 
-            {vendor ? (
+            {decoration ? (
                 <>
-                    <h4 className={styles.vendorHeader}>
-                        {vendor.firmName || "Vendor Firm Name"}
+                    <h4 className={styles.decorationHeader}>
+                        {decoration.firmName || "Decoration Firm Name"}
                     </h4>
-                    <p className={styles.vendorSubheader}>
-                        {vendor.address || "Vendor Address"}<br />
-                        📞 {vendor.contactNo || "Contact Number"} | 📧 {vendor.email || "Email"}
+                    <p className={styles.decorationSubheader}>
+                        {decoration.address || "Decoration Address"}<br />
+                        📞 {decoration.contactNo || "Contact Number"} | 📧 {decoration.email || "Email"}
                     </p>
                 </>
             ) : (
-                <p className={styles.message}>Loading vendor info...</p>
+                <p className={styles.message}>Loading decoration info...</p>
             )}
-
 
             {showValidationPopup && (
                 <div className={styles.topPopup}>⚠️ Please fill all the required fields</div>
             )}
 
             <div className={styles.formSection}>
+
                 <label>Name :</label>
-                <input
-                    name="customerName"
-                    value={form.customerName || ""}
-                    onChange={handleChange}
-                    disabled
-                />
+                <input name="customerName" value={form.customerName || ""} onChange={handleChange} />
                 {formErrors.customerName && <p className={styles.errorMsg}>{formErrors.customerName}</p>}
 
                 <label>Contact No. :</label>
@@ -410,7 +409,7 @@ const Vendor = () => {
                 {formErrors.contactNo && <p className={styles.errorMsg}>{formErrors.contactNo}</p>}
 
                 <label>Date Of Event :</label>
-                <input name="date" type="date" disabled value={form.date} onChange={handleChange} />
+                <input name="date" type="date" value={form.date} onChange={handleChange} />
                 {formErrors.date && <p className={styles.errorMsg}>{formErrors.date}</p>}
 
                 <label>Start Time :</label>
@@ -436,7 +435,8 @@ const Vendor = () => {
                 <input name="address" value={form.address} onChange={handleChange} />
 
                 <label>Event Type :</label>
-                <button disabled onClick={() => setShowEventPopup(true)} className={styles.vendorPopupBtn}>
+                <button
+                    onClick={() => setShowEventPopup(true)} className={styles.decorationPopupBtn}>
                     🎉 {customEvent || form.typeOfEvent || 'Select Event Type'}
                 </button>
                 {formErrors.typeOfEvent && <p className={styles.errorMsg}>{formErrors.typeOfEvent}</p>}
@@ -444,14 +444,10 @@ const Vendor = () => {
                 <label>Banquet Name:</label>
                 <input
                     name="banquetName"
-                    value={form.banquetName || " "}
+                    value={form.banquetName || ""}
                     onChange={handleChange}
-                    disabled
                 />
-                {formErrors.banquetName && (
-                    <p className={styles.errorMsg}>{formErrors.banquetName}</p>
-                )}
-
+                {formErrors.banquetName && <p className={styles.errorMsg}>{formErrors.banquetName}</p>}
 
                 {enableRoyalty && <>
                     <label>Note (PayOut) :</label>
@@ -487,7 +483,7 @@ const Vendor = () => {
 
             <div style={{ overflowX: "auto" }}>
                 <table
-                    className={styles.vendorTable}
+                    className={styles.decorationTable}
                     style={{ minWidth: "900px", borderCollapse: "collapse" }} // 👈 min width force
                 >
                     <thead>
@@ -740,4 +736,4 @@ const Vendor = () => {
 
 };
 
-export default Vendor;
+export default Decoration;

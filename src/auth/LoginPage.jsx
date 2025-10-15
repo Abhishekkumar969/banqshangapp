@@ -236,7 +236,8 @@ export default function MoonSunLogin() {
                             <option style={{ color: '#0040ffff' }} value=" ">✨ Choose Role</option>
                             <option style={{ color: '#0040ffff' }} value="A">🛡️ Admin</option>
                             <option style={{ color: '#0040ffff' }} value="D">🤝 Partner</option>
-                            <option style={{ color: '#0040ffff' }} value="B">📊 Management</option>
+                            <option style={{ color: '#0040ffff' }} value="B">📊 Manager</option>
+                            <option style={{ color: '#0040ffff' }} value="H">📞 Enquiry Executive</option>
                             <option style={{ color: '#0040ffff' }} value="F">💰 Accountant</option>
                             <option style={{ color: '#0040ffff' }} value="G">👩‍💻 User</option>
                             <option style={{ color: '#0040ffff' }} value="C">📦 Vendor</option>

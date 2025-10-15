@@ -28,12 +28,46 @@ const VendorLogPopupCell = ({ vendor }) => {
             })
         : [];
 
-    const formatDate = (isoString) => {
-        if (!isoString) return "None";
-        const date = new Date(isoString);
-        return date.toLocaleString("en-IN", {
+
+    const formatDateIST = (dateStr) => {
+        if (!dateStr) return "-";
+
+        // Check if it's already a timestamp object
+        if (dateStr.seconds) {
+            return new Date(dateStr.seconds * 1000).toLocaleString("en-GB", {
+                timeZone: "Asia/Kolkata",
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true,
+            });
+        }
+
+        // If it's a string like "13/10/2025, 8:39:17 pm"
+        const [datePart, timePart] = dateStr.split(", "); // ["13/10/2025", "8:39:17 pm"]
+        const [day, month, year] = datePart.split("/").map(Number);
+
+        let [hours, minutes, seconds] = timePart
+            .split(/[: ]/)
+            .slice(0, 3)
+            .map(Number);
+
+        const ampm = timePart.slice(-2).toLowerCase();
+        if (ampm === "pm" && hours < 12) hours += 12;
+        if (ampm === "am" && hours === 12) hours = 0;
+
+        // Create Date object in local timezone
+        const d = new Date(year, month - 1, day, hours, minutes, seconds);
+
+        // Convert to IST explicitly
+        const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+
+        return ist.toLocaleString("en-GB", {
             day: "2-digit",
-            month: "short",
+            month: "2-digit",
             year: "numeric",
             hour: "2-digit",
             minute: "2-digit",
@@ -45,8 +79,8 @@ const VendorLogPopupCell = ({ vendor }) => {
     const renderValue = (val, fieldName) => {
         const isObject = (v) => v && typeof v === "object" && !Array.isArray(v);
 
-        if (fieldName === "updatedAt") {
-            return <span>{formatDate(val)}</span>;
+        if (fieldName === "updatedAt" || fieldName === "at") {
+            return formatDateIST(val);
         }
 
         // Handle services inside updateLog changes (new/old arrays)

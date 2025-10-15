@@ -1,134 +1,473 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../styles/BookingAmenities.css';
-import { db } from '../firebaseConfig';
-import { doc, getDoc } from 'firebase/firestore';
+import { db } from "../firebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
 
-const FoodMenuSelection = ({ selectedMenus, setSelectedMenus, noOfPlates }) => {
-    const [menuItems, setMenuItems] = useState({});
+const FoodMenuSelection = ({ selectedMenus, setSelectedMenus, noOfPlates, extraPlates }) => {
+    const [newItemName, setNewItemName] = useState("");
+    const [popupMenu, setPopupMenu] = useState(null);
+    const [categories, setCategories] = useState({});
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchMenu = async () => {
             try {
-                const docRef = doc(db, "menu", "Dinner");
-                const docSnap = await getDoc(docRef);
+                const dinnerRef = doc(db, "menu", "Dinner");
+                const dinnerSnap = await getDoc(dinnerRef);
 
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    const categories = data.categories || {};
-
-                    // 🔹 Extract { name: price } format
-                    const items = {};
-                    Object.entries(categories).forEach(([key, value]) => {
-                        items[key] = Number(value.price) || 0;
-                    });
-
-                    setMenuItems(items);
+                if (dinnerSnap.exists()) {
+                    const data = dinnerSnap.data();
+                    setCategories(data.categories || {});
                 }
             } catch (err) {
                 console.error("Error fetching menu:", err);
+            } finally {
+                setLoading(false);
             }
         };
 
         fetchMenu();
     }, []);
 
-    const handleChange = (item, field, value) => {
-        setSelectedMenus((prev) => {
-            const updated = { ...prev };
-            if (!updated[item]) {
-                updated[item] = { rate: menuItems[item], qty: '', total: 0 };
-            }
+    useEffect(() => {
+        const base = parseInt(noOfPlates || "0", 10);
+        const extra = parseInt(extraPlates || "0", 10);
 
-            updated[item][field] = value;
-
-            const rate = parseFloat(updated[item].rate || 0);
-            const qty = parseInt(updated[item].qty || 0);
-            updated[item].total = rate * qty || 0;
-
-            return updated;
-        });
-    };
-
-    const toggleSelection = (item) => {
-        setSelectedMenus((prev) => {
-            const updated = { ...prev };
-
-            if (updated[item]) {
-                delete updated[item];
-            } else {
-                updated[item] = {
-                    rate: menuItems[item],
-                    qty: noOfPlates || '',
-                    total: (menuItems[item] * (noOfPlates || 0)) || 0
+        setSelectedMenus(prev => {
+            const updated = {};
+            for (const [menuKey, menu] of Object.entries(prev)) {
+                const total = (menu.rate || 0) * (base + extra);
+                updated[menuKey] = {
+                    ...menu,
+                    noOfPlates: base,
+                    extraPlates: extra,
+                    total
                 };
             }
             return updated;
         });
+    }, [noOfPlates, extraPlates, setSelectedMenus]);
+
+    const toggleSelection = (menuKey) => {
+        setSelectedMenus(prev => {
+            const isSelected = menuKey in prev;
+            if (isSelected) {
+                const updated = { ...prev };
+                delete updated[menuKey];
+                return updated;
+            }
+
+            const categoryData = categories[menuKey] || {};
+            const rate = parseFloat(categoryData.price || 0);
+
+            const base = parseInt(noOfPlates || "0", 10);
+            const extra = parseInt(extraPlates || "0", 10);
+            const total = rate * (base + extra);
+
+            // Collect all menuItems from sections
+            const selectedSubItems = Object.values(categoryData)
+                .filter(v => typeof v === 'object' && v.menuItems)
+                .flatMap(section => section.menuItems.map(mi => mi.name));
+
+            return {
+                [menuKey]: {
+                    rate,
+                    noOfPlates: base,
+                    extraPlates: extra,
+                    total,
+                    selectedSubItems
+                }
+            };
+
+
+        });
     };
+
+    const toggleSubItem = (menuKey, item) => {
+        setSelectedMenus(prev => {
+            const menu = prev[menuKey];
+            const selected = menu.selectedSubItems || [];
+            const updatedSelected = selected.includes(item)
+                ? selected.filter(i => i !== item)
+                : [...selected, item];
+            return { ...prev, [menuKey]: { ...menu, selectedSubItems: updatedSelected } };
+        });
+    };
+
+    const handleRateChange = (menuKey, value) => {
+        const rate = parseFloat(value || "0");
+        const base = parseInt(noOfPlates || "0", 10);
+        const extra = parseInt(extraPlates || "0", 10);
+        const total = rate * (base + extra);
+
+        setSelectedMenus(prev => ({
+            ...prev,
+            [menuKey]: {
+                ...prev[menuKey],
+                rate,
+                noOfPlates: base,
+                extraPlates: extra,
+                total
+            }
+        }));
+
+    };
+
+    const addNewItem = (menuKey) => {
+        if (!newItemName.trim()) return;
+        setSelectedMenus(prev => {
+            const menu = prev[menuKey];
+            const updatedSelectedSubItems = [...(menu.selectedSubItems || []), newItemName.trim()];
+            return { ...prev, [menuKey]: { ...menu, selectedSubItems: updatedSelectedSubItems } };
+        });
+        setNewItemName("");
+    };
+
+    if (loading) return <p>Loading menu...</p>;
+
 
     return (
         <div className="food-menu-selection">
-            <h4>2. Food Menu Selection</h4>
+            <h4>3. Food Menu Selection</h4>
 
-            {Object.keys(menuItems).length === 0 ? (
-                <p>Loading menu...</p>
-            ) : (
-                Object.keys(menuItems)
-                    .sort((a, b) => a.localeCompare(b))
-                    .map((item, index) => {
-                        const isSelected = selectedMenus[item];
-                        return (
-                            <div key={index} className="menu-row">
+            {Object.keys(categories).map((categoryName) => {
+                const isSelected = categoryName in selectedMenus;
+                const menuData = selectedMenus[categoryName] || {};
+
+                return (
+                    <div key={categoryName} style={{ marginBottom: "16px" }}>
+                        {/* Category Row */}
+                        <div style={{ display: "flex", alignItems: "center" }}>
+                            <label style={{ position: "relative", cursor: "pointer", marginRight: "12px" }}>
                                 <input
                                     type="checkbox"
-                                    checked={!!isSelected}
-                                    onChange={() => toggleSelection(item)}
+                                    checked={isSelected}
+                                    onChange={() => toggleSelection(categoryName)}
+                                    style={{ opacity: 0, width: 0, height: 0 }}
                                 />
-                                <span className="menu-label" style={{ fontWeight: 'bold', fontSize: '17px', marginLeft: '10px' }}>
-                                    {item.replace(/\b\w/g, char => char.toUpperCase())}
-                                </span>
+                                <span
+                                    style={{
+                                        display: "inline-block",
+                                        width: "16px",
+                                        height: "16px",
+                                        borderRadius: "8px",
+                                        border: "1px solid gray",
+                                        backgroundColor: isSelected ? "#4af650" : "#fff",
+                                        boxShadow: isSelected
+                                            ? "0 4px #9b9b9b, 0 6px 8px rgba(27,116,7,0.8)"
+                                            : "0 4px #adadad, 0 6px 5px rgba(0,0,0,0)",
+                                        transition: "all 0.1s ease-in-out",
+                                    }}
+                                />
+                            </label>
 
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
-                                    <span className="math-symbol" style={{ display: 'flex', alignItems: 'center' }}> Rate: </span>
+                            <span style={{ fontWeight: 500 }}>
+                                {categoryName
+                                    .split(" ")
+                                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                    .join(" ")}
+                            </span>
+
+                        </div>
+
+                        {/* If selected, show menu items */}
+                        {isSelected && (
+                            <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                                {/* Menu Button */}
+                                <button
+                                    type="button"
+                                    onClick={() => setPopupMenu(categoryName)}
+                                    style={{
+                                        alignSelf: "flex-start",
+                                        padding: "6px 18px",
+                                        backgroundColor: "#4CAF50",
+                                        color: "#fff",
+                                        border: "none",
+                                        borderRadius: "12px",
+                                        fontWeight: 600,
+                                        fontSize: "14px",
+                                        cursor: "pointer",
+                                        boxShadow: "0 4px #388E3C, 0 6px 10px rgba(0,0,0,0.2)",
+                                        transition: "all 0.15s ease-in-out",
+                                    }}
+                                    onMouseDown={(e) => (e.currentTarget.style.transform = "translateY(2px)")}
+                                    onMouseUp={(e) => (e.currentTarget.style.transform = "translateY(0px)")}
+                                >
+                                    🍽 Menu
+                                </button>
+
+                                {/* Rate × Qty = Total */}
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "12px",
+                                        padding: "8px 12px",
+                                        borderRadius: "12px",
+                                        backgroundColor: "#f0f0f0",
+                                        boxShadow: "inset 3px 3px 6px #d1d1d1, inset -3px -3px 6px #ffffff",
+                                        flexWrap: "wrap",
+                                    }}
+                                >
                                     <input
-                                        style={{ width: '40vw', marginTop: '10px' }}
                                         type="text"
-                                        inputMode="decimal"
-                                        placeholder=""
-                                        disabled={!isSelected}
-                                        value={selectedMenus[item]?.rate || menuItems[item] || ''}
+                                        value={menuData.rate ?? ""}
                                         onChange={(e) => {
                                             let val = e.target.value.replace(/[^0-9.]/g, "");
                                             if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
-                                            handleChange(item, "rate", val);
+                                            handleRateChange(categoryName, val);
                                         }}
-                                    />
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span className="math-symbol" style={{ display: 'flex', alignItems: 'center' }}> Pax: </span>
-                                    <input
-                                        style={{ width: '40vw', marginTop: '10px' }}
-                                        type="text"
-                                        inputMode="numeric"
                                         placeholder=""
-                                        disabled={!isSelected}
-                                        value={selectedMenus[item]?.qty || ''}
-                                        onChange={(e) => {
-                                            const val = e.target.value.replace(/[^0-9]/g, "");
-                                            handleChange(item, "qty", val);
+                                        style={{
+                                            width: "90px",
+                                            padding: "6px 10px",
+                                            borderRadius: "8px",
+                                            border: "none",
+                                            outline: "none",
+                                            textAlign: "center",
+                                            fontWeight: 500,
+                                            backgroundColor: "#e0e0e0",
+                                            boxShadow: "3px 3px 6px rgba(0,0,0,0.2), -3px -3px 6px rgba(255,255,255,0.7)",
                                         }}
                                     />
-                                </div>
 
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
-                                    <label style={{ display: "flex", alignItems: 'center' }}></label>
-                                    <span>Total: ₹{selectedMenus[item]?.total?.toFixed(0) || '0'}</span>
-                                </div>
+                                    <span style={{ fontWeight: 600 }}>×</span>
 
+                                    <input
+                                        type="text"
+                                        disabled
+                                        value={`${parseInt(noOfPlates || 0)} + ${parseInt(extraPlates || 0)}`}
+                                        style={{
+                                            width: "100px",
+                                            padding: "6px 10px",
+                                            borderRadius: "8px",
+                                            border: "none",
+                                            outline: "none",
+                                            textAlign: "center",
+                                            fontWeight: 500,
+                                            backgroundColor: "#e0e0e0",
+                                            boxShadow: "3px 3px 6px rgba(0,0,0,0.2), -3px -3px 6px rgba(255,255,255,0.7)",
+                                        }}
+                                    />
+
+                                    <span
+                                        style={{
+                                            fontWeight: 700,
+                                            padding: "6px 10px",
+                                            borderRadius: "8px",
+                                            backgroundColor: "#4CAF50",
+                                            color: "#fff",
+                                            boxShadow: "3px 3px 6px rgba(0,0,0,0.3), -2px -2px 5px rgba(255,255,255,0.5)",
+                                        }}
+                                    >
+                                        = ₹{menuData?.total?.toFixed(0) ?? "0"}
+                                    </span>
+                                </div>
                             </div>
-                        );
-                    })
+                        )}
+                    </div>
+                );
+            })}
+
+            {/* Popup Menu for subitems */}
+            {popupMenu && (
+                <div
+                    className="menu-popup"
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        backgroundColor: "rgba(0, 0, 0, 0.27)",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        zIndex: 9999,
+                    }}
+                >
+                    <div
+                        style={{
+                            backgroundColor: "#e0e0e0",
+                            padding: "20px",
+                            borderRadius: "16px",
+                            maxWidth: "400px",
+                            width: "90%",
+                            maxHeight: "95%",
+                            overflowY: "auto",
+                        }}
+                    >
+
+                        <h4 style={{ textAlign: "center", marginBottom: "16px", textDecoration: 'underline' }}>
+                            {popupMenu
+                                .split(" ")
+                                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                .join(" ")}
+                        </h4>
+
+                        {categories[popupMenu] &&
+                            Object.keys(categories[popupMenu])
+                                .filter(subCat => typeof categories[popupMenu][subCat] === 'object')
+                                .map((subCat) => (
+                                    <div key={subCat} style={{ marginBottom: "12px" }}>
+                                        <h5
+                                            style={{
+                                                fontWeight: 700,
+                                                marginBottom: "6px",
+                                                color: 'red',
+                                                fontSize: '16px'
+                                            }}
+                                        >
+                                            {subCat.toUpperCase()}
+                                        </h5>
+
+                                        {categories[popupMenu][subCat].menuItems?.map((item) => {
+                                            const isChecked = selectedMenus[popupMenu]?.selectedSubItems?.includes(item.name);
+                                            return (
+                                                <label
+                                                    key={item.id}
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: "10px",
+                                                        padding: "6px 10px",
+                                                        marginBottom: "6px",
+                                                        borderRadius: "8px",
+                                                        background: "#e0e0e0",
+                                                        boxShadow: "2px 2px 5px #bebebe, -2px -2px 5px #ffffff",
+                                                        cursor: "pointer",
+                                                    }}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isChecked}
+                                                        onChange={() => toggleSubItem(popupMenu, item.name)}
+                                                        style={{ display: "none" }}
+                                                    />
+                                                    <span
+                                                        style={{
+                                                            width: "20px",
+                                                            height: "20px",
+                                                            borderRadius: "50%",
+                                                            background: isChecked ? "#4CAF50" : "#e0e0e0",
+                                                            boxShadow: isChecked
+                                                                ? "inset 2px 2px 5px #2d7a32, inset -2px -2px 5px #6ad97d"
+                                                                : "inset 2px 2px 5px #bebebe, inset -2px -2px 5px #ffffff",
+                                                            transition: "all 0.1s",
+                                                        }}
+                                                    />
+                                                    {item.name}
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                ))
+                        }
+
+                        {selectedMenus[popupMenu]?.selectedSubItems?.some(itemName => {
+                            return !Object.values(categories[popupMenu] || {})
+                                .some(subCat => subCat.menuItems?.some(mi => mi.name === itemName));
+                        }) && (
+                                <div style={{ marginBottom: "12px" }}>
+
+                                    <h5
+                                        style={{
+                                            fontWeight: 700,
+                                            marginBottom: "6px",
+                                            color: 'red',
+                                            fontSize: '16px'
+                                        }}
+                                    >
+                                        Added
+                                    </h5>
+
+                                    {selectedMenus[popupMenu].selectedSubItems
+                                        .filter(itemName => !Object.values(categories[popupMenu] || {})
+                                            .some(subCat => subCat.menuItems?.some(mi => mi.name === itemName))
+                                        )
+                                        .map((itemName, idx) => (
+                                            <label
+                                                key={idx}
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "10px",
+                                                    padding: "6px 10px",
+                                                    marginBottom: "6px",
+                                                    borderRadius: "8px",
+                                                    background: "#e0e0e0",
+                                                    boxShadow: "2px 2px 5px #bebebe, -2px -2px 5px #ffffff",
+                                                    cursor: "pointer",
+                                                }}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={true}
+                                                    onChange={() => toggleSubItem(popupMenu, itemName)}
+                                                    style={{ display: "none" }}
+                                                />
+                                                <span
+                                                    style={{
+                                                        width: "20px",
+                                                        height: "20px",
+                                                        borderRadius: "50%",
+                                                        background: "#4CAF50",
+                                                        boxShadow: "inset 2px 2px 5px #2d7a32, inset -2px -2px 5px #6ad97d",
+                                                        transition: "all 0.1s",
+                                                    }}
+                                                />
+                                                {itemName}
+                                            </label>
+                                        ))}
+                                </div>
+                            )}
+
+                        {/* Add Custom Item Input */}
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                            <input
+                                type="text"
+                                value={newItemName}
+                                onChange={(e) => setNewItemName(e.target.value)}
+                                placeholder=""
+                                style={{ flex: 1, padding: '6px', borderRadius: '8px', border: '1px solid #ccc' }}
+                            />
+                            <button
+                                type='button'
+                                onClick={() => addNewItem(popupMenu)}
+                                style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: '#4CAF50',
+                                    color: '#fff',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Add
+                            </button>
+                        </div>
+
+                        {/* Close Button */}
+                        <button
+                            type='button'
+                            onClick={() => setPopupMenu(null)}
+                            style={{
+                                marginTop: "16px",
+                                padding: "8px 14px",
+                                borderRadius: "12px",
+                                border: "none",
+                                background: "#f44336",
+                                color: "#fff",
+                                cursor: "pointer",
+                                fontSize: "14px",
+                                width: "100%",
+                                boxShadow: "inset 4px 4px 6px #c32d28, inset -4px -4px 6px #f18e87",
+                                transition: "all 0.1s",
+                            }}
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
             )}
+
         </div>
     );
 };

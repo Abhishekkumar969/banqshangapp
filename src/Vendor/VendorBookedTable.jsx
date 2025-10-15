@@ -1,10 +1,12 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { collection, getDocs, doc, updateDoc, arrayUnion, serverTimestamp, setDoc, deleteField } from 'firebase/firestore';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { collection, getDocs, doc, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import '../styles/VendorTable.css';
 import BackButton from "../components/BackButton";
 import { useNavigate } from 'react-router-dom';
 import VendorLogPopupCell from './VendorLogPopupCell.jsx';
+import { query, where } from "firebase/firestore";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const VendorTable = () => {
   const [allBookings, setAllBookings] = useState([]);
@@ -12,48 +14,104 @@ const VendorTable = () => {
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [amount, setAmount] = useState("");
   const [showPopup, setShowPopup] = useState(false);
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [vendorProfile, setVendorProfile] = useState(null);
   const navigate = useNavigate();
-  const [sortOrder, setSortOrder] = useState("desc"); // "asc" ya "desc"
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const vendorSnap = await getDocs(collection(db, "vendor"));
-        const vendors = vendorSnap.docs.map(docItem => ({
-          id: docItem.id,
-          source: "vendor",
-          ...docItem.data(),
-          finalDate: docItem.data().date
-        }));
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
 
-        const merged = [];
-        const seenKeys = new Set();
-        const makeKey = (name, contact, eventType, date) =>
-          `${(name || "").toLowerCase()}|${(contact || "").replace(/\s+/g, "")}|${(eventType || "").toLowerCase()}|${date ? new Date(date).toISOString().split("T")[0] : ""}`;
+    if (!currentUser) return; // No user logged in
 
-        vendors.forEach(v => {
-          const key = makeKey(v.customerName, v.contactNo, v.eventType || v.typeOfEvent, v.finalDate);
-          if (!seenKeys.has(key)) {
-            seenKeys.add(key);
-            merged.push(v);
-          }
-        });
+    const vendorCollection = collection(db, "vendor");
+    const unsubscribe = onSnapshot(
+      vendorCollection,
+      async (snapshot) => {
+        try {
+          // ✅ Get user access info from usersAccess collection
+          const q = query(collection(db, "usersAccess"), where("email", "==", currentUser.email));
+          const userSnap = await getDocs(q);
+          const userData = userSnap.empty ? {} : userSnap.docs[0].data();
+          const hasFullAccess = userData.accessToApp === "A" || userData.accessToApp === "B";
 
-        merged.sort((a, b) => {
-          const dateA = a.finalDate ? new Date(a.finalDate) : new Date(0);
-          const dateB = b.finalDate ? new Date(b.finalDate) : new Date(0);
+          const merged = [];
+          const seenKeys = new Set();
+          let serialCounter = 1;
 
-          if (sortOrder === "asc") return dateA - dateB;
-          else return dateB - dateA;
-        });
+          const makeKey = (name, contact, eventType, date) =>
+            `${(name || "").toLowerCase()}|${(contact || "").replace(/\s+/g, "")}|${(eventType || "").toLowerCase()}|${date ? new Date(date).toISOString().split("T")[0] : ""}`;
 
-        setAllBookings(merged);
-      } catch (error) {
-        console.error("❌ Error fetching data:", error);
+          snapshot.docs.forEach((monthDoc) => {
+            const monthData = monthDoc.data();
+            Object.entries(monthData).forEach(([bookingId, booking]) => {
+              // ✅ Filter based on userEmail unless full access
+              if (!hasFullAccess && booking.userEmail !== currentUser.email) return;
+
+              const key = makeKey(
+                booking.customerName,
+                booking.contactNo,
+                booking.eventType || booking.typeOfEvent,
+                booking.date
+              );
+              if (!seenKeys.has(key)) {
+                seenKeys.add(key);
+                merged.push({
+                  id: bookingId,
+                  slNo: serialCounter++, // sequential
+                  source: "vendor",
+                  ...booking,
+                  finalDate: booking.date,
+                  monthYear: monthDoc.id,
+                });
+              }
+            });
+          });
+
+          // Sort by date
+          merged.sort((a, b) => {
+            const dateA = a.finalDate ? new Date(a.finalDate) : new Date(0);
+            const dateB = b.finalDate ? new Date(b.finalDate) : new Date(0);
+            return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+          });
+
+          setAllBookings(merged);
+        } catch (err) {
+          console.error("❌ Error processing data:", err);
+        }
+      },
+      (error) => {
+        console.error("❌ Error fetching real-time data:", error);
       }
-    };
-    fetchData();
+    );
+
+    return () => unsubscribe();
   }, [sortOrder]);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user && user.email) {
+        try {
+          const q = query(
+            collection(db, "usersAccess"),
+            where("email", "==", user.email)
+          );
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            const userData = snapshot.docs[0].data();
+            setVendorProfile(userData); // ✅ store vendor profile info
+            console.log("✅ Vendor profile loaded:", userData);
+          } else {
+            console.warn("❌ No vendor record found for this user.");
+          }
+        } catch (error) {
+          console.error("🔥 Error fetching vendor profile:", error);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const convertTo12Hour = (timeStr) => {
     if (!timeStr) return "-";
@@ -65,11 +123,16 @@ const VendorTable = () => {
 
   const formatDateTime = (timestamp) => {
     if (!timestamp) return "-";
-    let date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    if (isNaN(date.getTime())) return "-";
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const year = date.getFullYear();
+
+    const d = new Date(timestamp);
+
+    // Convert to IST by adding 5.5 hours (19800000 ms)
+    const istTime = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+
+    const day = String(istTime.getUTCDate()).padStart(2, "0");
+    const month = String(istTime.getUTCMonth() + 1).padStart(2, "0");
+    const year = istTime.getUTCFullYear();
+
     return `${day}-${month}-${year}`;
   };
 
@@ -80,8 +143,7 @@ const VendorTable = () => {
   };
 
   const getGrandTotal = (v) => parseMoney(v?.summary?.grandTotal);
-  const getAdvanceTotal = (v) =>
-    Array.isArray(v?.advance) ? v.advance.reduce((s, a) => s + parseMoney(a?.amount), 0) : 0;
+  const getAdvanceTotal = (v) => Array.isArray(v?.advance) ? v.advance.reduce((s, a) => s + parseMoney(a?.amount), 0) : 0;
 
   const handleAddAmountClick = (vendor) => {
     setSelectedVendor(vendor);
@@ -90,19 +152,29 @@ const VendorTable = () => {
 
   const handleSaveAmount = async () => {
     if (!selectedVendor || !amount) return;
+
+    if (!selectedVendor.monthYear || !selectedVendor.id) {
+      console.error("Selected vendor missing monthYear or id:", selectedVendor);
+      alert("Cannot add amount: vendor data incomplete.");
+      return;
+    }
+
     try {
-      const vendorRef = doc(db, "vendor", selectedVendor.id);
-      await updateDoc(vendorRef, {
-        advance: arrayUnion({
+      const monthDocRef = doc(db, "vendor", selectedVendor.monthYear);
+
+      await updateDoc(monthDocRef, {
+        [`${selectedVendor.id}.advance`]: arrayUnion({
           amount: Number(amount),
           date: new Date().toISOString(),
         }),
       });
-      alert("Amount added successfully ✅");
+
+      // alert("Amount added successfully ✅");
       setAmount("");
       setShowPopup(false);
     } catch (error) {
       console.error("❌ Error updating vendor:", error);
+      alert("❌ Failed to add amount.");
     }
   };
 
@@ -176,6 +248,20 @@ const VendorTable = () => {
 
   const getPrintFormat = (v, showRates) => {
     const services = normalizeServices(v?.services);
+    const firm = vendorProfile?.firmName || "Vendor Firm Name";
+    const address = vendorProfile?.address || "Vendor Address";
+    const contact = vendorProfile?.contactNo || "Contact Number";
+    const email = vendorProfile?.email || "Email";
+    const termsText = vendorProfile?.termsAndConditions || "";
+
+    const termsList = (() => {
+      if (!termsText) return [];
+      return termsText
+        .split(/\d+\.\s*/g)
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+    })();
+
     return (
       <div
         style={{
@@ -187,13 +273,12 @@ const VendorTable = () => {
           lineHeight: "1.4",
         }}
       >
-        {/* HEADER */}
         <h2 style={{ textAlign: "center", margin: 0, fontWeight: "bold", fontSize: "30px", wordSpacing: '5px' }}>
-          Global Events & Wedding Planner
+          {firm || "Vendor Firm Name"}
         </h2>
         <p style={{ textAlign: "center", fontSize: "15px", margin: "2px 0 10px 0" }}>
-          <span style={{ fontWeight: "bold" }}> Bazar Samiti Main Road, Magahdesiya Colony, Patna - 800016 <br />
-            Mob: 8084611124 | Email: vishnuldemon4480@gmail.com </span>
+          <span style={{ fontWeight: "bold" }}> {address || "Vendor Address"} <br />
+            Mob: {contact || "Contact Number"} | Email: {email || "Email"} </span>
         </p>
 
         {/* CUSTOMER DETAILS */}
@@ -202,7 +287,7 @@ const VendorTable = () => {
             <span>
               No:{" "}
               <span style={{ display: "inline-block", minWidth: "100px", color: 'black' }}>
-                {v?.slNo || ""}
+                {v.slNo || ""}
               </span>
             </span>
             <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }} >
@@ -327,33 +412,50 @@ const VendorTable = () => {
             fontWeight: "bold",
           }}
         >
-          <p>
-            GST 18%:{" "}
-            {v?.summary?.gstAmount
-              ? Number(v.summary.gstAmount).toLocaleString("en-IN")
-              : 0}
-          </p>
-          <p>
-            Grand Total:{" "}
-            {v?.summary?.grandTotal
-              ? Number(v.summary.grandTotal).toLocaleString("en-IN")
-              : 0}
-          </p>
+          {/* ✅ Show only if GST > 0 */}
+          {parseFloat(v?.summary?.gstAmount) > 0 && (
+            <p>
+              GST 18%:{" "}
+              {Number(v.summary.gstAmount).toLocaleString("en-IN")}
+            </p>
+          )}
+
+          {/* ✅ Show only if Grand Total > 0 */}
+          {parseFloat(v?.summary?.grandTotal) > 0 && (
+            <p>
+              Grand Total:{" "}
+              {Number(v.summary.grandTotal).toLocaleString("en-IN")}
+            </p>
+          )}
         </div>
 
+
         {/* TERMS */}
-        <h4 style={{ marginTop: "20px", fontSize: "18px", textDecoration: 'underline', marginBottom: 0 }}>
-          Terms & Conditions:
-        </h4>
-        <ol style={{ fontSize: "12px", paddingLeft: "20px", marginTop: 0 }}>
-          <li>GST 18% Extra as applicable.</li>
-          <li>50% advance & rest 50% before function date (Atleast 1 Week before Function Date).</li>
-          <li>DJ & Sound Music will not allowed after 10:00 PM.</li>
-          <li>Booking Cancellation / Changing of Date will be acceptable on subject to available / Consideration.</li>
-          <li>No amount will be refunded, if booking will be cancel within 1 month from function date.</li>
-          <li>Any physical damage will be responsible & paid by customer.</li>
-          <li>Security charges will be applicable @Rs. 10,000/- if Required.</li>
-        </ol>
+        {termsList.length > 0 && (
+          <>
+            <h4
+              style={{
+                marginTop: "20px",
+                fontSize: "18px",
+                textDecoration: "underline",
+                marginBottom: 0,
+              }}
+            >
+              Terms & Conditions:
+            </h4>
+            <ol
+              style={{
+                fontSize: "12px",
+                paddingLeft: "20px",
+                marginTop: 0,
+              }}
+            >
+              {termsList.map((line, index) => (
+                <li key={index}>{line}</li>
+              ))}
+            </ol>
+          </>
+        )}
 
         {/* SIGNATURE */}
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: "100px", textAlign: "center" }}>
@@ -422,7 +524,7 @@ const VendorTable = () => {
                     const totalPayOut = booking.royalityPayments?.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) || 0;
                     return acc + (totalRoyalty - totalPayOut);
                   }, 0).toLocaleString("en-IN")}`,
-                  'Booked on'
+                  'Booked By'
                 ].map(header => (
                   <th key={header}>{header}</th>
                 ))}
@@ -477,44 +579,71 @@ const VendorTable = () => {
   );
 };
 
-function BookingRow({
-  v, idx, filteredCount,
-  convertTo12Hour, formatDateTime,
-  getAdvanceTotal, getGrandTotal, normalizeServices,
-  navigate, getPrintFormat, handleAddAmountClick
-}) {
-  const [showPopupView, setShowPopupView] = useState(false); // ✅ Add here
+function BookingRow({ v, idx, filteredCount, convertTo12Hour, getAdvanceTotal, getGrandTotal, normalizeServices, navigate, getPrintFormat, handleAddAmountClick }) {
+  const [showPopupView, setShowPopupView] = useState(false);
   const [showRates, setShowRates] = useState(false);
+  const [vendorProfile, setVendorProfile] = useState(null);
+  const [appUserName, setAppUserName] = useState("App User");
 
-  const printRef = useRef(null); // ✅ per-row ref (legal: inside its own component)
-  const iframeRef = useRef(null);
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user && user.email) {
+        try {
+          const q = query(
+            collection(db, "usersAccess"),
+            where("email", "==", user.email)
+          );
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            const userData = snapshot.docs[0].data();
+            setAppUserName(userData.name || user.email || "App User");
+            console.log("✅ App user name loaded:", userData.name);
+          } else {
+            setAppUserName(user.email); // fallback to email if not found
+            console.warn("❌ No user record found for this email");
+          }
+        } catch (err) {
+          console.error("🔥 Error fetching app user name:", err);
+          setAppUserName(user.email);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
-  const handlePrint = () => {
-    if (!printRef.current) return;
+  const printRef = useRef(null);
 
-    // Create a hidden iframe if not exists
-    if (!iframeRef.current) {
-      const iframe = document.createElement("iframe");
-      iframe.style.position = "absolute";
-      iframe.style.width = "0";
-      iframe.style.height = "0";
-      iframe.style.border = "0";
-      document.body.appendChild(iframe);
-      iframeRef.current = iframe;
-    }
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user && user.email) {
+        try {
+          const q = query(collection(db, "usersAccess"), where("email", "==", user.email));
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            setVendorProfile(snapshot.docs[0].data());
+          } else {
+            console.warn("No vendor record found for this user.");
+          }
+        } catch (error) {
+          console.error("Error fetching vendor profile:", error);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
-    const doc = iframeRef.current.contentWindow.document;
-    doc.open();
-    doc.write("<html><head><title>Print</title></head><body>");
-    doc.write(printRef.current.innerHTML);
-    doc.write("</body></html>");
-    doc.close();
+  const allAdvances = (v.advance || []).map((adv, index) => ({
+    ...adv,
+    customerName: v.customerName,
+    contactNo: v.contactNo,
+    eventType: v.typeOfEvent,
+    bookedOn: v.bookedOn,
+    slNo: index + 1,
+  }));
 
-    iframeRef.current.contentWindow.focus();
-    iframeRef.current.contentWindow.print();
-  };
-
-  const svcs = normalizeServices(v.services);
+  const svcs = normalizeServices(v.services || []);
   const totalRoyalty = svcs.reduce((s, srv) => s + (Number(srv.royaltyAmount) || 0), 0);
   const royaltyPercents = svcs.map(srv => Number(srv.royaltyPercent) || 0).filter(p => p > 0);
   const avgRoyaltyPercent = royaltyPercents.length ? (royaltyPercents.reduce((a, b) => a + b, 0) / royaltyPercents.length).toFixed(2) : 0;
@@ -526,17 +655,125 @@ function BookingRow({
   const totalPayOut = royaltyPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   const remainingPayout = totalRoyalty - totalPayOut;
 
+  // const formatDate = (date) => {
+  //   if (!date) return "-";
+  //   const d = new Date(date);
+  //   const istTime = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+  //   const day = String(istTime.getUTCDate()).padStart(2, "0");
+  //   const month = String(istTime.getUTCMonth() + 1).padStart(2, "0");
+  //   const year = istTime.getUTCFullYear();
+  //   return `${day}-${month}-${year}`;
+  // };
+
+  const formatDate = (date) => {
+    if (!date) return "-";
+    const d = new Date(date);
+    const istTime = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+
+    const day = String(istTime.getUTCDate()).padStart(2, "0");
+    const month = String(istTime.getUTCMonth() + 1).padStart(2, "0");
+    const year = istTime.getUTCFullYear();
+
+    let hours = istTime.getUTCHours();
+    const minutes = String(istTime.getUTCMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12; // convert to 12-hour format
+
+    return `${day}-${month}-${year}, ${hours}:${minutes} ${ampm}`;
+  };
+
+
+  const handlePrintPayment = useCallback((receipt, adv) => {
+    const firm = vendorProfile?.firmName || "Vendor Firm Name";
+    const address = vendorProfile?.address || "Vendor Address";
+    const contact = vendorProfile?.contactNo || "Contact Number";
+    const email = vendorProfile?.email || "Email";
+
+    const content = `
+      <html>
+      <head>
+        <title>Receipt - #${adv.slNo}</title>
+        <style>
+          body { font-family: 'Calibri', sans-serif; color: #3c0000; font-size: 20px; padding: 30px 40px; }
+          .main-title { text-align: center; font-size: 38px; font-weight: bold; margin-top: 5px; color: maroon; }
+          .sub-header { text-align: center; font-size: 15px; margin: 1px 0; }
+          .line-group { display: flex; justify-content: space-between; margin-top: 20px; }
+          .section { margin: 10px 0; display: flex; gap: 8px; }
+          .underline { flex-grow: 1; border-bottom: 1px dotted #000; min-width: 150px; }
+          .short-underline { display: inline-block; border-bottom: 1px dotted #000; min-width: 100px; }
+          .rs-combo { display: flex; align-items: center; margin-top: 30px; }
+          .circle-rs { width: 60px; height: 60px; border-radius: 50%; background-color: transparent; color: #3c0000; font-size: 30px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+          .amount-box { border: 1px solid maroon; padding: 6px 14px; font-weight: bold; min-width: 100px; font-size: 30px; }
+          .signature { font-weight: bold; font-size: 18px; text-align: right; margin-top: 40px; }
+          .italic { font-style: italic; }
+          .payment-row { display: flex; justify-content: space-between; align-items: center; margin-top: 0px; }
+        </style>
+      </head>
+      <body>
+        <div style="border: 1px solid maroon; padding: 1px">
+          <div style="border: 1px solid maroon; padding: 30px">
+            <div class="main-title">${firm}</div>
+            <div class="sub-header">${address}</div>
+            <div class="sub-header">Mob: ${contact} | Email: ${email}</div>
+            <div class="line-group">
+              <div>No.<span>${adv.slNo}</span></div>
+              <div>Date: <span class="short-underline">${formatDate(adv.date)}</span></div>
+            </div>
+            <div class="section italic">Received with thanks from: <div class="underline">${adv.customerName}</div></div>
+            <div class="section italic"><span>Mob.:</span><div class="underline">${adv.contactNo || '-'}</div></div>
+            <div class="section italic">
+              for event of: <div class="underline">${adv.eventType || '-'}</div>
+              <span style="margin-left:auto;">Event Date: <span class="short-underline">${formatDate(adv.date)}</span></span>
+            </div>
+            <div class="payment-row">
+              <div class="rs-combo">
+                <div class="circle-rs">₹</div>
+                <div class="amount-box">${adv.amount}/-</div>
+              </div>
+         
+              <div class="signature">
+  Issued By: 
+  <span style="display:flex; flex-direction:column; align-items:flex-start;">
+    <!-- App user name on top -->
+    <span style="font-weight:bold; font-size:14px; margin-bottom:2px;">${appUserName}</span>
+    <!-- Underline for issued by -->
+    <span class="short-underline">${receipt.receiverd || receipt.senderd || ''}</span>
+  </span>
+</div>
+
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    let iframe = document.getElementById("print-frame");
+    if (!iframe) {
+      iframe = document.createElement("iframe");
+      iframe.id = "print-frame";
+      iframe.style.display = "none";
+      document.body.appendChild(iframe);
+    }
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(content);
+    doc.close();
+
+    iframe.onload = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    };
+  }, [vendorProfile, appUserName]);
+
   return (
     <tr>
       <td>{filteredCount - idx}</td>
-      <td>
-        {v.finalDate
-          ? (() => {
-            const [y, m, d] = v.finalDate.split("-").map(Number);
-            return `${String(d).padStart(2, "0")}-${String(m).padStart(2, "0")}-${y}`;
-          })()
-          : "-"}
-      </td>
+      <td>{v.finalDate ? (() => {
+        const [y, m, d] = v.finalDate.split("-").map(Number);
+        return `${String(d).padStart(2, "0")}-${String(m).padStart(2, "0")}-${y}`;
+      })() : "-"}</td>
       <td>{v.customerName}</td>
       <td><a href={`tel:${v.contactNo}`} style={{ color: "black", textDecoration: "none" }}>{v.contactNo}</a></td>
       <td>{v.address}</td>
@@ -546,64 +783,80 @@ function BookingRow({
       <td>₹{v.summary?.totalPackageCost || 0}</td>
       <td>₹{v.summary?.discount || 0}</td>
       <td>₹{v.summary?.gstAmount || 0}</td>
-      <td style={{ backgroundColor: '#d1ff98ff' }}><strong>₹{grandTotal}</strong></td>
-      <td>{v.advance?.map((a, i) => <span key={i}>₹{a.amount} ({new Date(a.date).toLocaleDateString()}) - </span>)}</td>
-      <td><strong>₹{advanceTotal}</strong></td>
-      <td style={{ backgroundColor: '#fdbbb1ff' }}><strong>₹{remaining}</strong></td>
+      <td style={{ backgroundColor: '#1ce202ff' }}><strong>₹{grandTotal}</strong></td>
 
-      <td>
-        <button
-          onClick={() => setShowPopupView(true)}
-          style={{
-            padding: "5px 10px",
-            cursor: "pointer",
-            borderRadius: "5px",
-            backgroundColor: "#007bff",
-            color: "#fff",
-            border: "none",
-          }}
-        >
-          View
-        </button>
-
-        {showPopupView && (
-          <div
-            className="modal-overlay"
-            onClick={() => setShowPopupView(false)}
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: "rgba(0,0,0,0.5)",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              zIndex: 1000,
-            }}
-          >
-            <div
-              className="modal-content"
-              onClick={(e) => e.stopPropagation()}
+      <td >
+        <div style={{ display: 'flex' }}>
+          {allAdvances.map((a, i) => (
+            <span
+              key={i}
               style={{
-                background: "#fff",
-                padding: "20px",
-                borderRadius: "8px",
-                maxHeight: "80vh",
-                overflowY: "auto",
-                width: "100vw",
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '7px 10px',
+                margin: '0px 5px',
+                borderRadius: '7px',
+                boxShadow: `
+                  2px 2px 5px rgba(158, 156, 156, 0.4),
+                  inset -2px -2px 5px rgba(119, 119, 119, 0.6)
+                `,
+                fontWeight: 'bold',
+                transition: 'all 0.2s ease-in-out',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = `
+                  4px 4px 8px rgba(0,0,0,0.5),
+                  inset -2px -2px 5px rgba(202, 202, 202, 0.6)
+                `;
+                e.currentTarget.style.backgroundColor = '#e4e4e4ff';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = `
+                  2px 2px 5px rgba(158, 156, 156, 0.4),
+                  inset -2px -2px 5px rgba(119, 119, 119, 0.6),
+                  `;
+                e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
-              <h3>Services</h3>
-              <table
+              <span>₹{a.amount} ({formatDate(a.date)})</span>
+              <button
+                onClick={() => handlePrintPayment(v, a)}
                 style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  marginTop: "10px",
-                  fontSize: "14px",
+                  marginLeft: '10px',
+                  background: '#b52e2e',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  padding: '2px 12px',
+                  boxShadow: '1px 1px 3px rgba(0,0,0,0.3)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
                 }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
               >
+                Print
+              </button>
+            </span>
+
+          ))}
+        </div>
+      </td>
+
+      <td><strong>₹{advanceTotal}</strong></td>
+      <td style={{ backgroundColor: '#f80000c1' }}><strong>₹{remaining}</strong></td>
+
+      <td>
+        <button onClick={() => setShowPopupView(true)} style={{ padding: "5px 10px", cursor: "pointer", borderRadius: "5px", backgroundColor: "#007bff", color: "#fff", border: "none" }}>View</button>
+
+        {showPopupView && (
+          <div onClick={() => setShowPopupView(false)} style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", padding: "20px", borderRadius: "8px", maxHeight: "80vh", overflowY: "auto", width: "100vw" }}>
+              <h3>Services</h3>
+              <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "10px", fontSize: "14px" }}>
                 <thead>
                   <tr>
                     <th style={{ border: "1px solid #ccc", padding: "6px" }}>#</th>
@@ -619,159 +872,73 @@ function BookingRow({
                 <tbody>
                   {svcs.map((srv, i) => (
                     <tr key={i}>
-                      <td style={{ border: "1px solid #ccc", padding: "6px", textAlign: "left" }}>{i + 1}</td>
+                      <td style={{ border: "1px solid #ccc", padding: "6px" }}>{i + 1}</td>
                       <td style={{ border: "1px solid #ccc", padding: "6px" }}>{srv.name}</td>
                       <td style={{ border: "1px solid #ccc", padding: "6px" }}>{srv.remarks || ""}</td>
-                      <td style={{ border: "1px solid #ccc", padding: "6px", textAlign: "left" }}>{srv.qty || 0}</td>
-                      <td style={{ border: "1px solid #ccc", padding: "6px", textAlign: "left" }}>₹{srv.rate || 0}</td>
-                      <td style={{ border: "1px solid #ccc", padding: "6px", textAlign: "left" }}>₹{srv.total || 0}</td>
-                      <td style={{ border: "1px solid #ccc", padding: "6px", textAlign: "left" }}>{srv.royaltyPercent || 0}%</td>
-                      <td style={{ border: "1px solid #ccc", padding: "6px", textAlign: "left" }}>₹{srv.royaltyAmount || 0}</td>
+                      <td style={{ border: "1px solid #ccc", padding: "6px" }}>{srv.qty || 0}</td>
+                      <td style={{ border: "1px solid #ccc", padding: "6px" }}>₹{srv.rate || 0}</td>
+                      <td style={{ border: "1px solid #ccc", padding: "6px" }}>₹{srv.total || 0}</td>
+                      <td style={{ border: "1px solid #ccc", padding: "6px" }}>{srv.royaltyPercent || 0}%</td>
+                      <td style={{ border: "1px solid #ccc", padding: "6px" }}>₹{srv.royaltyAmount || 0}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-
-              <button
-                onClick={() => setShowPopupView(false)}
-                style={{
-                  marginTop: "10px",
-                  padding: "5px 10px",
-                  cursor: "pointer",
-                  borderRadius: "5px",
-                  backgroundColor: "#dc3545",
-                  color: "#fff",
-                  border: "none",
-                }}
-              >
-                Close
-              </button>
+              <button onClick={() => setShowPopupView(false)} style={{ marginTop: "10px", padding: "5px 10px", cursor: "pointer", borderRadius: "5px", backgroundColor: "#dc3545", color: "#fff", border: "none" }}>Close</button>
             </div>
           </div>
         )}
       </td>
 
-      <td>
-        <button style={{ backgroundColor: 'green' }} onClick={() => handleAddAmountClick(v)}>Add Amount</button>
-      </td>
+      <td><button style={{ backgroundColor: 'green' }} onClick={() => handleAddAmountClick(v)}>Add Amount</button></td>
 
-      <td style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "10px",
-        cursor: "pointer",
-      }}>
+      <td style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", padding: "11px 8px" }}>
+        <div ref={printRef} style={{ display: "none" }}>{getPrintFormat(v, showRates)}</div>
 
-        {/* Hidden printable content for THIS row */}
-        <div ref={printRef} style={{ display: "none" }}>
-          {getPrintFormat(v, showRates)}
-        </div>
-
-        {/* ✅ Toggle + Text in one line */}
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            cursor: "pointer",
-          }}
-        >
-          <div
-            onClick={() => setShowRates(!showRates)}
-            style={{
-              width: "50px",
-              height: "24px",
-              borderRadius: "20px",
-              background: showRates ? "#4caf50" : "#ccc",
-              position: "relative",
-              cursor: "pointer",
-              transition: "background 0.3s",
-            }}
-          >
-            <div
-              style={{
-                width: "20px",
-                height: "20px",
-                borderRadius: "50%",
-                background: "#fff",
-                position: "absolute",
-                top: "2px",
-                left: showRates ? "26px" : "2px",
-                transition: "left 0.3s",
-                boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
-              }}
-            ></div>
+        <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+          <div onClick={() => setShowRates(!showRates)} style={{ width: "50px", height: "24px", borderRadius: "20px", background: showRates ? "#4caf50" : "#ccc", position: "relative", cursor: "pointer", transition: "background 0.3s" }}>
+            <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#fff", position: "absolute", top: "2px", left: showRates ? "26px" : "2px", transition: "left 0.3s", boxShadow: "0 2px 5px rgba(0,0,0,0.2)" }}></div>
           </div>
-
-          {/* ✅ Text change according to toggle */}
-          <span style={{ fontWeight: "bold" }}>
-            {!showRates && (
-              <span style={{ color: "red", textDecoration: "line-through" }}>R&T</span>
-            )}
-            {showRates && <span style={{ color: "green" }}>R&T</span>}
-          </span>
+          <span style={{ fontWeight: "bold" }}>{!showRates ? <span style={{ color: "red", textDecoration: "line-through" }}>R&T</span> : <span style={{ color: "green" }}>R&T</span>}</span>
         </label>
 
-        <button
-          onClick={handlePrint}
-          style={{
-            backgroundColor: "#51bc36ff",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-            marginRight: "10px",
-          }}
-        >
-          🖨
-        </button>
+        <button onClick={() => {
+          if (!printRef.current) return;
+          const iframe = document.createElement("iframe");
+          iframe.style.display = "none";
+          document.body.appendChild(iframe);
+          const doc = iframe.contentWindow.document;
+          doc.open();
+          doc.write(printRef.current.innerHTML);
+          doc.close();
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        }} style={{ backgroundColor: "#51bc36ff", color: "white", border: "none", borderRadius: "5px", cursor: "pointer", marginRight: "10px" }}>🖨</button>
       </td>
 
       <td>
-        {!v.dropReason && (
-          <button
-            onClick={() => navigate("/Vendor", { state: { vendorData: v } })}
-            style={{ backgroundColor: v.source === 'vendor' ? '#4CAF50' : '#2196F3', color: 'white', padding: '6px 10px', borderRadius: '6px' }}
-          >
-            {v.source === 'vendor' ? '✏️Update' : '📘 Book'}
-          </button>
-        )}
+        {!v.dropReason && <button onClick={() => navigate("/Vendor", { state: { vendorData: v } })} style={{ backgroundColor: v.source === 'vendor' ? '#4CAF50' : '#2196F3', color: 'white', padding: '6px 10px', borderRadius: '6px' }}>{v.source === 'vendor' ? '✏️Update' : '📘 Book'}</button>}
+
         {v.dropReason ? (
-          <button
-            onClick={async () => {
-              try {
-                const ref = doc(db, 'vendor', v.id);
-                await updateDoc(ref, { dropReason: deleteField(), dropAt: deleteField() });
-                alert("✅ Booking restored!");
-              } catch (err) {
-                console.error(err);
-                alert("Failed to restore booking.");
-              }
-            }}
-            style={{ backgroundColor: '#FF9800', color: 'white', padding: '6px 10px', borderRadius: '6px', marginLeft: '5px' }}
-          >
-            📘 Book Again
-          </button>
+          <span style={{ color: 'red', fontWeight: 'bold' }}>Dropped: {v.dropReason}</span>
         ) : (
           <button
+            style={{ backgroundColor: '#f44336', color: 'white', padding: '6px 10px', borderRadius: '6px', marginLeft: '5px' }}
             onClick={async () => {
               const reason = prompt("Enter drop reason:");
-              if (reason) {
-                try {
-                  const ref = doc(db, 'vendor', v.id);
-                  if (v.source !== 'vendor') {
-                    await setDoc(ref, { ...v, source: 'vendor', dropReason: reason, createdAt: serverTimestamp() });
-                  } else {
-                    await updateDoc(ref, { dropReason: reason, dropAt: serverTimestamp() });
-                  }
-                  alert("✅ Drop reason saved!");
-                } catch (err) {
-                  console.error(err);
-                  alert("Failed to save drop reason.");
-                }
+              if (!reason) return;
+
+              try {
+                const monthDocRef = doc(db, "vendor", v.monthYear);
+                await updateDoc(monthDocRef, {
+                  [`${v.id}.dropReason`]: reason
+                });
+                // alert("Vendor marked as dropped ✅");
+              } catch (err) {
+                console.error("❌ Error saving drop reason:", err);
+                alert("Failed to mark vendor as dropped ❌");
               }
             }}
-            style={{ backgroundColor: '#f44336', color: 'white', padding: '6px 10px', borderRadius: '6px', marginLeft: '5px' }}
           >
             ⛔ Drop
           </button>
@@ -784,16 +951,19 @@ function BookingRow({
       <td>{avgRoyaltyPercent > 0 ? `${avgRoyaltyPercent}%` : ''}</td>
       <td>{totalRoyalty > 0 ? `₹${totalRoyalty}` : ''}</td>
       <td>Approval From Admin</td>
-      <td>
-        {royaltyPayments.map(p => {
-          const date = new Date(p.receiptDate);
-          const formattedDate = `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`;
-          return `₹${p.amount} (${formattedDate})`;
-        }).join(", ")}
-      </td>
+      <td>{royaltyPayments.map(p => {
+        const date = new Date(p.receiptDate);
+        const formattedDate = `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`;
+        return `₹${p.amount} (${formattedDate})`;
+      }).join(", ")}</td>
       <td>₹{totalPayOut}</td>
       <td>₹{remainingPayout}</td>
-      <td>{formatDateTime(new Date(v.bookedOn))}</td>
+      <td>
+        <div>
+          {v.userEmail}
+        </div>
+        {formatDate(new Date(v.bookedOn))}
+      </td>
     </tr>
   );
 }

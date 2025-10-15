@@ -490,15 +490,7 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
     <html>
     <head>
         <title>Booking Estimate_${lead.functionDate ? new Date(lead.functionDate).toLocaleDateString('en-GB').split('/').join('-') : ''}</title>
-
-
         <style>
-
-@page {
-  size: A4;
-  margin: 10mm;
-}
-
             body { font-family: Arial; padding: 30px; line-height: 1.4; border: 2px solid red; color:#00054b }
             h2 { text-align: center; color: red; font-weight: bold; text-decoration: underline; font-size: 24px; }
             .section { margin-top: 15px; }
@@ -613,7 +605,7 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
         iframe.contentWindow.print();
 
         // cleanup
-       // setTimeout(() => document.body.removeChild(iframe), 1000);
+        setTimeout(() => document.body.removeChild(iframe), 1000);
 
     };
 
@@ -638,20 +630,41 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
         return 'very-high-prob';
     };
 
+    // ✅ IST-based formatDate function (you already have this)
     const formatDate = (dateStr) => {
         if (!dateStr) return '-';
-        const [year, month, day] = dateStr.split('-');
-        return `${day}-${month}-${year}`;
+
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return '-';
+
+        // Convert UTC → IST (add 5 hours 30 minutes)
+        const utc = date.getTime() + date.getTimezoneOffset() * 60000;
+        const ist = new Date(utc + 5.5 * 60 * 60 * 1000);
+
+        const day = String(ist.getDate()).padStart(2, "0");
+        const month = String(ist.getMonth() + 1).padStart(2, "0");
+        const year = ist.getFullYear();
+
+        return `${day}-${month}-${year}`; // DD-MM-YYYY
     };
+
 
     useEffect(() => {
         if (leads.length > 0) {
             const fyList = leads.map(l => {
-                const d = new Date(l.functionDate);
-                const y = d.getFullYear();
-                const m = d.getMonth();
+                if (!l.functionDate) return null;
+
+                const date = new Date(l.functionDate);
+
+                // Convert to IST (using same logic as formatDate)
+                const utc = date.getTime() + date.getTimezoneOffset() * 60000;
+                const ist = new Date(utc + 5.5 * 60 * 60 * 1000);
+
+                const y = ist.getFullYear();
+                const m = ist.getMonth(); // 0 = Jan, 3 = Apr
+
                 return m >= 3 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
-            });
+            }).filter(Boolean);
 
             const currentFY = getCurrentFinancialYear();
             const uniqueFY = [...new Set([...fyList, currentFY])].sort();
@@ -659,43 +672,68 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
         }
     }, [leads]);
 
+
     const getCurrentFinancialYear = () => {
         const today = new Date();
-        const year = today.getUTCFullYear();
-        const month = today.getUTCMonth() + 1;
-        if (month >= 4) {
-            return `${year}-${year + 1}`;
-        } else {
-            return `${year - 1}-${year}`;
-        }
+
+        // Convert UTC → IST (same logic for consistency)
+        const utc = today.getTime() + today.getTimezoneOffset() * 60000;
+        const ist = new Date(utc + 5.5 * 60 * 60 * 1000);
+
+        const year = ist.getFullYear();
+        const month = ist.getMonth() + 1; // 1–12
+
+        return month >= 4 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
     };
+
+    const headerStyle = { textAlign: "center", border: "2px solid transparent", padding: "2px", fontSize: '13px', fontWeight: '700', color: 'transparent', textShadow: '1px 1px transparent', boxShadow: '1px 1px transparent' };
+    const cellStyle = { padding: "2px 6px", border: "2px solid transparent", color: 'transparent', boxShadow: '1px 1px transparent' };
 
     useEffect(() => {
         let filtered = [...leads];
 
+        // Utility function: convert any date to IST Date object
+        const toIST = (dateStr) => {
+            if (!dateStr) return null;
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return null;
+
+            // Convert UTC → IST (add 5h 30m)
+            const utc = date.getTime() + date.getTimezoneOffset() * 60000;
+            return new Date(utc + 5.5 * 60 * 60 * 1000);
+        };
+
         // From Date filter
         if (fromDate) {
-            filtered = filtered.filter(lead =>
-                lead.functionDate && new Date(lead.functionDate) >= new Date(fromDate)
-            );
+            const from = toIST(fromDate);
+            filtered = filtered.filter(lead => {
+                const funcDate = toIST(lead.functionDate);
+                return funcDate && funcDate >= from;
+            });
         }
 
         // To Date filter
         if (toDate) {
-            filtered = filtered.filter(lead =>
-                lead.functionDate && new Date(lead.functionDate) <= new Date(toDate)
-            );
+            const to = toIST(toDate);
+            filtered = filtered.filter(lead => {
+                const funcDate = toIST(lead.functionDate);
+                return funcDate && funcDate <= to;
+            });
         }
 
         // Financial Year filter
         if (financialYear && financialYear !== "") {
             const [startYear, endYear] = financialYear.split("-").map(Number);
-            const fyStart = new Date(Date.UTC(startYear, 3, 1)); // 1 April startYear
-            const fyEnd = new Date(Date.UTC(endYear, 2, 31, 23, 59, 59)); // 31 March endYear
+
+            // Define FY boundaries in IST
+            const fyStartUTC = Date.UTC(startYear, 3, 1); // April 1
+            const fyEndUTC = Date.UTC(endYear, 2, 31, 23, 59, 59); // March 31
+            const fyStart = toIST(fyStartUTC);
+            const fyEnd = toIST(fyEndUTC);
 
             filtered = filtered.filter(lead => {
-                const date = new Date(lead.functionDate);
-                return date >= fyStart && date <= fyEnd;
+                const funcDate = toIST(lead.functionDate);
+                return funcDate && funcDate >= fyStart && funcDate <= fyEnd;
             });
         }
 
@@ -837,174 +875,289 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
                                         Event Date {sortField === 'functionDate' ? (sortAsc ? '' : '') : ''}
                                     </th>
                                     <th>Name</th>
-                                    <th colSpan="25"></th>
+                                    <th colSpan="26"></th>
                                 </tr>
                             </thead>
 
                             <tbody>
                                 {sortedLeads.map((lead) => (
                                     <tr key={lead.id} className={getColumnColorClass(lead.winProbability)}>
-                                        <td style={{ padding: '14px 0px', whiteSpace: 'nowrap', fontSize: '14px', fontWeight:'700' }}>
+                                        <td style={{ padding: '14px 0px', whiteSpace: 'nowrap', fontSize: '14px', fontWeight: '700' }}>
                                             {lead.functionDate ? formatDate(lead.functionDate) : ''}
                                         </td>
 
-                                        <td>{lead.name || lead.partyName}</td>
+                                        {['name'].map((field) => (
+                                            <td
+                                                style={{
+                                                    whiteSpace: 'nowrap',
+                                                    maxWidth: '180rem',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis'
+                                                }}
+                                                key={`${lead.id}-${field}`}
+                                            >
+                                                {isEditing(lead.id, field) ? (
+                                                    <input
+                                                        key={`${lead.id}-${field}-input`} // ✅ force remount
+                                                        type={field.includes('Date') ? 'date' : 'text'}
 
-                                        <td key={`${lead.id}-menu-details`} style={{ padding: '0px', flexDirection: 'column', gap: '5px', backgroundColor: 'transparent', color: 'transparent' }}>
-                                            {lead.selectedMenus ? (
-                                                <table
-                                                    style={{
-                                                        borderCollapse: 'collapse',
-                                                        width: '100%',
-                                                        whiteSpace: 'nowrap',
-                                                        border: '2px solid #ffffff05' 
-                                                    }}
-                                                >
-                                                    <thead>
-                                                        {Object.entries(lead.selectedMenus).map(([menuName, data], idx) => (
+                                                        style={{
+                                                            width: '100%',
+                                                            boxSizing: 'border-box',
+                                                            padding: '7px',
+                                                            fontSize: 'inherit',
+                                                            border: '1px solid #ccc',
+                                                            borderRadius: '4px',
+                                                        }}
+                                                        autoFocus
+                                                    />
+                                                ) : (
+                                                    field === 'name'
+                                                        ? `${lead.prefix || ''} ${lead.name || '-'}`.trim()
+                                                        : field.includes('Date') && lead[field]
+                                                            ? formatDate(lead[field]) // 🔁 Format to DD-MM-YYYY
+                                                            : (lead[field] ?? '-')
+                                                )}
+                                            </td>
+                                        ))}
 
-                                                            <tr key={idx} className={getColumnColorClass(lead.winProbability)}>
-                                                                <td style={{ padding: '5px 10px', border: '2px solid #ffffff0b', textAlign: 'left', backgroundColor: 'transparent', color: 'transparent', boxShadow:'none' }}>.</td>
-                                                            </tr>
-                                                        ))}
-                                                    </thead>
+                                        {/* hidden */}
+                                        <>
 
-                                                    <tbody>
-                                                        {Object.entries(lead.selectedMenus).map(([menuName, data], idx) => (
-                                                            <tr key={idx} className={getColumnColorClass(lead.winProbability)}>
-                                                                <td style={{ padding: '5px 10px', border: '2px solid #ffffff01', boxShadow:'none' }}>{data.qty}</td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            ) : (
-                                                "-"
-                                            )}
-                                        </td>
+                                            <td key={`${lead.id}-menu-details`} style={{ flexDirection: 'column', gap: '5px' }}>
+                                                {lead.selectedMenus ? (
+                                                    <>
+                                                        <table
+                                                            style={{
+                                                                borderCollapse: 'collapse',
+                                                                width: '100%',
+                                                                whiteSpace: 'nowrap',
+                                                                border: '2px solid transparent',
+                                                                color: 'transparent'
+                                                            }}
+                                                        >
+                                                            <thead>
+                                                                <tr
+                                                                    style={{ whiteSpace: "nowrap" }}
+                                                                    className={getColumnColorClass(lead.winProbability)}
+                                                                >
+                                                                    <td style={headerStyle}>Menu Name</td>
+                                                                    <td style={headerStyle}>PAX</td>
+                                                                    <td style={headerStyle}>Extra Plates</td>
+                                                                    <td style={headerStyle}>Rate</td>
+                                                                    <td style={headerStyle}>Menu Items</td>
+                                                                </tr>
+                                                            </thead>
 
-                                        <td key={`${lead.id}-meals`} style={{ backgroundColor: 'transparent', color: 'transparent' }} >
-                                            {lead.meals ? (
-                                                <>
-                                                    {Object.entries(lead.meals)
-                                                        .filter(([_, dayData]) =>
-                                                            Object.entries(dayData).some(
-                                                                ([mealName, mealInfo]) => mealName !== "date" && mealInfo?.total
+                                                            <tbody>
+                                                                {Object.entries(lead.selectedMenus).map(([menuName, menuData], idx) => (
+                                                                    <tr
+                                                                        key={idx}
+                                                                        style={{ whiteSpace: "nowrap" }}
+                                                                        className={getColumnColorClass(lead.winProbability)}
+                                                                    >
+                                                                        <td style={cellStyle}>{menuName}</td>
+                                                                        <td style={cellStyle}>{menuData.noOfPlates}</td>
+                                                                        <td style={cellStyle}>{menuData.extraPlates}</td>
+                                                                        <td style={cellStyle}>₹{menuData.rate}</td>
+                                                                        <td style={cellStyle}>
+                                                                            {menuData.selectedSubItems && menuData.selectedSubItems.length > 0 ? (
+                                                                                <button
+                                                                                    style={{
+                                                                                        padding: '2px 6px',
+                                                                                        backgroundColor: 'transparent',
+                                                                                        borderRadius: 4,
+                                                                                        cursor: 'pointer',
+                                                                                        color: 'transparent'
+                                                                                    }}
+                                                                                >
+                                                                                    View Items ({menuData.selectedSubItems.length})
+                                                                                </button>
+                                                                            ) : (
+                                                                                ""
+                                                                            )}
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+
+                                                        </table>
+
+
+                                                    </>
+                                                ) : (
+                                                    ""
+                                                )}
+                                            </td>
+
+                                            <td key={`${lead.id}-meals`}>
+                                                {lead.meals ? (
+                                                    <>
+                                                        {Object.entries(lead.meals)
+                                                            .filter(([_, dayData]) =>
+                                                                Object.entries(dayData).some(
+                                                                    ([mealName, mealInfo]) => mealName !== "date" && mealInfo?.total
+                                                                )
                                                             )
-                                                        )
-                                                        .sort(([a], [b]) => {
-                                                            const numA = parseInt(a.replace(/\D/g, ""), 10);
-                                                            const numB = parseInt(b.replace(/\D/g, ""), 10);
-                                                            return numA - numB;
-                                                        })
-                                                        .map(([dayName, dayData], dayIdx) => {
-                                                            const mealOrder = ["Breakfast", "Lunch", "Dinner"]; // ✅ fixed order
+                                                            .sort(([a], [b]) => {
+                                                                const numA = parseInt(a.replace(/\D/g, ""), 10);
+                                                                const numB = parseInt(b.replace(/\D/g, ""), 10);
+                                                                return numA - numB;
+                                                            })
+                                                            .map(([dayName, dayData], dayIdx) => {
+                                                                const mealOrder = ["Breakfast", "Lunch", "Dinner"]; // ✅ fixed order
 
-                                                            return (
-                                                                <table
-                                                                    key={dayIdx}
+                                                                return (
+                                                                    <table
+                                                                        key={dayIdx}
+                                                                        style={{
+                                                                            borderCollapse: "collapse",
+                                                                            width: "100%",
+                                                                            marginTop: "0px",
+                                                                            fontSize: '12',
+                                                                            whiteSpace: 'nowrap',
+                                                                            border: "2px solid #ffffffff",
+                                                                        }}
+                                                                    >
+                                                                        <thead>
+                                                                            <tr className={getColumnColorClass(lead.winProbability)}>
+                                                                                <td colSpan={7} style={headerStyle} >
+                                                                                    {dayName} ( {dayData.date ? (() => { const formatted = formatDate(dayData.date); return formatted; })() : "No date"}) </td>
+                                                                            </tr>
+                                                                            <tr className={getColumnColorClass(lead.winProbability)}>
+                                                                                <td style={headerStyle}>Meal</td>
+                                                                                <td style={headerStyle}>Option</td>
+                                                                                <td style={headerStyle}>Time</td>
+                                                                                <td style={headerStyle}>PAX</td>
+                                                                                <td style={headerStyle}>Extra Plates</td>
+                                                                                <td style={headerStyle}>Rate</td>
+                                                                                <td style={headerStyle}>Menu</td>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {Object.entries(dayData)
+                                                                                .filter(([mealName]) => mealName !== "date")
+                                                                                // ✅ sort by defined order
+                                                                                .sort(([mealA], [mealB]) => {
+                                                                                    const idxA = mealOrder.indexOf(mealA);
+                                                                                    const idxB = mealOrder.indexOf(mealB);
+                                                                                    if (idxA === -1 && idxB === -1) return mealA.localeCompare(mealB);
+                                                                                    if (idxA === -1) return 1;
+                                                                                    if (idxB === -1) return -1;
+                                                                                    return idxA - idxB;
+                                                                                })
+                                                                                .map(([mealName, mealInfo], mealIdx) => {
+                                                                                    const formatTime = (timeStr) => {
+                                                                                        if (!timeStr) return "";
+                                                                                        let [hour, minute] = timeStr.split(":").map(Number);
+                                                                                        const ampm = hour >= 12 ? "PM" : "AM";
+                                                                                        hour = hour % 12 || 12;
+                                                                                        return `${hour}:${String(minute).padStart(2, "0")} ${ampm}`;
+                                                                                    };
+
+                                                                                    return (
+                                                                                        <tr key={mealIdx} className={getColumnColorClass(lead.winProbability)}>
+                                                                                            <td style={{ padding: "5px 10px", border: "2px solid #ffffff01", whiteSpace: 'nowrap', color: 'transparent', boxShadow: '1px 1px transparent' }}>
+                                                                                                {mealName}
+                                                                                            </td>
+
+                                                                                            <td style={{ padding: "5px 10px", border: "2px solid #ffffff01", whiteSpace: 'nowrap', color: 'transparent', boxShadow: '1px 1px transparent' }}>
+                                                                                                {mealInfo.option}
+                                                                                            </td>
+
+                                                                                            <td style={{ padding: "5px 10px", border: "2px solid #ffffff01", whiteSpace: 'nowrap', color: 'transparent', boxShadow: '1px 1px transparent' }}>
+                                                                                                {formatTime(mealInfo.startTime)} - {formatTime(mealInfo.endTime)}
+                                                                                            </td>
+
+                                                                                            <td style={{ padding: "5px 10px", border: "2px solid #ffffff01", whiteSpace: 'nowrap', color: 'transparent', boxShadow: '1px 1px transparent' }}>
+                                                                                                {mealInfo.pax}
+                                                                                            </td>
+
+                                                                                            <td style={{ padding: "5px 10px", border: "2px solid #ffffff01", whiteSpace: 'nowrap', color: 'transparent', boxShadow: '1px 1px transparent' }}>
+                                                                                                {mealInfo.extraPlates}
+                                                                                            </td>
+
+                                                                                            <td style={{ padding: "5px 10px", border: "2px solid #ffffff01", whiteSpace: 'nowrap', color: 'transparent', boxShadow: '1px 1px transparent' }}>
+                                                                                                ₹{mealInfo.rate}
+                                                                                            </td>
+
+                                                                                            <td style={cellStyle}>
+                                                                                                {mealInfo.selectedItems && mealInfo.selectedItems.length > 0 ? (
+                                                                                                    <button
+                                                                                                        style={{
+                                                                                                            padding: '2px 6px',
+                                                                                                            fontSize: '12px',
+                                                                                                            backgroundColor: 'transparent',
+                                                                                                            color: 'transparent',
+                                                                                                            borderRadius: 4,
+                                                                                                            cursor: 'pointer',
+                                                                                                        }}
+                                                                                                    >
+                                                                                                        View Items ({mealInfo.selectedItems.length})
+                                                                                                    </button>
+                                                                                                ) : ""}
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    );
+                                                                                })}
+                                                                        </tbody>
+                                                                    </table>
+                                                                );
+                                                            })}
+                                                    </>
+                                                ) : (
+                                                    " "
+                                                )}
+                                            </td>
+
+                                            <td key={`${lead.id}-mobiles`}>
+                                                {isEditing(lead.id, 'mobile') ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        {['mobile1', 'mobile2'].map((field) => (
+                                                            <input
+                                                                key={`${lead.id}-${field}-input`}
+                                                                type="text"
+                                                                style={{
+                                                                    width: '100%',
+                                                                    boxSizing: 'border-box',
+                                                                    padding: '4px',
+                                                                    fontSize: 'inherit',
+
+                                                                    border: '1px solid #ccc',
+                                                                    borderRadius: '4px',
+                                                                }}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                        {['mobile1', 'mobile2'].map((field, idx) => (
+                                                            lead[field] ? (
+                                                                <span
+                                                                    key={`${lead.id}-${field}`}
+                                                                    onClick={() => {
+                                                                        const confirmed = window.confirm(
+                                                                            `📞 Call ${lead.name || 'this person'} (${lead.functionType || 'Unknown Role'})?`
+                                                                        );
+                                                                        if (confirmed) {
+                                                                            window.location.href = `tel:${lead[field]}`;
+                                                                        }
+                                                                    }}
                                                                     style={{
-                                                                        borderCollapse: "collapse",
-                                                                        width: "100%",
-                                                                        marginTop: "0px",
-                                                                        whiteSpace: 'nowrap',
-                                                                        border: "2px solid #ffffff03",
+                                                                        color: 'transparent',
+                                                                        textDecoration: 'none',
+                                                                        cursor: 'pointer',
+                                                                        fontWeight: 'bold',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '6px',
+                                                                        margin: '3px 0px'
                                                                     }}
                                                                 >
-                                                                    <thead>
-                                                                        <tr className={getColumnColorClass(lead.winProbability)}>
-
-                                                                            <td
-                                                                                colSpan={4}
-                                                                                style={{
-                                                                                    textAlign: "left",
-                                                                                    padding: "2px 10px",
-                                                                                    border: "1px solid #cccccc03",
-                                                                                    color:'transparent' , boxShadow:'none'
-                                                                                }}
-                                                                            >
-                                                                                {dayName} (
-                                                                                {dayData.date
-                                                                                    ? (() => {
-                                                                                        const d = new Date(dayData.date);
-                                                                                        const day = String(d.getDate()).padStart(2, "0");
-                                                                                        const month = String(d.getMonth() + 1).padStart(2, "0");
-                                                                                        const year = d.getFullYear();
-                                                                                        return `${day}-${month}-${year}`;
-                                                                                    })()
-                                                                                    : "No date"}
-                                                                                )
-                                                                            </td>
-                                                                        </tr>
-                                                                        <tr className={getColumnColorClass(lead.winProbability)}>
-
-                                                                            <td style={{ padding: "2px 10px", border: "2px solid #ffffff09", color: 'transparent', boxShadow:'none' }}>x</td>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                        {Object.entries(dayData)
-                                                                            .filter(([mealName]) => mealName !== "date")
-                                                                            // ✅ sort by defined order
-                                                                            .sort(([mealA], [mealB]) => {
-                                                                                const idxA = mealOrder.indexOf(mealA);
-                                                                                const idxB = mealOrder.indexOf(mealB);
-                                                                                if (idxA === -1 && idxB === -1) return mealA.localeCompare(mealB);
-                                                                                if (idxA === -1) return 1;
-                                                                                if (idxB === -1) return -1;
-                                                                                return idxA - idxB;
-                                                                            })
-                                                                            .map(([mealName, mealInfo], mealIdx) => {
-                                                                                return (
-                                                                                    <tr key={mealIdx} className={getColumnColorClass(lead.winProbability)}>
-                                                                                        <td style={{ padding: "5px 10px", border: "2px solid #ffffff00", whiteSpace: 'nowrap', boxShadow:'none' }}>
-                                                                                            {mealInfo.pax} (PAX)
-                                                                                        </td>
-                                                                                    </tr>
-                                                                                );
-                                                                            })}
-                                                                    </tbody>
-                                                                </table>
-                                                            );
-                                                        })}
-                                                </>
-                                            ) : (
-                                                " "
-                                            )}
-                                        </td>
-
-                                        <td key={`${lead.id}-mobiles`}>
-                                            {isEditing(lead.id, 'mobile') ? (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                    {['mobile1', 'mobile2'].map((field) => (
-                                                        <input
-                                                            key={`${lead.id}-${field}-input`}
-                                                            type="text"
-                                                            style={{
-                                                                width: '100%',
-                                                                boxSizing: 'border-box',
-                                                                padding: '4px',
-                                                                fontSize: 'inherit',
-
-                                                                border: '1px solid #ccc',
-                                                                borderRadius: '4px',
-                                                            }}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                    {['mobile1', 'mobile2'].map((field, idx) => (
-                                                        lead[field] ? (
-                                                            <span
-                                                                key={`${lead.id}-${field}`}
-                                                                onClick={() => {
-                                                                    const confirmed = window.confirm(
-                                                                        `📞 Call ${lead.name || 'this person'} (${lead.functionType || 'Unknown Role'})?`
-                                                                    );
-                                                                    if (confirmed) {
-                                                                        window.location.href = `tel:${lead[field]}`;
-                                                                    }
-                                                                }}
-                                                                style={{
+                                                                    <span role="img" aria-label="call"></span> {lead[field]}
+                                                                </span>
+                                                            ) : (
+                                                                <span style={{
                                                                     color: 'transparent',
                                                                     textDecoration: 'none',
                                                                     cursor: 'pointer',
@@ -1012,274 +1165,108 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
                                                                     display: 'flex',
                                                                     alignItems: 'center',
                                                                     gap: '6px',
-                                                                    margin: '3px 0px'
-                                                                }}
-                                                            >
-                                                                <span role="img" aria-label="call"></span> {lead[field]}
-                                                            </span>
-                                                        ) : (
-                                                            <span style={{
-                                                                color: 'transparent',
-                                                                textDecoration: 'none',
-                                                                cursor: 'pointer',
-                                                                fontWeight: 'bold',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                gap: '6px',
-                                                            }} key={`${lead.id}-${field}`}>-</span>
-                                                        )
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </td>
-
-                                        {/* 
-                                        // 
-                                        // 
-                                        // 
-                                        */}
-
-
-                                        <td style={{color:'transparent', whiteSpace:'nowrap'}}>
-                                            {lead.enquiryDate ? formatDate(lead.enquiryDate) : '-'}
-                                        </td>
-
-                                        {['functionType', 'dayNight', 'venueType'].map(field => (
-                                            <td key={`${lead.id}-${field}`} style={{ color: 'transparent' }}>
-                                                {isEditing(lead.id, field) ? (
-                                                    <input
-                                                        type={typeof lead[field] === 'number' ? 'number' : 'text'}
-                                                        autoFocus
-                                                        style={{
-                                                            whiteSpace: 'nowrap',
-                                                            maxWidth: '180rem',
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis'
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div
-                                                        style={{
-                                                            whiteSpace: 'nowrap',
-                                                            maxWidth: '180rem',
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis'
-                                                        }}
-                                                    >
-                                                        {lead[field] ?? '-'}
+                                                                }} key={`${lead.id}-${field}`}>-</span>
+                                                            )
+                                                        ))}
                                                     </div>
                                                 )}
                                             </td>
-                                        ))}
 
-                                        <td key={`${lead.id}-mobiles`} style={{color:'transparent',backgroundColor:'transparent'}}>
-                                            {isEditing(lead.id, 'mobile') ? (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                    {['mobile1', 'mobile2'].map((field) => (
+                                            <td style={{ color: 'transparent', whiteSpace: 'nowrap' }}>
+                                                {lead.enquiryDate ? formatDate(lead.enquiryDate) : '-'}
+                                            </td>
+
+                                            {['functionType', 'dayNight', 'venueType'].map(field => (
+                                                <td key={`${lead.id}-${field}`} style={{ color: 'transparent' }}>
+                                                    {isEditing(lead.id, field) ? (
                                                         <input
-                                                            key={`${lead.id}-${field}-input`}
-                                                            type="text"
-
+                                                            type={typeof lead[field] === 'number' ? 'number' : 'text'}
+                                                            autoFocus
                                                             style={{
-                                                                width: '100%',
-                                                                boxSizing: 'border-box',
-                                                                padding: '4px',
-                                                                fontSize: 'inherit',
-
-                                                                border: '1px solid #ccc',
-                                                                borderRadius: '4px',
-                                                                color:'transparent'
+                                                                whiteSpace: 'nowrap',
+                                                                maxWidth: '180rem',
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis'
                                                             }}
                                                         />
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                    {['mobile1', 'mobile2'].map((field, idx) => (
-                                                        lead[field] ? (
-                                                            <span
-                                                                key={`${lead.id}-${field}`}
-                                                                onClick={() => {
-                                                                    const confirmed = window.confirm(
-                                                                        `📞 Call ${lead.name || 'this person'} (${lead.functionType || 'Unknown Role'})?`
-                                                                    );
-                                                                    if (confirmed) {
-                                                                        window.location.href = `tel:${lead[field]}`;
-                                                                    }
-                                                                }}
-                                                                style={{
-                                                                    color: 'transparent',
-                                                                    textDecoration: 'none',
-                                                                    cursor: 'pointer',
-                                                                    fontWeight: 'bold',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    gap: '6px',
-                                                                    margin: '3px 0px'
-                                                                }}
-                                                            >
-                                                                <span role="img" aria-label="call"></span> {lead[field]}
-                                                            </span>
-                                                        ) : (
-                                                            <span key={`${lead.id}-${field}`}>-</span>
-                                                        )
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </td>
-
-                                        {['hallCharges', 'gstAmount', 'gstBase'].map(field => (
-                                            <td key={`${lead.id}-${field}`} style={{color:'transparent',backgroundColor:'transparent'}} >
-                                                {isEditing(lead.id, field) ? (
-                                                    <input
-                                                        key={`${lead.id}-${field}-input`}
-                                                        type={typeof lead[field] === 'number' ? 'number' : 'text'}
-
-                                                        autoFocus
-                                                        style={{
-                                                            width: '100%',
-                                                            boxSizing: 'border-box',
-                                                            padding: '4px',
-                                                            fontSize: 'inherit',
-
-                                                            border: '1px solid #ccc',
-                                                            borderRadius: '4px',
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    lead[field] ?? '-'
-                                                )}
-                                            </td>
-                                        ))}
-
-                                        <td key={`${lead.id}-menu-grandTotal`}
-                                            style={{
-                                                whiteSpace: 'nowrap',
-                                                maxWidth: '150rem',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                color:'transparent'
-                                            }}
-                                            title={JSON.stringify(lead.menuSummaries)}
-                                        >
-                                            {Array.isArray(lead.menuSummaries)
-                                                ? lead.menuSummaries
-                                                    .map((summary) =>
-                                                        `${summary.menuName} (→${summary.grandTotal})`
-                                                    )
-                                                    .join(', ')
-                                                : '-'}
-                                        </td>
-
-                                        <td > <button style={{ backgroundColor: "#2e75cc06", color: "#ffffff03", border: "none", padding: "10px 15px", borderRadius: "4px" }}> Update </button> </td>
-                                        <td> <button style={{ backgroundColor: "#2ecc7002", color: "#ffffff04", border: "none", padding: "10px 15px", borderRadius: "4px", whiteSpace: 'nowrap' }}> Book Now </button> </td>
-                                        <td><button style={{ backgroundColor: "#00725b05", color: "#ffffff04", border: "none", padding: "10px 15px", borderRadius: "4px" }}> Print </button> </td>
-
-                                        <td key={`${lead.id}-bookingAmenities`}
-                                            title={Array.isArray(lead.bookingAmenities) ? lead.bookingAmenities.join(', ') : ''}
-                                            style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px',color:'transparent' }}
-                                        >
-                                            {isEditing(lead.id, 'bookingAmenities') ? (
-                                                <input
-                                                    key={`${lead.id}-bookingAmenities-input`}
-                                                    type="text"
-
-                                                    autoFocus
-                                                    style={{
-                                                        width: '100%',
-                                                        boxSizing: 'border-box',
-                                                        padding: '4px',
-                                                        fontSize: 'inherit',
-
-                                                        border: '1px solid #ccc',
-                                                        borderRadius: '4px',
-                                                    }}
-                                                />
-                                            ) : (
-                                                Array.isArray(lead.bookingAmenities) ? lead.bookingAmenities.join(', ') : '-'
-                                            )}
-                                        </td>
-
-                                        {['winProbability'].map(field => (
-                                            <td key={`${lead.id}-${field}`} onClick={() => startEdit(lead.id, field)} style={{color:'transparent'}}>
-                                                {isEditing(lead.id, field) ? (
-                                                    <input
-                                                        key={`${lead.id}-${field}-input`}
-                                                        type="text"
-                                                        placeholder="Win Probability"
-
-                                                        autoFocus
-                                                        style={{
-                                                            width: '100%',
-                                                            boxSizing: 'border-box',
-                                                            padding: '4px',
-                                                            fontSize: 'inherit',
-
-                                                            border: '1px solid #ccc',
-                                                            borderRadius: '4px',
-                                                            color:'transparent'
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div>{lead[field] ?? '-'}</div>
-                                                )}
-                                            </td>
-                                        ))}
-
-                                        <td key={`${lead.id}-holdDate`} onClick={() => startEdit(lead.id, 'holdDate')} style={{color:'transparent'}}>
-                                            {isEditing(lead.id, 'holdDate') ? (
-                                                <input
-                                                    key={`${lead.id}-holdDate-input`}
-                                                    type="date"
-
-                                                    autoFocus
-                                                    style={{ width: '100%', boxSizing: 'border-box', padding: '4px', fontSize: 'inherit', border: '1px solid #ccc', borderRadius: '4px', }}
-                                                />
-                                            ) : (
-                                                lead.holdDate
-                                                    ? new Date(lead.holdDate).toLocaleDateString('en-GB')
-                                                    : '-'
-                                            )}
-                                        </td>
-
-                                        {[0, 1, 2, 3, 4].map(index => {
-                                            const followUp = lead.followUpDetails?.[index] || {};
-                                            const isActive = editing[lead.id]?.[index];
-
-                                            return (
-                                                <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '6000rem',color:'transparent' }} key={`${lead.id}-followup-${index}`} onClick={() => handleEdit(lead.id, index)}>
-                                                    {isActive ? (
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                            <input
-                                                                type="date"
-                                                                style={{ padding: '4px', borderRadius: '4px', border: '1px solid #ccc' }}
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Enter remark"
-                                                                style={{ padding: '4px', borderRadius: '4px', border: '1px solid #ccc' }}
-                                                            />
-                                                        </div>
                                                     ) : (
-                                                        followUp.date ? (
-                                                            <>
-                                                                <div>{new Date(followUp.date).toLocaleDateString('en-GB')}</div>
-                                                                {followUp.remark && <small style={{ color: 'black' }}>Remark: {followUp.remark}</small>}
-                                                            </>
-                                                        ) : '-'
+                                                        <div
+                                                            style={{
+                                                                whiteSpace: 'nowrap',
+                                                                maxWidth: '180rem',
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis'
+                                                            }}
+                                                        >
+                                                            {lead[field] ?? '-'}
+                                                        </div>
                                                     )}
                                                 </td>
-                                            );
-                                        })}
+                                            ))}
 
-                                        {['source',].map(field => (
-                                            <td key={`${lead.id}-${field}`} style={{color:'transparent'}} >
-                                                {isEditing(lead.id, field) ? (
+                                            <td key={`${lead.id}-mobiles`} style={{ color: 'transparent', backgroundColor: 'transparent' }}>
+                                                {isEditing(lead.id, 'mobile') ? (
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        {['mobile1', 'mobile2'].map((field) => (
+                                                            <input
+                                                                key={`${lead.id}-${field}-input`}
+                                                                type="text"
+
+                                                                style={{
+                                                                    width: '100%',
+                                                                    boxSizing: 'border-box',
+                                                                    padding: '4px',
+                                                                    fontSize: 'inherit',
+
+                                                                    border: '1px solid #ccc',
+                                                                    borderRadius: '4px',
+                                                                    color: 'transparent'
+                                                                }}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                        {['mobile1', 'mobile2'].map((field, idx) => (
+                                                            lead[field] ? (
+                                                                <span
+                                                                    key={`${lead.id}-${field}`}
+                                                                    onClick={() => {
+                                                                        const confirmed = window.confirm(
+                                                                            `📞 Call ${lead.name || 'this person'} (${lead.functionType || 'Unknown Role'})?`
+                                                                        );
+                                                                        if (confirmed) {
+                                                                            window.location.href = `tel:${lead[field]}`;
+                                                                        }
+                                                                    }}
+                                                                    style={{
+                                                                        color: 'transparent',
+                                                                        textDecoration: 'none',
+                                                                        cursor: 'pointer',
+                                                                        fontWeight: 'bold',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '6px',
+                                                                        margin: '3px 0px'
+                                                                    }}
+                                                                >
+                                                                    <span role="img" aria-label="call"></span> {lead[field]}
+                                                                </span>
+                                                            ) : (
+                                                                <span key={`${lead.id}-${field}`}>-</span>
+                                                            )
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </td>
+
+                                            {['hallCharges', 'gstAmount', 'gstBase'].map(field => (
+                                                <td key={`${lead.id}-${field}`} style={{ color: 'transparent', backgroundColor: 'transparent' }} >
+                                                    {isEditing(lead.id, field) ? (
                                                         <input
                                                             key={`${lead.id}-${field}-input`}
-                                                            type="text"
-                                                            placeholder="Source"
+                                                            type={typeof lead[field] === 'number' ? 'number' : 'text'}
+
                                                             autoFocus
                                                             style={{
                                                                 width: '100%',
@@ -1291,40 +1278,44 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
                                                                 borderRadius: '4px',
                                                             }}
                                                         />
-                                                        <input
-                                                            key={`${lead.id}-referredBy-input`}
-                                                            type="text"
-                                                            placeholder="Reference (Optional)"
-                                                            style={{
-                                                                width: '100%',
-                                                                boxSizing: 'border-box',
-                                                                padding: '4px',
-                                                                fontSize: 'inherit',
+                                                    ) : (
+                                                        lead[field] ?? '-'
+                                                    )}
+                                                </td>
+                                            ))}
 
-                                                                border: '1px solid #ccc',
-                                                                borderRadius: '4px',
-                                                            }}
-                                                        />
-                                                    </div>
-                                                ) : (
-                                                    <div>
-                                                        <div>{lead[field] ?? '-'}</div>
-                                                        {lead.referredBy && (
-                                                            <div style={{ fontSize: '0.85em', color: '#88888804' }}>
-                                                                • Reference: {lead.referredBy}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
+                                            <td key={`${lead.id}-menu-grandTotal`}
+                                                style={{
+                                                    whiteSpace: 'nowrap',
+                                                    maxWidth: '150rem',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    color: 'transparent'
+                                                }}
+                                                title={JSON.stringify(lead.menuSummaries)}
+                                            >
+                                                {Array.isArray(lead.menuSummaries)
+                                                    ? lead.menuSummaries
+                                                        .map((summary) =>
+                                                            `${summary.menuName} (→${summary.grandTotal})`
+                                                        )
+                                                        .join(', ')
+                                                    : '-'}
                                             </td>
-                                        ))}
 
-                                        {['authorisedSignatory'].map(field => (
-                                            <td key={`${lead.id}-${field}`} style={{color:'transparent'}} >
-                                                {isEditing(lead.id, field) ? (
+                                            <td > <button style={{ backgroundColor: "#2e75cc06", color: "#ffffff03", border: "none", padding: "10px 15px", borderRadius: "4px" }}> Update </button> </td>
+                                            <td> <button style={{ backgroundColor: "#2ecc7002", color: "#ffffff04", border: "none", padding: "10px 15px", borderRadius: "4px", whiteSpace: 'nowrap' }}> Book Now </button> </td>
+                                            <td><button style={{ backgroundColor: "#00725b05", color: "#ffffff04", border: "none", padding: "10px 15px", borderRadius: "4px" }}> Print </button> </td>
+
+                                            <td key={`${lead.id}-bookingAmenities`}
+                                                title={Array.isArray(lead.bookingAmenities) ? lead.bookingAmenities.join(', ') : ''}
+                                                style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px', color: 'transparent' }}
+                                            >
+                                                {isEditing(lead.id, 'bookingAmenities') ? (
                                                     <input
-                                                        key={`${lead.id}-${field}-input`}
-                                                        type={typeof lead[field] === 'number' ? 'number' : 'text'}
+                                                        key={`${lead.id}-bookingAmenities-input`}
+                                                        type="text"
+
                                                         autoFocus
                                                         style={{
                                                             width: '100%',
@@ -1337,10 +1328,153 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
                                                         }}
                                                     />
                                                 ) : (
-                                                    lead[field] ?? '-'
+                                                    Array.isArray(lead.bookingAmenities) ? lead.bookingAmenities.join(', ') : '-'
                                                 )}
                                             </td>
-                                        ))}
+
+                                            {['winProbability'].map(field => (
+                                                <td key={`${lead.id}-${field}`} onClick={() => startEdit(lead.id, field)} style={{ color: 'transparent' }}>
+                                                    {isEditing(lead.id, field) ? (
+                                                        <input
+                                                            key={`${lead.id}-${field}-input`}
+                                                            type="text"
+                                                            placeholder="Win Probability"
+
+                                                            autoFocus
+                                                            style={{
+                                                                width: '100%',
+                                                                boxSizing: 'border-box',
+                                                                padding: '4px',
+                                                                fontSize: 'inherit',
+
+                                                                border: '1px solid #ccc',
+                                                                borderRadius: '4px',
+                                                                color: 'transparent'
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <div>{lead[field] ?? '-'}</div>
+                                                    )}
+                                                </td>
+                                            ))}
+
+                                            <td key={`${lead.id}-holdDate`} onClick={() => startEdit(lead.id, 'holdDate')} style={{ color: 'transparent' }}>
+                                                {isEditing(lead.id, 'holdDate') ? (
+                                                    <input
+                                                        key={`${lead.id}-holdDate-input`}
+                                                        type="date"
+
+                                                        autoFocus
+                                                        style={{ width: '100%', boxSizing: 'border-box', padding: '4px', fontSize: 'inherit', border: '1px solid #ccc', borderRadius: '4px', }}
+                                                    />
+                                                ) : (
+                                                    lead.holdDate
+                                                        ? new Date(lead.holdDate).toLocaleDateString('en-GB')
+                                                        : '-'
+                                                )}
+                                            </td>
+
+                                            {[0, 1, 2, 3, 4].map(index => {
+                                                const followUp = lead.followUpDetails?.[index] || {};
+                                                const isActive = editing[lead.id]?.[index];
+
+                                                return (
+                                                    <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '6000rem', color: 'transparent' }} key={`${lead.id}-followup-${index}`} onClick={() => handleEdit(lead.id, index)}>
+                                                        {isActive ? (
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                <input
+                                                                    type="date"
+                                                                    style={{ padding: '4px', borderRadius: '4px', border: '1px solid #ccc' }}
+                                                                />
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Enter remark"
+                                                                    style={{ padding: '4px', borderRadius: '4px', border: '1px solid #ccc' }}
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            followUp.date ? (
+                                                                <>
+                                                                    <div>{new Date(followUp.date).toLocaleDateString('en-GB')}</div>
+                                                                    {followUp.remark && <small style={{ color: 'transparent' }}>Remark: {followUp.remark}</small>}
+                                                                </>
+                                                            ) : '-'
+                                                        )}
+                                                    </td>
+                                                );
+                                            })}
+
+                                            {['source',].map(field => (
+                                                <td key={`${lead.id}-${field}`} style={{ color: 'transparent' }} >
+                                                    {isEditing(lead.id, field) ? (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                            <input
+                                                                key={`${lead.id}-${field}-input`}
+                                                                type="text"
+                                                                placeholder="Source"
+                                                                autoFocus
+                                                                style={{
+                                                                    width: '100%',
+                                                                    boxSizing: 'border-box',
+                                                                    padding: '4px',
+                                                                    fontSize: 'inherit',
+
+                                                                    border: '1px solid #ccc',
+                                                                    borderRadius: '4px',
+                                                                }}
+                                                            />
+                                                            <input
+                                                                key={`${lead.id}-referredBy-input`}
+                                                                type="text"
+                                                                placeholder="Reference (Optional)"
+                                                                style={{
+                                                                    width: '100%',
+                                                                    boxSizing: 'border-box',
+                                                                    padding: '4px',
+                                                                    fontSize: 'inherit',
+
+                                                                    border: '1px solid #ccc',
+                                                                    borderRadius: '4px',
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div>
+                                                            <div>{lead[field] ?? '-'}</div>
+                                                            {lead.referredBy && (
+                                                                <div style={{ fontSize: '0.85em', color: '#88888804' }}>
+                                                                    • Reference: {lead.referredBy}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            ))}
+
+                                            {['authorisedSignatory'].map(field => (
+                                                <td key={`${lead.id}-${field}`} style={{ color: 'transparent' }} >
+                                                    {isEditing(lead.id, field) ? (
+                                                        <input
+                                                            key={`${lead.id}-${field}-input`}
+                                                            type={typeof lead[field] === 'number' ? 'number' : 'text'}
+                                                            autoFocus
+                                                            style={{
+                                                                width: '100%',
+                                                                boxSizing: 'border-box',
+                                                                padding: '4px',
+                                                                fontSize: 'inherit',
+
+                                                                border: '1px solid #ccc',
+                                                                borderRadius: '4px',
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        lead[field] ?? '-'
+                                                    )}
+                                                </td>
+                                            ))}
+
+                                        </>
                                     </tr>
                                 ))}
 
@@ -1375,7 +1509,7 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
 
                                     {[
                                         'Month', 'Event', 'Day/Night', 'Venue Type', 'Contact Number',
-                                        'Menu', 'Meal', 'Hall Charges', 'GST', 'Applicable GST', 'grandTotal', 'Edit',
+                                        'Menu', 'Meal', 'Hall Charges', 'GST', 'Applicable GST', 'Grand Total', 'Edit',
                                         'Send to Bookings', 'Print', 'Extra Booking Amenities', 'Win Probability', 'Hold Up Date',
                                         'Follow Up Date 1', 'Follow Up Date 2', 'Follow Up Date 3', 'Follow Up Date 4',
                                         'Follow Up Date 5', 'Source Of Customer', "Booked By", 'Drop',
@@ -1452,8 +1586,5 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
         </div>
     );
 };
-
-
-
 
 export default BookingLeadsTable; 
