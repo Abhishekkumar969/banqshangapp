@@ -12,8 +12,6 @@ const BackButton = ({ setActiveTab }) => {
   const location = useLocation();
   const [userAppType, setUserAppType] = useState(null);
 
-
-
   const routeToTab = {
     "/": "Dashboard",
     "/EnquiryDetails": "EnquiryDetails",
@@ -30,14 +28,14 @@ const BackButton = ({ setActiveTab }) => {
     top: 0,
     left: 0,
     width: "100vw",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#d6d6d6ff",
     zIndex: 9999,
     padding: "3px 10px",
     display: "flex",
     alignItems: "center",
     gap: "8px",
     flexWrap: "wrap",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+    boxShadow: "inset -2px -2px 5px rgba(0, 0, 0, 0.53)",
   };
 
   const fixedGroupStyle = {
@@ -72,7 +70,7 @@ const BackButton = ({ setActiveTab }) => {
     flex: "0 0 auto",
     whiteSpace: "nowrap",
     fontWeight: 600,
-    boxShadow: "0 4px #4b4b4b33",
+    boxShadow: "inset -0 -4px 2.2px #18181885",
     transition: "all 0.15s ease-in-out",
     fontSize: "0.9rem",
   };
