@@ -6,15 +6,28 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
     const [showCalendar, setShowCalendar] = useState(false);
     const [errors, setErrors] = useState({});
 
+    // ✅ Helper to get today's date in IST format (YYYY-MM-DD)
+    const getTodayIST = () => {
+        const now = new Date();
+        const istOffset = 5 * 60 + 30; // minutes
+        const istDate = new Date(now.getTime() + istOffset * 60 * 1000);
+        const day = String(istDate.getUTCDate()).padStart(2, '0');
+        const month = String(istDate.getUTCMonth() + 1).padStart(2, '0');
+        const year = istDate.getUTCFullYear();
+        return `${year}-${month}-${day}`;
+    };
+
+    // ✅ Format a date (yyyy-mm-dd) to DD-MM-YYYY for display
+    const formatDateIST = (dateStr) => {
+        if (!dateStr) return "-";
+        const [year, month, day] = dateStr.split("-");
+        return `${day}-${month}-${year}`;
+    };
+
+    // ✅ Set default enquiryDate to today IST
     useEffect(() => {
         if (!form.enquiryDate) {
-            const today = new Date();
-            const year = today.getUTCFullYear();
-            const month = String(today.getUTCMonth() + 1).padStart(2, '0');
-            const day = String(today.getUTCDate()).padStart(2, '0');
-            const formattedDate = `${year}-${month}-${day}`;
-
-            setForm(prev => ({ ...prev, enquiryDate: formattedDate }));
+            setForm(prev => ({ ...prev, enquiryDate: getTodayIST() }));
         }
     }, [form.enquiryDate, setForm]);
 
@@ -34,20 +47,15 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
         }
     }));
 
-
     useEffect(() => {
         if (!form.strikeHallCharges) {
-            setForm(prev => ({
-                ...prev,
-                strikeHallCharges: "700000",
-            }));
+            setForm(prev => ({ ...prev, strikeHallCharges: "700000" }));
         }
     }, [form.strikeHallCharges, setForm]);
 
-
     return (
         <>
-
+            {/* Enquiry Date */}
             <div
                 style={{
                     position: "absolute",
@@ -76,6 +84,7 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
                 />
             </div>
 
+            {/* Customer Name */}
             <div className="form-group">
                 <label>Customer Name</label>
                 <div style={{ display: 'flex', gap: '10px' }}>
@@ -94,13 +103,10 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
 
                     <input
                         type="text"
-                        placeholder=""
                         value={form.name || ''}
                         onChange={(e) => {
                             let value = e.target.value;
-
                             value = value.replace(/\b\w/g, (char) => char.toUpperCase());
-
                             handleChange({ target: { name: 'name', value } });
                         }}
                     />
@@ -108,14 +114,14 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
                 {errors.name && <span className="error">Required</span>}
             </div>
 
+            {/* Contact Numbers */}
             <div className="form-group">
                 <label>Contact Number 1</label>
                 <input
                     type="tel"
                     name="mobile1"
-                    placeholder=""
-                    onChange={handleChange}
                     value={form.mobile1 || ''}
+                    onChange={handleChange}
                     maxLength={14}
                     pattern="[0-9]{10}"
                 />
@@ -127,21 +133,17 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
                 <input
                     type="tel"
                     name="mobile2"
-                    placeholder=""
-                    onChange={handleChange}
                     value={form.mobile2 || ''}
+                    onChange={handleChange}
                     maxLength={14}
                     pattern="[0-9]{10}"
                 />
             </div>
 
+            {/* Source */}
             <div className="form-group">
                 <label>Source of Lead</label>
-                <select
-                    name="source"
-                    onChange={handleChange}
-                    value={form.source || ''}
-                >
+                <select name="source" onChange={handleChange} value={form.source || ''}>
                     <option value=""></option>
                     <option value="Walk-In">Walk-In</option>
                     <option value="Just Dial">Just Dial</option>
@@ -160,19 +162,15 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
                         name="referredBy"
                         value={form.referredBy || ''}
                         onChange={handleChange}
-                        placeholder=""
                     />
                     {errors.referredBy && <span className="error">Required</span>}
                 </div>
             )}
 
+            {/* Venue Type */}
             <div className="form-group">
                 <label>Venue Type</label>
-                <select
-                    name="venueType"
-                    onChange={handleChange}
-                    value={form.venueType || ''}
-                >
+                <select name="venueType" onChange={handleChange} value={form.venueType || ''}>
                     <option value=""></option>
                     <option value="Hall with Front Lawn">Hall with Front Lawn</option>
                     <option value="Hall with Front & Back Lawn">Hall with Front & Back Lawn</option>
@@ -181,35 +179,29 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
                 {errors.venueType && <span className="error">Required</span>}
             </div>
 
+            {/* Function Type */}
             <div className="form-group">
-                <label> Function Type</label>
-                <FunctionTypeSelector
-                    selectedType={form.functionType}
-                    setForm={setForm}
-                />
+                <label>Function Type</label>
+                <FunctionTypeSelector selectedType={form.functionType} setForm={setForm} />
                 {errors.functionType && <span className="error">Required</span>}
-
             </div>
 
+            {/* Day/Night */}
             <div className="form-group">
                 <label>Day / Night</label>
-                <select
-                    name="dayNight"
-                    value={form.dayNight || ""}
-                    onChange={handleChange}
-                >
+                <select name="dayNight" value={form.dayNight || ""} onChange={handleChange}>
                     <option value="Night">Night</option>
                     <option value="Day">Day</option>
                     <option value="Both">Both</option>
                 </select>
             </div>
 
+            {/* No. of Pax */}
             <div className="form-group">
                 <label>No. of Pax</label>
                 <input
                     type="text"
                     name="noOfPlates"
-                    placeholder=""
                     value={form.noOfPlates || ""}
                     onChange={(e) => {
                         const onlyNums = e.target.value.replace(/[^0-9]/g, "");
@@ -220,7 +212,7 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
                 {errors.noOfPlates && <span className="error">Required</span>}
             </div>
 
-
+            {/* Function Date */}
             <div className="form-group">
                 <label>Date of Function</label>
                 <button
@@ -237,27 +229,23 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
                         color: 'black'
                     }}
                 >
-                    {form.functionDate
-                        ? `📅 ${form.functionDate.split("-").reverse().join("-")}` // dd-mm-yyyy
-                        : "."}
-
+                    {form.functionDate ? `📅 ${formatDateIST(form.functionDate)}` : "."}
                 </button>
 
                 <CalendarInput
                     isOpen={showCalendar}
                     onClose={() => setShowCalendar(false)}
                     onDateSelect={(selectedDate) => {
-                        // yaha selectedDate ek string hai: "yyyy-mm-dd"
-                        setForm((prev) => ({ ...prev, functionDate: selectedDate }));
+                        // ✅ Ensure selectedDate is in IST (YYYY-MM-DD)
+                        setForm(prev => ({ ...prev, functionDate: selectedDate }));
                         setShowCalendar(false);
                     }}
-                    selectedDate={form.functionDate} // string pass karo
+                    selectedDate={form.functionDate}
                 />
-
                 {errors.functionDate && <span className="error">Required</span>}
+            </div>
 
-            </div >
-
+            {/* Strike Venue Charges */}
             <div className="form-group">
                 <label style={{ whiteSpace: 'nowrap' }}>Strike Venue Charges</label>
                 <input
@@ -267,32 +255,24 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
                     value={form.strikeHallCharges || ""}
                     onChange={(e) => {
                         let val = e.target.value.replace(/[^0-9.]/g, "");
-                        if ((val.match(/\./g) || []).length > 1) {
-                            val = val.slice(0, -1);
-                        }
-                        handleChange({
-                            target: {
-                                name: "strikeHallCharges",
-                                value: val,
-                            }
-                        });
+                        if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
+                        handleChange({ target: { name: "strikeHallCharges", value: val } });
                     }}
                 />
             </div>
 
+            {/* Venue Charges */}
             <div className="form-group">
                 <label>1. Venue Charges</label>
                 <input
                     type="text"
                     inputMode="decimal"
                     name="hallCharges"
-                    placeholder=""
                     value={form.hallCharges || ""}
                     onChange={(e) => {
-                        let val = e.target.value.replace(/[^0-9.]/g, ""); // only numbers & dot
-                        // Prevent multiple dots
+                        let val = e.target.value.replace(/[^0-9.]/g, "");
                         if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
-                        setForm(prev => ({ ...prev, hallCharges: val })); // ✅ directly update state
+                        setForm(prev => ({ ...prev, hallCharges: val }));
                     }}
                 />
                 {errors.hallCharges && <span className="error">Required</span>}

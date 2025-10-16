@@ -9,9 +9,10 @@ const AllBookingDatesPopup = ({ isOpen, onClose }) => {
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     const date = new Date(dateStr);
-    const day = date.getDate();
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
+    const istDate = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
+    const day = String(istDate.getDate()).padStart(2, "0");
+    const month = String(istDate.getMonth() + 1).padStart(2, "0");
+    const year = istDate.getFullYear();
     return `${day}-${month}-${year}`;
   };
 

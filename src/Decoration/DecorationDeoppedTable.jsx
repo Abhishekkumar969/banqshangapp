@@ -13,6 +13,35 @@ const DecorationTable = () => {
     const [decorationProfile, setDecorationProfile] = useState(null);
     const [appUserName, setAppUserName] = useState("App User");
 
+    const convertToISTDate = (dateStr) => {
+        if (!dateStr) return "-";
+        const d = new Date(dateStr);
+        const istTime = new Date(d.getTime() + 5.5 * 60 * 60 * 1000); // UTC+5:30
+
+        const day = String(istTime.getUTCDate()).padStart(2, "0");
+        const month = String(istTime.getUTCMonth() + 1).padStart(2, "0");
+        const year = istTime.getUTCFullYear();
+
+        return `${day}-${month}-${year}`;
+    };
+
+    const convertTimeToIST = (timeStr) => {
+        if (!timeStr) return "-";
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        let istHours = hours + 5;
+        let istMinutes = minutes + 30;
+        if (istMinutes >= 60) {
+            istMinutes -= 60;
+            istHours += 1;
+        }
+        istHours = istHours % 24;
+
+        const ampm = istHours >= 12 ? 'PM' : 'AM';
+        const hour12 = istHours % 12 || 12;
+
+        return `${hour12}:${String(istMinutes).padStart(2, '0')} ${ampm}`;
+    };
+
     useEffect(() => {
         const auth = getAuth();
         const currentUser = auth.currentUser;
@@ -110,14 +139,6 @@ const DecorationTable = () => {
             dateStr.includes(q)
         );
     });
-
-    const convertTo12Hour = (timeStr) => {
-        if (!timeStr) return "-";
-        const [hours, minutes] = timeStr.split(':').map(Number);
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        const hour12 = hours % 12 || 12;
-        return `${hour12}:${String(minutes).padStart(2, '0')} ${ampm}`;
-    };
 
     const handleUndoDrop = async (v) => {
         try {
@@ -331,12 +352,12 @@ const DecorationTable = () => {
                                 return (
                                     <tr key={v.id}>
                                         <td>{filteredBookings.length - idx}</td>
-                                        <td>{v.finalDate ? new Date(v.finalDate).toLocaleDateString("en-GB").replace(/\//g, "-") : "-"}</td>
+                                        <td>{v.finalDate ? convertToISTDate(v.finalDate) : "-"}</td>
                                         <td>{v.customerName}</td>
                                         <td><a href={`tel:${v.contactNo}`} style={{ color: "black", textDecoration: "none" }}>{v.contactNo}</a></td>
                                         <td>{v.eventType}</td>
                                         <td>{v.venueType || "-"}</td>
-                                        <td>{convertTo12Hour(v.startTime)} - {convertTo12Hour(v.endTime)}</td>
+                                        <td>{convertTimeToIST(v.startTime)} - {convertTimeToIST(v.endTime)}</td>
 
                                         <td><strong>₹{totalAdvance}</strong></td>
 

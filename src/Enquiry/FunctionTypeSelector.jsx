@@ -1,51 +1,72 @@
-import React, { useState, useEffect } from 'react';
-import '../styles/BookingAmenities.css';
+import React, { useState, useEffect } from "react";
+import { db } from "../firebaseConfig";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import "../styles/BookingAmenities.css";
 
-const predefinedTypes = [
-  "Wedding", "Reception", "Engagement", "Birthday", "Anniversary",
-  "Tilak", "Corporate Party", "Haldi & Mehndi"
-];
-
-const FunctionTypeSelector = ({ selectedType, onSelect }) => {
-  const [customType, setCustomType] = useState('');
-  const [types, setTypes] = useState(predefinedTypes);
+const FunctionTypeSelector = ({ selectedType = "", onSelect = () => {} }) => {
+  const [types, setTypes] = useState([]);
+  const [customType, setCustomType] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState([]);
 
-  // Initialize on edit
+  // ✅ Real-time fetch from Firestore (usersAccess where accessToApp == "A")
   useEffect(() => {
-    if (selectedType) {
-      if (!types.includes(selectedType)) {
-        setTypes(prev => [...prev, selectedType]);
+    const q = query(collection(db, "usersAccess"), where("accessToApp", "==", "A"));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const allTypes = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          if (Array.isArray(data.functionTypes)) {
+            allTypes.push(...data.functionTypes);
+          }
+        });
+
+        const uniqueTypes = [...new Set(allTypes)].sort();
+        setTypes(uniqueTypes);
+      },
+      (error) => {
+        console.error("Error fetching function types:", error);
       }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  // ✅ Keep selected type synced
+  useEffect(() => {
+    if (selectedType && !types.includes(selectedType)) {
+      setTypes((prev) => [...prev, selectedType]);
       setCustomType(selectedType);
     }
   }, [selectedType, types]);
 
-
+  // ✅ Filter suggestions for custom input
   useEffect(() => {
-    // filter suggestions whenever customType changes
-    if (customType.trim() === '') {
+    if (customType.trim() === "") {
       setFilteredSuggestions([]);
     } else {
       const filtered = types.filter(
-        t => t.toLowerCase().includes(customType.toLowerCase()) && t !== customType
+        (t) => t.toLowerCase().includes(customType.toLowerCase()) && t !== customType
       );
       setFilteredSuggestions(filtered);
     }
   }, [customType, types]);
 
+  // ✅ Selection handler
   const handleSelect = (type) => {
-    onSelect(type);   // update parent
+    if (typeof onSelect === "function") onSelect(type);
     setDrawerOpen(false);
-    setCustomType(type); // keep selected type visible
+    setCustomType(type);
   };
 
+  // ✅ Add custom function
   const handleAddCustomType = () => {
     const trimmed = customType.trim();
     if (!trimmed) return;
-    if (!types.includes(trimmed)) setTypes([...types, trimmed]);
-    onSelect(trimmed);
+    if (!types.includes(trimmed)) setTypes((prev) => [...prev, trimmed]);
+    if (typeof onSelect === "function") onSelect(trimmed);
     setCustomType(trimmed);
     setDrawerOpen(false);
   };
@@ -57,33 +78,39 @@ const FunctionTypeSelector = ({ selectedType, onSelect }) => {
         onClick={() => setDrawerOpen(true)}
         className="drawer-trigger"
       >
-        {selectedType ? `🎉 ${selectedType}` : 'Select Function Type'}
+        {selectedType ? `🎉 ${selectedType}` : "Select Function Type"}
       </button>
 
       {drawerOpen && (
         <div className="drawer-backdrop" onClick={() => setDrawerOpen(false)}>
-          <div className="drawer" onClick={e => e.stopPropagation()}>
+          <div className="drawer" onClick={(e) => e.stopPropagation()}>
             <div className="drawer-header">
               <h3>Select Function Type</h3>
               <button onClick={() => setDrawerOpen(false)}>✕</button>
             </div>
 
+            {/* ✅ All fetched function types */}
             <ul className="drawer-list">
-              {types.map((type, index) => (
-                <li key={index}>
-                  <label>
-                    <input
-                      type="radio"
-                      name="functionType"
-                      checked={selectedType === type}
-                      onChange={() => handleSelect(type)}
-                    />
-                    {type}
-                  </label>
-                </li>
-              ))}
+              {types.length === 0 ? (
+                <li style={{ color: "#888" }}>Loading...</li>
+              ) : (
+                types.map((type, index) => (
+                  <li key={index}>
+                    <label>
+                      <input
+                        type="radio"
+                        name="functionType"
+                        checked={selectedType === type}
+                        onChange={() => handleSelect(type)}
+                      />
+                      {type}
+                    </label>
+                  </li>
+                ))
+              )}
             </ul>
 
+            {/* ✅ Custom function type */}
             <div className="drawer-custom">
               <input
                 type="text"

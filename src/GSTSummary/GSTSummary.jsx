@@ -13,13 +13,27 @@ const GSTSummary = () => {
     const [financialYears, setFinancialYears] = useState([]);
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
-    const [sortConfig, setSortConfig] = useState({ key: "date", direction: "desc" }); // ✅ sort config
+    const [sortConfig, setSortConfig] = useState({ key: "date", direction: "desc" });
 
-    const parseDate = (dateStr) => {
+    const toISTDate = (dateInput) => {
+        if (!dateInput) return new Date();
+        let date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+        return new Date(date.getTime() + 5.5 * 60 * 60 * 1000); // IST offset
+    };
+
+    const formatDateIST = (dateInput) => {
+        const d = toISTDate(dateInput);
+        const day = String(d.getDate()).padStart(2, "0");
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const year = d.getFullYear();
+        return `${day}-${month}-${year}`;
+    };
+
+    const parseDate = useCallback((dateStr) => {
         if (!dateStr) return new Date();
         const [year, month, day] = dateStr.split("-").map(Number);
-        return new Date(year, month - 1, day);
-    };
+        return toISTDate(new Date(year, month - 1, day));
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -37,12 +51,10 @@ const GSTSummary = () => {
                     d.advancePayments.forEach((payment, index) => {
                         if (!payment.amount || !payment.receiptDate) return;
 
-                        // Skip Cash payments
                         if (payment.mode === 'Cash') return;
 
-                        const dateObj = parseDate(payment.receiptDate);
+                        const dateObj = parseDate(payment.receiptDate); // ✅ now stable
 
-                        // Determine financial year
                         const fyYear = dateObj.getMonth() + 1 >= 4
                             ? dateObj.getFullYear()
                             : dateObj.getFullYear() - 1;
@@ -77,27 +89,27 @@ const GSTSummary = () => {
         };
 
         fetchData();
-    }, []);
+    }, [parseDate]); // ✅ include parseDate in dependencies
 
     const handleFilter = useCallback(() => {
         let filtered = data;
 
         if (financialYear) {
-            const fyStart = new Date(`${financialYear}-04-01`);
-            const fyEnd = new Date(`${financialYear + 1}-03-31`);
+            const fyStart = toISTDate(new Date(`${financialYear}-04-01`));
+            const fyEnd = toISTDate(new Date(`${financialYear + 1}-03-31`));
 
             filtered = filtered.filter(entry => {
-                const entryDate = new Date(entry.date);
+                const entryDate = toISTDate(new Date(entry.date));
                 return entryDate >= fyStart && entryDate <= fyEnd;
             });
         }
 
         if (fromDate && toDate) {
-            const from = new Date(fromDate);
-            const to = new Date(toDate);
+            const from = toISTDate(new Date(fromDate));
+            const to = toISTDate(new Date(toDate));
 
             filtered = filtered.filter(entry => {
-                const entryDate = new Date(entry.date);
+                const entryDate = toISTDate(new Date(entry.date));
                 return entryDate >= from && entryDate <= to;
             });
         }
@@ -108,8 +120,8 @@ const GSTSummary = () => {
 
         if (sortConfig.key) {
             filtered.sort((a, b) => {
-                let dateA = sortConfig.key === "functionDate" ? new Date(a.functionDate) : new Date(a.date);
-                let dateB = sortConfig.key === "functionDate" ? new Date(b.functionDate) : new Date(b.date);
+                let dateA = sortConfig.key === "functionDate" ? toISTDate(new Date(a.functionDate)) : toISTDate(new Date(a.date));
+                let dateB = sortConfig.key === "functionDate" ? toISTDate(new Date(b.functionDate)) : toISTDate(new Date(b.date));
 
                 return sortConfig.direction === "asc" ? dateA - dateB : dateB - dateA;
             });
@@ -268,11 +280,9 @@ const GSTSummary = () => {
                                                     <td>{filteredData.length - idx}.</td>
                                                     <td>{entry.name}</td>
                                                     <td>
-                                                        {entry.functionDate
-                                                            ? new Date(entry.functionDate).toLocaleDateString("en-GB")
-                                                            : "-"}
+                                                        {entry.functionDate ? formatDateIST(entry.functionDate) : "-"}
                                                     </td>
-                                                    <td>{new Date(entry.date).toLocaleDateString("en-GB")}</td>
+                                                    <td>{formatDateIST(entry.date)}</td>
                                                     <td>₹{Number(entry.amount).toLocaleString("en-IN")}</td>
                                                     <td>{entry.mode}</td>
                                                 </tr>

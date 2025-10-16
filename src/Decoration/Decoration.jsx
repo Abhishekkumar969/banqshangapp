@@ -9,6 +9,25 @@ import BackButton from "../components/BackButton";
 import { useNavigate } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
+const toISTDateInputValue = (date) => {
+    if (!date) return "";
+    const d = new Date(date);
+    const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000); // IST offset
+    return ist.toISOString().split("T")[0]; // "YYYY-MM-DD" for input[type=date]
+};
+
+const toISTTimeInputValue = (date) => {
+    if (!date) return "";
+    const d = new Date(date);
+    const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+    return ist.toTimeString().slice(0, 5); // "HH:MM" for input[type=time]
+};
+
+const toISTDateTimeString = (date) => {
+    if (!date) return "";
+    return new Date(date).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+};
+
 const Decoration = () => {
     const location = useLocation();
     const [editData, setEditData] = useState(null);
@@ -291,10 +310,14 @@ const Decoration = () => {
             // ✅ Add user email to the decorationData
             const decorationData = {
                 ...form,
+                date: toISTDateInputValue(form.date),
+                bookedOn: toISTDateInputValue(form.bookedOn),
+                startTime: toISTTimeInputValue(form.startTime),
+                endTime: toISTTimeInputValue(form.endTime),
+                updatedAt: toISTDateTimeString(new Date()),
                 eventType: customEvent.trim() || form.typeOfEvent,
                 services: filteredServicesToSave,
                 summary: summaryFields,
-                updatedAt: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
                 userEmail: currentUser.email // <-- this line added
             };
 
@@ -410,15 +433,15 @@ const Decoration = () => {
                 {formErrors.contactNo && <p className={styles.errorMsg}>{formErrors.contactNo}</p>}
 
                 <label>Date Of Event :</label>
-                <input name="date" type="date" disabled value={form.date} onChange={handleChange} />
+                <input name="date" type="date" disabled value={toISTDateInputValue(form.date)} onChange={handleChange} />
                 {formErrors.date && <p className={styles.errorMsg}>{formErrors.date}</p>}
 
                 <label>Start Time :</label>
-                <input name="startTime" type="time" value={form.startTime} onChange={handleChange} />
+                <input name="startTime" type="time" value={toISTTimeInputValue(form.startTime)} onChange={handleChange} />
                 {formErrors.startTime && <p className={styles.errorMsg}>{formErrors.startTime}</p>}
 
                 <label>End Time :</label>
-                <input name="endTime" type="time" value={form.endTime} onChange={handleChange} />
+                <input name="endTime" type="time" value={toISTTimeInputValue(form.endTime)} onChange={handleChange} />
                 {formErrors.endTime && <p className={styles.errorMsg}>{formErrors.endTime}</p>}
 
                 <label>Venue Type :</label>
@@ -428,7 +451,7 @@ const Decoration = () => {
                 <input
                     type="date"
                     name="bookedOn"
-                    value={form.bookedOn}
+                    value={toISTDateInputValue(form.bookedOn)}
                     onChange={handleChange}
                 />
 

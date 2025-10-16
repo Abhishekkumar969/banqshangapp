@@ -1,6 +1,6 @@
 // Hidden
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import styles from "../styles/Vendor.module.css";
 import { useLocation } from "react-router-dom";
 import { doc, serverTimestamp, runTransaction, collection, query, where, getDocs } from "firebase/firestore";
@@ -28,6 +28,22 @@ const Vendor = () => {
     const [selectAll, setSelectAll] = useState(false);
     const [vendor, setVendor] = useState(null);
     const [predefinedEvents, setPredefinedEvents] = useState([]);
+
+    // Vendor.jsx (top of file, outside component)
+    const toISTDate = (dateInput) => {
+        if (!dateInput) return new Date();
+        const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+        return new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
+    };
+
+    const formatDateIST = useCallback((dateInput) => {
+        const d = toISTDate(dateInput);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }, []);
+
 
     useEffect(() => {
         const auth = getAuth();
@@ -199,7 +215,6 @@ const Vendor = () => {
             totalPackageCost: editData.summary?.totalPackageCost || "",
             overAllPackageCost: editData.summary?.overAllPackageCost || "",
             discount: editData.summary?.discount || "",
-            // ✅ If GST is empty or "0", leave it blank; otherwise use stored value
             gstApplicableAmount: manuallySet ? gstAppAmtStr : "",
             gstAmount: editData.summary?.gstAmount || "",
             grandTotal: editData.summary?.grandTotal || "",
@@ -211,14 +226,14 @@ const Vendor = () => {
             venueType: editData.venueType || "",
             contactNo: editData.contactNo || "",
             typeOfEvent: editData.eventType || "",
-            date: editData.date || "",
             startTime: editData.startTime || "",
             endTime: editData.endTime || "",
             banquetName: editData.banquetName || "Shangri-la Palace", // ✅ added this line
-            bookedOn: editData.bookedOn || new Date().toISOString().split("T")[0],
+            bookedOn: editData?.bookedOn ? formatDateIST(editData.bookedOn) : formatDateIST(new Date()),
+            date: editData?.date ? formatDateIST(editData.date) : formatDateIST(new Date()),
+
         });
 
-        // Services mapping (same as before)
         const eventName = (editData.eventType || "").toLowerCase();
         let eventKey = "";
         if (eventName.includes("engagement")) eventKey = vendor.functionTypes[0] || "";
@@ -252,7 +267,7 @@ const Vendor = () => {
 
         setServices(merged);
 
-    }, [editData, vendor, enableRoyalty]);
+    }, [editData, vendor, enableRoyalty, formatDateIST]);
 
     const handleSave = async () => {
         const newErrors = {};
@@ -291,11 +306,13 @@ const Vendor = () => {
             // ✅ Add user email to the vendorData
             const vendorData = {
                 ...form,
+                bookedOn: toISTDate(form.bookedOn).toISOString(),
+                date: toISTDate(form.date).toISOString(),
                 eventType: customEvent.trim() || form.typeOfEvent,
                 services: filteredServicesToSave,
                 summary: summaryFields,
-                updatedAt: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
-                userEmail: currentUser.email // <-- this line added
+                updatedAt: toISTDate(new Date()).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
+                userEmail: currentUser.email
             };
 
             const monthDocRef = doc(db, "vendor", monthYear);
@@ -410,7 +427,7 @@ const Vendor = () => {
                 {formErrors.contactNo && <p className={styles.errorMsg}>{formErrors.contactNo}</p>}
 
                 <label>Date Of Event :</label>
-                <input name="date" type="date" disabled value={form.date} onChange={handleChange} />
+                <input name="date" type="date" disabled value={form.date ? formatDateIST(form.date) : ""} onChange={handleChange} />
                 {formErrors.date && <p className={styles.errorMsg}>{formErrors.date}</p>}
 
                 <label>Start Time :</label>
@@ -428,7 +445,7 @@ const Vendor = () => {
                 <input
                     type="date"
                     name="bookedOn"
-                    value={form.bookedOn}
+                    value={form.bookedOn ? formatDateIST(form.bookedOn) : ""}
                     onChange={handleChange}
                 />
 

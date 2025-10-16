@@ -15,12 +15,25 @@ const CateringAssign = () => {
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "catering"), (snap) => {
-      const data = snap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setCaterings(data);
+      const allBookings = [];
+
+      snap.docs.forEach((doc) => {
+        const monthDocId = doc.id; // e.g., "Apr2025"
+        const monthData = doc.data().data || {}; // "data" map
+
+        // Flatten bookings with month info
+        Object.entries(monthData).forEach(([bookingId, booking]) => {
+          allBookings.push({
+            monthDocId,
+            bookingId,
+            ...booking,
+          });
+        });
+      });
+
+      setCaterings(allBookings);
     });
+
     return () => unsub();
   }, []);
 

@@ -53,7 +53,6 @@ import StatsPage from './pages/Stats';
 import MenuItems from './pages/MenuItems';
 import AdminProfile from './pages/AdminProfile';
 
-
 function AppRoutes() {
   const navigate = useNavigate();
 
@@ -127,7 +126,7 @@ function AppRoutes() {
 
         <Route path="/MenuItems" element={<PrivateRoute><MenuItems /></PrivateRoute>} />
         <Route path="/AdminProfile" element={<PrivateRoute><AdminProfile /></PrivateRoute>} />
-        
+
         <Route path="/login" element={<LoginPage />} />
       </Routes>
     </>

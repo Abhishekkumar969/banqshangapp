@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import styles from "../styles/Decoration.module.css";
 import { useLocation } from "react-router-dom";
-import { doc, serverTimestamp, runTransaction, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, runTransaction, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import BackButton from "../components/BackButton";
 import { useNavigate } from "react-router-dom";
@@ -284,9 +284,10 @@ const Decoration = () => {
                     ((srv.total?.toString().trim() || "") !== "" || (srv.remarks?.toString().trim() || "") !== "")
             );
 
-            const bookedDate = form.bookedDate ? new Date(form.bookedDate) : new Date();
+            const bookedDate = form.bookedOn ? new Date(form.bookedOn) : new Date();
+            const istBookedDate = new Date(bookedDate.getTime() + 5.5 * 60 * 60 * 1000); // IST offset
             const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            const monthYear = `${monthNames[bookedDate.getMonth()]}${bookedDate.getFullYear()}`;
+            const monthYear = `${monthNames[istBookedDate.getMonth()]}${istBookedDate.getFullYear()}`;
 
             // ✅ Get current user
             const auth = getAuth();
@@ -352,7 +353,8 @@ const Decoration = () => {
                     const newDecorationData = {
                         ...decorationData,
                         slNo,
-                        createdAt: serverTimestamp(),
+                        createdAt: new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
+
                     };
 
                     transaction.set(

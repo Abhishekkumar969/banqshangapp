@@ -14,6 +14,25 @@ const DecorationLogPopupCell = ({ decoration }) => {
             })
         : [];
 
+    const convertToISTDateTime = (timestampSeconds) => {
+        if (!timestampSeconds) return "Unknown time";
+        const d = new Date(timestampSeconds * 1000);
+        const istTime = new Date(d.getTime() + 5.5 * 60 * 60 * 1000); // UTC+5:30
+
+        const day = String(istTime.getUTCDate()).padStart(2, "0");
+        const month = String(istTime.getUTCMonth() + 1).padStart(2, "0");
+        const year = istTime.getUTCFullYear();
+
+        let hours = istTime.getUTCHours();
+        const minutes = String(istTime.getUTCMinutes()).padStart(2, "0");
+        const seconds = String(istTime.getUTCSeconds()).padStart(2, "0");
+        const ampm = hours >= 12 ? "PM" : "AM";
+        hours = hours % 12 || 12;
+
+        return `${day}-${month}-${year} ${hours}:${minutes}:${seconds} ${ampm}`;
+    };
+
+
     const renderValue = (val, fieldName) => {
         if (fieldName === 'customItems' && Array.isArray(val)) {
             return (
@@ -180,7 +199,7 @@ const DecorationLogPopupCell = ({ decoration }) => {
           <div class="log-entry">
             <div class="log-entry-header">
               <div>📝 ${logKey}</div>
-              <div>${log.at?.seconds ? new Date(log.at.seconds * 1000).toLocaleString('en-GB') : 'Unknown time'}</div>
+              <div>${log.at?.seconds ? convertToISTDateTime(log.at.seconds) : 'Unknown time'}</div>
             </div>
         `;
 
@@ -254,20 +273,9 @@ const DecorationLogPopupCell = ({ decoration }) => {
                                 <div className="log-entry" key={logKey}>
                                     <div>
                                         <b>Time:</b>{" "}
-                                        {log.at
-                                            ? log.at.seconds
-                                                ? new Date(log.at.seconds * 1000).toLocaleString("en-GB", {
-                                                    day: "2-digit",
-                                                    month: "2-digit",
-                                                    year: "numeric",
-                                                    hour: "2-digit",
-                                                    minute: "2-digit",
-                                                    second: "2-digit",
-                                                    hour12: true, // 12-hour format with AM/PM
-                                                })
-                                                : log.at
-                                            : "Unknown time"}
+                                        {log.at?.seconds ? convertToISTDateTime(log.at.seconds) : "Unknown time"}
                                     </div>
+
                                     {log.by && (
                                         <div className="log-by-info">
                                             <div>

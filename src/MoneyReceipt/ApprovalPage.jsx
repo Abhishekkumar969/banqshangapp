@@ -43,12 +43,6 @@ export default function ApprovalPage() {
         return () => unsubscribe();
     }, []);
 
-    const formatDate = (date) => {
-        if (!date) return "-";
-        const d = new Date(date);
-        return d.toLocaleDateString("en-GB").replace(/\//g, "-");
-    };
-
     // 🔹 Get current approver's name
     const getApproverName = async () => {
         const auth = getAuth();
@@ -147,6 +141,15 @@ export default function ApprovalPage() {
         }
     };
 
+    // 🔹 Format date in IST
+    const formatDate = (date) => {
+        if (!date) return "-";
+        const d = new Date(date);
+        // Convert to IST
+        const istDate = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+        return istDate.toISOString().split("T")[0].split("-").reverse().join("-"); // DD-MM-YYYY
+    };
+
 
     return (
         <div style={{ maxWidth: "95%", margin: "0 auto", padding: "10px" }}>
@@ -196,36 +199,36 @@ export default function ApprovalPage() {
                                     whiteSpace: "nowrap",
                                 }}
                             >
-                                <th style={{border:'2px solid #8e8e8eff'}}>SL.</th>
-                                <th style={{border:'2px solid #8e8e8eff'}}>SL. No</th>
-                                <th style={{border:'2px solid #8e8e8eff'}}>Party</th>
-                                <th style={{border:'2px solid #8e8e8eff'}}>Amount</th>
-                                <th style={{border:'2px solid #8e8e8eff'}}>Mode</th>
-                                <th style={{border:'2px solid #8e8e8eff'}}>Cash</th>
-                                <th style={{border:'2px solid #8e8e8eff'}}>Credit</th>
-                                <th style={{border:'2px solid #8e8e8eff'}}>Debit</th>
-                                <th style={{border:'2px solid #8e8e8eff'}}>Date-Time</th>
-                                <th style={{border:'2px solid #8e8e8eff'}}>Particulars</th>
-                                <th style={{border:'2px solid #8e8e8eff'}}>Approve</th>
+                                <th style={{ border: '2px solid #8e8e8eff' }}>SL.</th>
+                                <th style={{ border: '2px solid #8e8e8eff' }}>SL. No</th>
+                                <th style={{ border: '2px solid #8e8e8eff' }}>Party</th>
+                                <th style={{ border: '2px solid #8e8e8eff' }}>Amount</th>
+                                <th style={{ border: '2px solid #8e8e8eff' }}>Mode</th>
+                                <th style={{ border: '2px solid #8e8e8eff' }}>Cash</th>
+                                <th style={{ border: '2px solid #8e8e8eff' }}>Credit</th>
+                                <th style={{ border: '2px solid #8e8e8eff' }}>Debit</th>
+                                <th style={{ border: '2px solid #8e8e8eff' }}>Date-Time</th>
+                                <th style={{ border: '2px solid #8e8e8eff' }}>Particulars</th>
+                                <th style={{ border: '2px solid #8e8e8eff' }}>Approve</th>
                             </tr>
                         </thead>
                         <tbody>
                             {receipts.map((r, index) => (
                                 <tr key={`${r.month}-${r.mapId}`} style={{ whiteSpace: "nowrap" }}>
-                                    <td style={{border:'2px solid #8e8e8eff'}}>{receipts.length - index}</td>
-                                    <td style={{border:'2px solid #8e8e8eff'}}>#{r.slNo || "-"}</td>
-                                    <td style={{border:'2px solid #8e8e8eff'}}>{r.customerName || r.partyName || "-"}</td>
-                                    <td style={{border:'2px solid #8e8e8eff'}}> ₹{r.amount || 0} </td>
-                                    <td style={{border:'2px solid #8e8e8eff'}}> {r.mode || "-"} </td>
-                                    <td style={{border:'2px solid #8e8e8eff'}}> {r.cashTo} </td>
-                                    <td style={{border:'2px solid #8e8e8eff'}}> {r.paymentFor === "Credit" ? "Credit" : " "} </td>
-                                    <td style={{border:'2px solid #8e8e8eff'}}> {r.paymentFor === "Debit" ? "Debit" : " "} </td>
-                                    <td style={{border:'2px solid #8e8e8eff'}}>
+                                    <td style={{ border: '2px solid #8e8e8eff' }}>{receipts.length - index}</td>
+                                    <td style={{ border: '2px solid #8e8e8eff' }}>#{r.slNo || "-"}</td>
+                                    <td style={{ border: '2px solid #8e8e8eff' }}>{r.customerName || r.partyName || "-"}</td>
+                                    <td style={{ border: '2px solid #8e8e8eff' }}> ₹{r.amount || 0} </td>
+                                    <td style={{ border: '2px solid #8e8e8eff' }}> {r.mode || "-"} </td>
+                                    <td style={{ border: '2px solid #8e8e8eff' }}> {r.cashTo} </td>
+                                    <td style={{ border: '2px solid #8e8e8eff' }}> {r.paymentFor === "Credit" ? "Credit" : " "} </td>
+                                    <td style={{ border: '2px solid #8e8e8eff' }}> {r.paymentFor === "Debit" ? "Debit" : " "} </td>
+                                    <td style={{ border: '2px solid #8e8e8eff' }}>
                                         <span>{formatDate(r.createdAt)}</span>
                                         <br />
                                         {r.createdAt && (
                                             <span style={{ fontSize: "0.85em", color: "#555" }}>
-                                                {new Date(r.createdAt).toLocaleTimeString("en-US", {
+                                                {new Date(r.createdAt + 5.5 * 60 * 60 * 1000).toLocaleTimeString("en-US", {
                                                     hour: "2-digit",
                                                     minute: "2-digit",
                                                     hour12: true,
@@ -233,8 +236,8 @@ export default function ApprovalPage() {
                                             </span>
                                         )}
                                     </td>
-                                    <td style={{border:'2px solid #8e8e8eff'}}>{r.particularNature || r.description || "-"}</td>
-                                    <td style={{border:'2px solid #8e8e8eff'}}>
+                                    <td style={{ border: '2px solid #8e8e8eff' }}>{r.particularNature || r.description || "-"}</td>
+                                    <td style={{ border: '2px solid #8e8e8eff' }}>
                                         <button
                                             onClick={() => approveReceipt(r.month, r.mapId)}
                                             disabled={loading}

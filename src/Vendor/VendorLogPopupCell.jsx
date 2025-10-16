@@ -4,65 +4,29 @@ import '../styles/LogPopupCell.css';
 const VendorLogPopupCell = ({ vendor }) => {
     const [showLogs, setShowLogs] = useState(false);
 
-    const parseCustomDate = (str) => {
-        if (!str) return 0;
-        const [datePart, timePart, meridiem] = str.match(/(\d+\/\d+\/\d+), (\d+:\d+:\d+) (am|pm)/i)?.slice(1) || [];
-        if (!datePart || !timePart) return 0;
+    // ✅ Parse Firestore timestamp or custom string to IST string
+    const formatToIST = (dateVal) => {
+        if (!dateVal) return "-";
 
-        const [day, month, year] = datePart.split('/').map(Number);
-        let [hours, minutes, seconds] = timePart.split(':').map(Number);
-
-        if (meridiem.toLowerCase() === 'pm' && hours < 12) hours += 12;
-        if (meridiem.toLowerCase() === 'am' && hours === 12) hours = 0;
-
-        return new Date(year, month - 1, day, hours, minutes, seconds).getTime();
-    };
-
-    const updateLogs = vendor
-        ? Object.keys(vendor)
-            .filter(k => k.startsWith('updateLog'))
-            .sort((a, b) => {
-                const aTime = parseCustomDate(vendor[a]?.at);
-                const bTime = parseCustomDate(vendor[b]?.at);
-                return bTime - aTime;
-            })
-        : [];
-
-
-    const formatDateIST = (dateStr) => {
-        if (!dateStr) return "-";
-
-        // Check if it's already a timestamp object
-        if (dateStr.seconds) {
-            return new Date(dateStr.seconds * 1000).toLocaleString("en-GB", {
-                timeZone: "Asia/Kolkata",
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-                hour12: true,
-            });
+        let d;
+        if (dateVal.seconds) {
+            // Firestore timestamp
+            d = new Date(dateVal.seconds * 1000);
+        } else if (typeof dateVal === "string") {
+            // Custom string like "13/10/2025, 8:39:17 pm"
+            const [datePart, timePart] = dateVal.split(", ");
+            if (!datePart || !timePart) return dateVal;
+            const [day, month, year] = datePart.split("/").map(Number);
+            let [hours, minutes, seconds] = timePart.split(/[: ]/).slice(0, 3).map(Number);
+            const ampm = timePart.slice(-2).toLowerCase();
+            if (ampm === "pm" && hours < 12) hours += 12;
+            if (ampm === "am" && hours === 12) hours = 0;
+            d = new Date(year, month - 1, day, hours, minutes, seconds);
+        } else {
+            d = new Date(dateVal);
         }
 
-        // If it's a string like "13/10/2025, 8:39:17 pm"
-        const [datePart, timePart] = dateStr.split(", "); // ["13/10/2025", "8:39:17 pm"]
-        const [day, month, year] = datePart.split("/").map(Number);
-
-        let [hours, minutes, seconds] = timePart
-            .split(/[: ]/)
-            .slice(0, 3)
-            .map(Number);
-
-        const ampm = timePart.slice(-2).toLowerCase();
-        if (ampm === "pm" && hours < 12) hours += 12;
-        if (ampm === "am" && hours === 12) hours = 0;
-
-        // Create Date object in local timezone
-        const d = new Date(year, month - 1, day, hours, minutes, seconds);
-
-        // Convert to IST explicitly
+        // Convert to IST (UTC +5:30)
         const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
 
         return ist.toLocaleString("en-GB", {
@@ -76,14 +40,27 @@ const VendorLogPopupCell = ({ vendor }) => {
         });
     };
 
+    const updateLogs = vendor
+        ? Object.keys(vendor)
+            .filter(k => k.startsWith('updateLog'))
+            .sort((a, b) => {
+                const aTime = new Date(vendor[a]?.at?.seconds ? vendor[a].at.seconds * 1000 : vendor[a]?.at).getTime();
+                const bTime = new Date(vendor[b]?.at?.seconds ? vendor[b].at.seconds * 1000 : vendor[b]?.at).getTime();
+                return bTime - aTime;
+            })
+        : [];
+
     const renderValue = (val, fieldName) => {
+        if (!val) return <span>None</span>;
+
         const isObject = (v) => v && typeof v === "object" && !Array.isArray(v);
 
+        // Format dates to IST
         if (fieldName === "updatedAt" || fieldName === "at") {
-            return formatDateIST(val);
+            return formatToIST(val);
         }
 
-        // Handle services inside updateLog changes (new/old arrays)
+        // Services
         if (fieldName === "services" && isObject(val)) {
             return (
                 <div style={{ marginTop: "6px", paddingLeft: "12px" }}>
@@ -108,7 +85,7 @@ const VendorLogPopupCell = ({ vendor }) => {
             );
         }
 
-        // Handle summary inside updateLog changes (new/old objects)
+        // Summary
         if (fieldName === "summary" && isObject(val)) {
             return (
                 <div style={{ marginTop: "6px", paddingLeft: "12px" }}>
@@ -117,7 +94,7 @@ const VendorLogPopupCell = ({ vendor }) => {
                             <div key={type} style={{ marginBottom: "6px" }}>
                                 <b>{type.toUpperCase()}:</b>
                                 {Object.entries(val[type])
-                                    .filter(([k]) => k !== "updatedAt") // <-- skip updatedAt
+                                    .filter(([k]) => k !== "updatedAt")
                                     .map(([k, v]) => (
                                         <div key={k} style={{ paddingLeft: "12px" }}>
                                             • <b>{k}:</b> {v}
@@ -130,37 +107,35 @@ const VendorLogPopupCell = ({ vendor }) => {
             );
         }
 
-        // Handle generic arrays of objects
+        // Arrays
         if (Array.isArray(val)) {
             return val.length ? (
                 <div style={{ marginTop: "6px", paddingLeft: "12px" }}>
-                    {val.map((item, i) => (
-                        <div key={i} style={{ marginBottom: "4px" }}>
-                            {isObject(item) ? (
-                                Object.entries(item)
-                                    .filter(([k]) => k !== "updatedAt") // <-- skip updatedAt
-                                    .map(([k, v]) => (
-                                        <div key={k}>
-                                            <b>{k}:</b> {String(v ?? "None")}
-                                        </div>
-                                    ))
-                            ) : (
-                                <span>{String(item ?? "None")}</span>
-                            )}
-                        </div>
-                    ))}
+                    {val.map((item, i) =>
+                        isObject(item) ? (
+                            Object.entries(item)
+                                .filter(([k]) => k !== "updatedAt")
+                                .map(([k, v]) => (
+                                    <div key={k}>
+                                        <b>{k}:</b> {String(v ?? "None")}
+                                    </div>
+                                ))
+                        ) : (
+                            <div key={i}>{String(item ?? "None")}</div>
+                        )
+                    )}
                 </div>
             ) : (
                 <span>None</span>
             );
         }
 
-        // Handle generic objects
+        // Generic objects
         if (isObject(val)) {
             return (
                 <div style={{ marginTop: "6px", paddingLeft: "12px" }}>
                     {Object.entries(val)
-                        .filter(([k]) => k !== "updatedAt") // <-- skip updatedAt
+                        .filter(([k]) => k !== "updatedAt")
                         .map(([k, v]) => (
                             <div key={k}>
                                 <b>{k}:</b> {Array.isArray(v) ? `[Array]` : isObject(v) ? `[Object]` : v}
@@ -171,7 +146,7 @@ const VendorLogPopupCell = ({ vendor }) => {
         }
 
         // Primitive fallback
-        return <span>"{String(val ?? "None")}"</span>;
+        return <span>{String(val)}</span>;
     };
 
     return (
@@ -179,9 +154,9 @@ const VendorLogPopupCell = ({ vendor }) => {
             <button
                 onClick={() => setShowLogs(true)}
                 className="log-popup-btn"
-                disabled={updateLogs.length === 0} // Disable if no logs
+                disabled={updateLogs.length === 0}
                 style={{
-                    backgroundColor: updateLogs.length === 0 ? '#ccc' : '#2e86de', // Gray if disabled
+                    backgroundColor: updateLogs.length === 0 ? '#ccc' : '#2e86de',
                     cursor: updateLogs.length === 0 ? 'not-allowed' : 'pointer',
                     color: updateLogs.length === 0 ? '#666' : '#fff',
                 }}
@@ -199,9 +174,7 @@ const VendorLogPopupCell = ({ vendor }) => {
                     }}
                 >
                     <div className="log-popup-box">
-
                         <button className="log-popup-close" onClick={() => setShowLogs(false)}>✖</button>
-
                         <h3 className="log-popup-heading"> Update Logs for <b>{vendor.customerName}</b></h3>
 
                         {updateLogs.length === 0 && <p style={{ color: '#999' }}>No logs available.</p>}
@@ -213,28 +186,13 @@ const VendorLogPopupCell = ({ vendor }) => {
                             return (
                                 <div className="log-entry" key={logKey}>
                                     <div>
-                                        <b>Time:</b>{" "}
-                                        {log.at
-                                            ? log.at.seconds
-                                                ? new Date(log.at.seconds * 1000).toLocaleString("en-GB", {
-                                                    day: "2-digit",
-                                                    month: "2-digit",
-                                                    year: "numeric",
-                                                    hour: "2-digit",
-                                                    minute: "2-digit",
-                                                    second: "2-digit",
-                                                    hour12: true,
-                                                })
-                                                : log.at
-                                            : "Unknown time"}
+                                        <b>Time:</b> {formatToIST(log.at)}
                                     </div>
                                     {log.by && (
                                         <div className="log-by-info">
                                             <div>
                                                 <b>By:</b>{" "}
-                                                {log.by
-                                                    ? `${log.by.name || "Unknown User"} (${log.by.email || "No email"})`
-                                                    : "Unknown User"}
+                                                {log.by ? `${log.by.name || "Unknown User"} (${log.by.email || "No email"})` : "Unknown User"}
                                             </div>
                                         </div>
                                     )}

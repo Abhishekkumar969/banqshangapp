@@ -32,13 +32,32 @@ const MoneyReceipt = () => {
     const [activeSource, setActiveSource] = useState("prebookings");
     const navigate = useNavigate();
     const [assignedUsers, setAssignedUsers] = useState([]);
-    const [manualDate, setManualDate] = useState(() => {
-        const today = new Date();
-        const yyyy = today.getUTCFullYear();
-        const mm = String(today.getUTCMonth() + 1).padStart(2, '0');
-        const dd = String(today.getUTCDate()).padStart(2, '0');
+
+    // Convert a JS Date to IST date string (yyyy-mm-dd)
+    const getISTDateString = (date = new Date()) => {
+        const istOffset = 5.5 * 60; // IST = UTC+5:30 in minutes
+        const localTime = date.getTime();
+        const localOffset = date.getTimezoneOffset() * 60000;
+        const istTime = new Date(localTime + localOffset + istOffset * 60000);
+        const yyyy = istTime.getFullYear();
+        const mm = String(istTime.getMonth() + 1).padStart(2, '0');
+        const dd = String(istTime.getDate()).padStart(2, '0');
         return `${yyyy}-${mm}-${dd}`;
-    });
+    };
+
+    // Format date string in DD-MM-YYYY IST
+    const formatISTDate = (dateStr) => {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        const istOffset = 5.5 * 60 * 60000;
+        const istDate = new Date(d.getTime() + istOffset);
+        const dd = String(istDate.getDate()).padStart(2, '0');
+        const mm = String(istDate.getMonth() + 1).padStart(2, '0');
+        const yyyy = istDate.getFullYear();
+        return `${dd}-${mm}-${yyyy}`;
+    };
+
+    const [manualDate, setManualDate] = useState(getISTDateString());
 
     useEffect(() => {
         const fetchAssignedUsers = async () => {
@@ -93,37 +112,42 @@ const MoneyReceipt = () => {
             const source = paymentFor === "Refund" ? "cancelledBookings" : activeSource;
             const res = [];
 
-            if (source === "prebookings") {
-                const colSnap = await getDocs(collection(db, "prebookings"));
-                for (const docSnap of colSnap.docs) {
-                    const monthData = docSnap.data(); // e.g., Sep2025, Aug2025
-                    Object.entries(monthData).forEach(([id, booking]) => {
+            const processDocs = (docs, isNested = true) => {
+                docs.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (isNested) {
+                        Object.entries(data).forEach(([id, booking]) => {
+                            res.push({
+                                monthDoc: docSnap.id,
+                                id,
+                                name: booking.customerName || booking.name || 'Unknown',
+                                mobile1: booking.contactNo || booking.mobile1 || '-',
+                                functionType: booking.eventType || booking.functionType || '-',
+                                functionDate: booking.date || booking.functionDate || '-',
+                                summary: booking.summary || {},
+                                source
+                            });
+                        });
+                    } else {
                         res.push({
-                            monthDoc: docSnap.id, // Save which month doc it belongs to
-                            id,
-                            name: booking.customerName || booking.name || 'Unknown',
-                            mobile1: booking.contactNo || booking.mobile1 || '-',
-                            functionType: booking.eventType || booking.functionType || '-',
-                            functionDate: booking.date || booking.functionDate || '-',
-                            summary: booking.summary || {},
+                            id: docSnap.id,
+                            name: data.customerName || data.name || 'Unknown',
+                            mobile1: data.contactNo || data.mobile1 || '-',
+                            functionType: data.eventType || data.functionType || '-',
+                            functionDate: data.date || data.functionDate || '-',
+                            summary: data.summary || {},
                             source
                         });
-                    });
-                }
-            } else {
-                const snap = await getDocs(collection(db, source));
-                snap.forEach(docSnap => {
-                    const data = docSnap.data();
-                    res.push({
-                        id: docSnap.id,
-                        name: data.customerName || data.name || 'Unknown',
-                        mobile1: data.contactNo || data.mobile1 || '-',
-                        functionType: data.eventType || data.functionType || '-',
-                        functionDate: data.date || data.functionDate || '-',
-                        summary: data.summary || {},
-                        source
-                    });
+                    }
                 });
+            };
+
+            if (["prebookings", "vendor", "decoration"].includes(source)) {
+                const colSnap = await getDocs(collection(db, source));
+                processDocs(colSnap.docs);
+            } else {
+                const colSnap = await getDocs(collection(db, source));
+                processDocs(colSnap.docs, false);
             }
 
             setCustomers(res);
@@ -221,7 +245,7 @@ const MoneyReceipt = () => {
             const monthYear = `${month}${year}`;
 
             const newPayment = {
-                addedAt: new Date(manualDate).toISOString(),
+                addedAt: new Date(new Date(manualDate).getTime() + 5.5 * 60 * 60000).toISOString(), // IST
                 receiptDate: manualDate,
                 amount: parseFloat(amount),
                 amountWords,
@@ -348,7 +372,7 @@ const MoneyReceipt = () => {
                     {[
                         { key: "prebookings", label: "Prebookings" },
                         { key: "vendor", label: "Vendor" },
-                        { key: "decoration", label: "Decoration", hidden: true },
+                        { key: "decoration", label: "Decoration" },
                     ].map(({ key, label, hidden }) => (
                         <button key={key} style={{
                             backgroundColor: activeSource === key ? "#25baffff" : "#d7f2ffff",
@@ -366,7 +390,9 @@ const MoneyReceipt = () => {
                             <p><strong>{paymentFor === 'Refund' ? 'Refund to' : 'Received with thanks from'}:</strong> {selectedCustomer.prefix || ''} {selectedCustomer.name || ''}</p>
                             <p><strong>Customer Mobile:</strong> {selectedCustomer.mobile1 || ''}</p>
                             {selectedCustomer.functionType && <p><strong>Event:</strong> {selectedCustomer.functionType}</p>}
-                            {selectedCustomer.functionDate && <p><strong>Event Date:</strong> {new Date(selectedCustomer.functionDate).toLocaleDateString('en-GB')}</p>}
+                            {selectedCustomer.functionDate && (
+                                <p><strong>Event Date:</strong> {formatISTDate(selectedCustomer.functionDate)}</p>
+                            )}
 
                             {/* Mode Selection */}
                             {paymentFor === 'Advance' && (
@@ -433,12 +459,9 @@ const MoneyReceipt = () => {
                             const searchLower = search.toLowerCase();
 
                             // Function Date ko DD-MM-YYYY & DD/MM/YYYY me convert karo
-                            const formattedDateDash = new Date(c.functionDate)
-                                .toLocaleDateString("en-GB")
-                                .replace(/\//g, "-"); // 25-08-2025
+                            const formattedDateDash = formatISTDate(c.functionDate); // 25-08-2025
 
-                            const formattedDateSlash = new Date(c.functionDate)
-                                .toLocaleDateString("en-GB"); // 25/08/2025
+                            const formattedDateSlash = formattedDateDash.replace(/-/g, '-'); // 25-08-2025
 
                             return (
                                 c.name?.toLowerCase().includes(searchLower) ||

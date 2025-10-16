@@ -8,6 +8,44 @@ import DecorationLogPopupCell from './DecorationLogPopupCell.jsx';
 import { query, where } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
+const toIST = (timestamp, withTime = false) => {
+  if (!timestamp) return "-";
+  const d = new Date(timestamp);
+
+  // IST = UTC + 5:30
+  const istTime = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+
+  const day = String(istTime.getUTCDate()).padStart(2, "0");
+  const month = String(istTime.getUTCMonth() + 1).padStart(2, "0");
+  const year = istTime.getUTCFullYear();
+
+  if (!withTime) return `${day}-${month}-${year}`;
+
+  let hours = istTime.getUTCHours();
+  const minutes = String(istTime.getUTCMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
+
+  return `${day}-${month}-${year}, ${hours}:${minutes} ${ampm}`;
+};
+
+const toISTTime = (timeStr) => {
+  if (!timeStr) return "-";
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  let istHours = hours + 5;
+  let istMinutes = minutes + 30;
+  if (istMinutes >= 60) {
+    istMinutes -= 60;
+    istHours += 1;
+  }
+  if (istHours >= 24) istHours -= 24;
+
+  const ampm = istHours >= 12 ? "PM" : "AM";
+  const hour12 = istHours % 12 || 12;
+  return `${String(hour12).padStart(2, "0")}:${String(istMinutes).padStart(2, "0")} ${ampm}`;
+};
+
+
 const DecorationTable = () => {
   const [allBookings, setAllBookings] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -298,7 +336,7 @@ const DecorationTable = () => {
             <span>
               Date:{" "}
               <span style={{ display: "inline-block", borderBottom: "1px dotted brown", minWidth: "120px", fontWeight: 'bold' }}>
-                {v?.date ? new Date(v.date).toLocaleDateString("en-GB") : ""}
+                {v?.date ? toIST(v.date) : ""}
               </span>
             </span>
           </div>
@@ -315,18 +353,18 @@ const DecorationTable = () => {
             fields={[
               {
                 label: "Date of Event:",
-                value: v?.date ? new Date(v.date).toLocaleDateString("en-GB") : "",
+                value: v?.date ? toIST(v.date) : "",
               },
               {
                 label: "Start Time:",
                 value: v?.startTime
-                  ? new Date(`1970-01-01T${v.startTime}`).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+                  ? toIST(v.date, true)
                   : "",
               },
               {
                 label: "End Time:",
                 value: v?.endTime
-                  ? new Date(`1970-01-01T${v.endTime}`).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+                  ? toIST(v.date, true)
                   : "",
               },
             ]}
@@ -655,23 +693,7 @@ function BookingRow({ v, idx, filteredCount, convertTo12Hour, getAdvanceTotal, g
   const totalPayOut = royaltyPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   const remainingPayout = totalRoyalty - totalPayOut;
 
-  const formatDate = (date) => {
-    if (!date) return "-";
-    const d = new Date(date);
-    const istTime = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
-
-    const day = String(istTime.getUTCDate()).padStart(2, "0");
-    const month = String(istTime.getUTCMonth() + 1).padStart(2, "0");
-    const year = istTime.getUTCFullYear();
-
-    let hours = istTime.getUTCHours();
-    const minutes = String(istTime.getUTCMinutes()).padStart(2, "0");
-    const ampm = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12 || 12; // convert to 12-hour format
-
-    return `${day}-${month}-${year}, ${hours}:${minutes} ${ampm}`;
-  };
-
+  const formatDate = (ts) => toIST(ts, true); // date + time
 
   const handlePrintPayment = useCallback((receipt, adv) => {
     const firm = decorationProfile?.firmName || "Decoration Firm Name";
@@ -769,7 +791,7 @@ function BookingRow({ v, idx, filteredCount, convertTo12Hour, getAdvanceTotal, g
       <td>{v.address}</td>
       <td>{v.eventType}</td>
       <td>{v.venueType}</td>
-      <td>{convertTo12Hour(v.startTime)} - {convertTo12Hour(v.endTime)}</td>
+      <td>{toISTTime(v.startTime)} - {toISTTime(v.endTime)}</td>
       <td>₹{v.summary?.totalPackageCost || 0}</td>
       <td>₹{v.summary?.discount || 0}</td>
       <td>₹{v.summary?.gstAmount || 0}</td>

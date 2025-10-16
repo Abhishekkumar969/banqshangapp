@@ -8,7 +8,54 @@ import FunctionTypeSelector from "./FunctionTypeSelector";
 import { useLocation } from "react-router-dom";
 
 const EnquiryPage = () => {
-    const today = new Date().toISOString().split("T")[0];
+
+    const formatDateIST = (date) => {
+        if (!date) return "-";
+
+        const d = new Date(date);
+
+        // Convert to IST (UTC + 5:30)
+        const istOffset = 5 * 60 + 30; // minutes
+        const istDate = new Date(d.getTime() + istOffset * 60 * 1000);
+
+        const day = String(istDate.getUTCDate()).padStart(2, "0");
+        const month = String(istDate.getUTCMonth() + 1).padStart(2, "0");
+        const year = istDate.getUTCFullYear();
+        const hours = String(istDate.getUTCHours()).padStart(2, "0");
+        const minutes = String(istDate.getUTCMinutes()).padStart(2, "0");
+
+        return `${day}-${month}-${year}, ${hours}:${minutes}`; // DD-MM-YYYY HH:MM IST
+    };
+
+    const formatDate = (date) => {
+        if (!date) return "-";
+
+        const d = new Date(date);
+
+        // Convert to IST (UTC + 5:30)
+        const istOffset = 5 * 60 + 30; // minutes
+        const istDate = new Date(d.getTime() + istOffset * 60 * 1000);
+
+        const day = String(istDate.getUTCDate()).padStart(2, "0");
+        const month = String(istDate.getUTCMonth() + 1).padStart(2, "0");
+        const year = istDate.getUTCFullYear();
+
+        return `${day}-${month}-${year}`; // DD-MM-YYYY
+    };
+
+    // ✅ Get today's date in IST for input[type="date"]
+    const getTodayIST = () => {
+        const now = new Date();
+        const istOffset = 5 * 60 + 30; // minutes
+        const istDate = new Date(now.getTime() + istOffset * 60 * 1000);
+
+        const day = String(istDate.getUTCDate()).padStart(2, "0");
+        const month = String(istDate.getUTCMonth() + 1).padStart(2, "0");
+        const year = istDate.getUTCFullYear();
+
+        return `${year}-${month}-${day}`; // YYYY-MM-DD
+    };
+
     const location = useLocation();
     const { enquiry } = location.state || {};
 
@@ -21,8 +68,8 @@ const EnquiryPage = () => {
         functionType: "Wedding",
         functionDate: "",
         dayNight: "Night",
-        enquiryDate: today,
-        shareMedia: false,
+        enquiryDate: getTodayIST(),
+        shareMedia: { shareMedia: false, at: null },
     });
 
     useEffect(() => {
@@ -93,7 +140,7 @@ const EnquiryPage = () => {
                 fieldId: fieldIdToUse,
                 originalMonthYear: newMonthYear, // update for future edits
                 updatedAt: serverTimestamp(),
-                createdAt: formData.fieldId ? formData.createdAt || serverTimestamp() : serverTimestamp(),
+                createdAt: formData.fieldId ? formData.createdAt || formatDateIST(new Date()) : formatDateIST(new Date()),
             };
 
             // 🔹 Save/update enquiry in Firestore
@@ -113,13 +160,13 @@ const EnquiryPage = () => {
                     functionType: "",
                     functionDate: "",
                     dayNight: "Night",
-                    enquiryDate: today,
-                    shareMedia: false,
+                    enquiryDate: getTodayIST(),
+                    shareMedia: { shareMedia: false, at: null }, // ✅ updated
                 });
             }
 
             // 🔹 WhatsApp share
-            if (formData.shareMedia && formData.mobile1) {
+            if (formData.shareMedia.shareMedia && formData.mobile1) {
                 let phone = formData.mobile1.trim().replace(/\D/g, "");
                 if (!phone.startsWith("91")) phone = phone.length === 10 ? "91" + phone : "91" + phone;
                 const message = encodeURIComponent("Hello! You can view our gallery here: https://shangrilapalace.com/");
@@ -135,6 +182,8 @@ const EnquiryPage = () => {
             setTimeout(() => setToast(null), 4000);
         }
     };
+
+
 
     return (
         <div style={{ color: "black" }}>
@@ -262,7 +311,7 @@ const EnquiryPage = () => {
                             }}
                         >
                             {formData.functionDate
-                                ? `📅 ${formData.functionDate.split("-").reverse().join("-")}` // dd-mm-yyyy
+                                ? `📅 ${formatDate(formData.functionDate)}`
                                 : "."}
                         </button>
 
@@ -288,8 +337,16 @@ const EnquiryPage = () => {
                             <input
                                 type="checkbox"
                                 name="shareMedia"
-                                checked={formData.shareMedia}
-                                onChange={(e) => setFormData((prev) => ({ ...prev, shareMedia: e.target.checked }))}
+                                checked={formData.shareMedia.shareMedia} // ✅ fixed
+                                onChange={(e) =>
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        shareMedia: {
+                                            shareMedia: e.target.checked,
+                                            at: e.target.checked ? formatDateIST(new Date()) : null, // ✅ use formatted IST
+                                        },
+                                    }))
+                                }
                             />
                             Share Media
                         </label>

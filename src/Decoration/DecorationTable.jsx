@@ -7,6 +7,27 @@ import '../styles/DecorationTable.css';
 import BackButton from "../components/BackButton";
 import { useNavigate } from 'react-router-dom';
 
+const convertToISTDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const date = new Date(dateStr);
+    const istTime = new Date(date.getTime() + 5.5 * 60 * 60 * 1000); // UTC + 5:30
+    return istTime.toLocaleDateString("en-GB").replace(/\//g, "-");
+};
+
+const convertToIST12Hour = (timeStr) => {
+    if (!timeStr) return "-";
+    const [hours, minutes] = timeStr.split(":").map(Number);
+    let istHours = (hours + 5) % 24;
+    let istMinutes = minutes + 30;
+    if (istMinutes >= 60) {
+        istMinutes -= 60;
+        istHours = (istHours + 1) % 24;
+    }
+    const ampm = istHours >= 12 ? "PM" : "AM";
+    const hour12 = istHours % 12 || 12;
+    return `${hour12}:${String(istMinutes).padStart(2, "0")} ${ampm}`;
+};
+
 const DecorationTable = () => {
     const [allBookings, setAllBookings] = useState([]);
     const [searchQuery, setSearchQuery] = useState("");
@@ -127,14 +148,6 @@ const DecorationTable = () => {
         setSortOrder(prev => (prev === "asc" ? "desc" : "asc"));
     };
 
-    const convertTo12Hour = (timeStr) => {
-        if (!timeStr) return "-";
-        const [hours, minutes] = timeStr.split(':').map(Number);
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        const hour12 = hours % 12 || 12;
-        return `${hour12}:${String(minutes).padStart(2, '0')} ${ampm}`;
-    };
-
     const handleSaveAmount = async () => {
         if (!selectedDecoration || !amount) return;
         try {
@@ -188,12 +201,12 @@ const DecorationTable = () => {
                                 return (
                                     <tr key={v.id}>
                                         <td>{filteredBookings.length - idx}</td>
-                                        <td>{v.finalDate ? new Date(v.finalDate).toLocaleDateString("en-GB").replace(/\//g, "-") : "-"}</td>
+                                        <td>{v.finalDate ? convertToISTDate(v.finalDate) : "-"}</td>
                                         <td>{v.customerName}</td>
                                         <td><a href={`tel:${v.contactNo}`} style={{ color: "black", textDecoration: "none" }}>{v.contactNo}</a></td>
                                         <td>{v.eventType}</td>
                                         <td>{v.venueType}</td>
-                                        <td>{convertTo12Hour(v.startTime)} - {convertTo12Hour(v.endTime)}</td>
+                                        <td>{convertToIST12Hour(v.startTime)} - {convertToIST12Hour(v.endTime)}</td>
 
                                         <td>
                                             {/* Update / Book button */}

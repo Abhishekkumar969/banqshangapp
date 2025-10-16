@@ -1,7 +1,7 @@
 // src/pages/CateringAssign.jsx
 import React, { useEffect, useState } from "react";
 import { db } from "../firebaseConfig";
-import { collection, onSnapshot, serverTimestamp, doc, setDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, setDoc } from "firebase/firestore";
 import "../styles/VendorTable.css";
 import BackButton from "../components/BackButton";
 import { useNavigate } from "react-router-dom";
@@ -14,25 +14,65 @@ const CateringAssign = () => {
     const [sortOrder, setSortOrder] = useState("desc");
     const navigate = useNavigate();
 
+    const convertToISTDate = (dateStr) => {
+        if (!dateStr) return "-";
+        const d = new Date(dateStr);
+        const istTime = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+        const day = String(istTime.getDate()).padStart(2, "0");
+        const month = String(istTime.getMonth() + 1).padStart(2, "0");
+        const year = istTime.getFullYear();
+        return `${day}-${month}-${year}`;
+    };
+
+    const convertToIST12Hour = (timeStr) => {
+        if (!timeStr) return "-";
+        const [hours, minutes] = timeStr.split(":").map(Number);
+        let istHours = (hours + 5) % 24;
+        let istMinutes = minutes + 30;
+        if (istMinutes >= 60) {
+            istMinutes -= 60;
+            istHours = (istHours + 1) % 24;
+        }
+        const ampm = istHours >= 12 ? "PM" : "AM";
+        const hour12 = istHours % 12 || 12;
+        return `${hour12}:${String(istMinutes).padStart(2, "0")} ${ampm}`;
+    };
+
     useEffect(() => {
-        const unsubPrebookings = onSnapshot(collection(db, "prebookings"), (prebookSnap) => {
-            const prebookingData = prebookSnap.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-            }));
-            setPrebookings((prev) =>
-                prebookingData.map((booking) => ({
-                    ...booking,
-                    assignedMenus: prev.find((b) => b.id === booking.id)?.assignedMenus || {},
-                }))
-            );
+        const prebookingsCollection = collection(db, "prebookings");
+        const cateringCollection = collection(db, "catering");
+
+        // Prebookings listener
+        const unsubPrebookings = onSnapshot(prebookingsCollection, async (monthSnap) => {
+            const allPrebookings = [];
+
+            for (const monthDoc of monthSnap.docs) {
+                const monthData = monthDoc.data().data || monthDoc.data() || {};
+                Object.keys(monthData).forEach((docId) => {
+                    allPrebookings.push({
+                        id: docId,
+                        month: monthDoc.id,
+                        ...monthData[docId],
+                        assignedMenus: {}, // will populate from catering later
+                    });
+                });
+            }
+
+            setPrebookings(allPrebookings);
         });
 
-        const unsubCatering = onSnapshot(collection(db, "catering"), (cateringSnap) => {
-            const cateringData = cateringSnap.docs.reduce((acc, doc) => {
-                acc[doc.id] = doc.data();
-                return acc;
-            }, {});
+        // Catering listener
+        const unsubCatering = onSnapshot(cateringCollection, async (monthSnap) => {
+            const cateringData = {};
+
+            for (const monthDoc of monthSnap.docs) {
+                const monthData = monthDoc.data().data || monthDoc.data() || {};
+                Object.keys(monthData).forEach((docId) => {
+                    cateringData[docId] = monthData[docId]; // we only care about assignedMenus
+                });
+            }
+
+            // Update assignedMenus in prebookings
             setPrebookings((prev) =>
                 prev.map((booking) => ({
                     ...booking,
@@ -64,6 +104,7 @@ const CateringAssign = () => {
         try {
             const bookingAssign = assignments[booking.id] || {};
 
+            // 1️⃣ Assigned Menus
             const assignedMenus = {};
             Object.entries(booking.selectedMenus || {}).forEach(([menuKey, menuVal]) => {
                 const assigned = bookingAssign[menuKey] || {};
@@ -74,6 +115,7 @@ const CateringAssign = () => {
                 };
             });
 
+            // 2️⃣ Custom Menu Charges
             const customMenuCharges = {};
             (booking.customMenuCharges || []).forEach((menu, i) => {
                 const assigned = bookingAssign[`custom-${i}`] || {};
@@ -84,14 +126,14 @@ const CateringAssign = () => {
                 };
             });
 
-            // Prepare meals data for Firestore
+            // 3️⃣ Meals per day
             const mealsData = {};
             Object.entries(booking.meals || {}).forEach(([day, dayMeals]) => {
-                if (day === "No. of days") return; // skip
+                if (day === "No. of days") return;
                 mealsData[day] = {};
                 Object.entries(dayMeals).forEach(([mealName, mealDetails]) => {
                     if (mealName === "date") {
-                        mealsData[day].date = mealDetails; // keep date
+                        mealsData[day].date = mealDetails;
                     } else {
                         const assigned = bookingAssign[`${day}-${mealName}`] || {};
                         mealsData[day][mealName] = {
@@ -107,27 +149,44 @@ const CateringAssign = () => {
                 });
             });
 
+            // 4️⃣ Determine document ID (month-year with short month)
+            const bookedOnValue =
+                bookingAssign?.general?.bookedOn ||
+                booking.bookedOn ||
+                new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().split("T")[0]; // IST
+
+            const [year, monthNum] = bookedOnValue.split("-"); // monthNum = "04"
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const monthShort = monthNames[parseInt(monthNum, 10) - 1]; // "Apr"
+
+            const docId = `${monthShort}${year}`; // e.g., "Apr2025"
+
+
+            // 5️⃣ Firestore reference
+            const docRef = doc(db, "catering", docId);
+
+            // 6️⃣ Set booking data under `data` map
             await setDoc(
-                doc(db, "catering", booking.id),
-                {   
-                    functionType: booking.functionType || "",
-                    venueType: booking.venueType || "",
-                    assignedMenus,
-                    customMenuCharges,
-                    meals: mealsData,
-                    eventDate: booking.functionDate || "",
-                    name: booking.name || "",
-                    CateringAssignName:
-                        bookingAssign?.general?.CateringAssignName ||
-                        booking.CateringAssignName ||
-                        "",
-                    CateringAssignNumber:
-                        bookingAssign?.general?.CateringAssignNumber ||
-                        booking.CateringAssignNumber ||
-                        "",
-                    updatedAt: serverTimestamp(),
+                docRef,
+                {
+                    [booking.id]:
+                    {
+                        functionType: booking.functionType || "",
+                        venueType: booking.venueType || "",
+                        assignedMenus,
+                        customMenuCharges,
+                        meals: mealsData,
+                        eventDate: booking.functionDate || "",
+                        name: booking.name || "",
+                        bookedOn: bookedOnValue,
+                        CateringAssignName:
+                            bookingAssign?.general?.CateringAssignName || booking.CateringAssignName || "",
+                        CateringAssignNumber:
+                            bookingAssign?.general?.CateringAssignNumber || booking.CateringAssignNumber || "",
+                        updatedAt: new Date(Date.now() + 5.5 * 60 * 60 * 1000), // IST timestamp
+                    },
                 },
-                { merge: true }
+                { merge: true } // Important: merge so we don’t overwrite other bookings
             );
 
             navigate("/cateringAssigned");
@@ -145,9 +204,7 @@ const CateringAssign = () => {
         )
         .filter((booking) => {
             const nameMatch = booking.name?.toLowerCase().includes(searchTerm.toLowerCase());
-            const formattedDate = booking.functionDate
-                ? new Date(booking.functionDate).toLocaleDateString("en-GB")
-                : "";
+            const formattedDate = convertToISTDate(booking.functionDate);
             const formattedDateDashed = formattedDate.replace(/\//g, "-");
             const dateMatch =
                 formattedDate.includes(searchTerm) || formattedDateDashed.includes(searchTerm);
@@ -165,7 +222,6 @@ const CateringAssign = () => {
             <BackButton />
             <h2>Catering Assignment</h2>
 
-            {/* 🔎 Search Bar */}
             <div style={{ marginBottom: "20px", textAlign: "center" }}>
                 <input
                     type="text"
@@ -263,8 +319,8 @@ const CateringAssign = () => {
                                                             if (mealName === "date") return null;
                                                             return (
                                                                 <div key={mealName} style={{ paddingLeft: "10px" }}>
-                                                                    <b style={{ color: 'red' }} >{mealName}</b> | <b> {mealDetails.option} </b> | Pax: <b> {mealDetails.pax} </b> |
-                                                                    Rate: <b> ₹{mealDetails.rate} </b> | Start: <b> {mealDetails.startTime} </b> | End: <b> {mealDetails.endTime} </b> |
+                                                                    <b style={{ color: 'red' }} >{mealName}</b> | <b> {mealDetails.option} </b> | Pax: <b> {mealDetails.pax} </b>
+                                                                    | Rate: <b> ₹{mealDetails.rate} </b> | Start: <b>{convertToIST12Hour(mealDetails.startTime)}</b> | End: <b>{convertToIST12Hour(mealDetails.endTime)}</b> |
                                                                     <b style={{ color: 'green' }} >  Total: ₹{mealDetails.total} </b>
                                                                 </div>
                                                             );
@@ -283,8 +339,17 @@ const CateringAssign = () => {
                                         onClick={() => {
                                             setAssignments((prev) => ({
                                                 ...prev,
-                                                [booking.id]: booking.assignedMenus || {},
+                                                [booking.id]: {
+                                                    general: {
+                                                        bookedOn: booking.bookedOn ||
+                                                            new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().split("T")[0],
+                                                        CateringAssignName: booking.CateringAssignName || "",
+                                                        CateringAssignNumber: booking.CateringAssignNumber || "",
+                                                    },
+                                                    ...booking.assignedMenus, // keep menu assignments
+                                                },
                                             }));
+
                                             setPopupBooking(booking);
                                         }}
                                         className={`assign-btn ${booking.assignedMenus &&
@@ -306,10 +371,23 @@ const CateringAssign = () => {
             </div>
 
             {/* Modal */}
-            {/* Modal */}
             {popupBooking && (
                 <div className="modal-overlay">
                     <div className="modal-content">
+                        {/* ✅ Booked On (IST) */}
+                        <div style={{ marginBottom: "15px" }}>
+                            <div >
+                                <label style={{ marginRight: "8px", fontWeight: "bold", whiteSpace: 'nowrap' }}>Booked On:</label>
+                                <input
+                                    type="date"
+                                    value={assignments[popupBooking.id]?.general?.bookedOn || new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().split("T")[0]}
+                                    onChange={(e) =>
+                                        handleInputChange(popupBooking.id, "general", "bookedOn", e.target.value)
+                                    }
+                                />
+                            </div>
+                        </div>
+
                         <h2 className="modal-title">🍽 Assign Catering</h2>
 
                         {/* ✅ Name + Number */}
@@ -353,12 +431,13 @@ const CateringAssign = () => {
                                                 e.target.value
                                             )
                                         }
+                                        onWheel={(e) => e.target.blur()} // ✅ prevent scroll
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        {/* ✅ Selected Menus */}
+                        {/* Selected Menus */}
                         {popupBooking.selectedMenus && Object.keys(popupBooking.selectedMenus).length > 0 && (
                             <div className="menus-container">
                                 <h3>Selected Menus</h3>
@@ -374,9 +453,7 @@ const CateringAssign = () => {
                                                         <label>Pax</label>
                                                         <input
                                                             type="number"
-                                                            value={
-                                                                assigned.qty ?? menuVal.qty ?? ""
-                                                            }
+                                                            value={assigned.qty ?? menuVal.qty ?? ""}
                                                             onChange={(e) =>
                                                                 handleInputChange(
                                                                     popupBooking.id,
@@ -387,6 +464,7 @@ const CateringAssign = () => {
                                                                         : Number(e.target.value)
                                                                 )
                                                             }
+                                                            onWheel={(e) => e.target.blur()} // ✅ prevent scroll
                                                         />
                                                     </div>
                                                     <div className="field">
@@ -404,6 +482,7 @@ const CateringAssign = () => {
                                                                         : Number(e.target.value)
                                                                 )
                                                             }
+                                                            onWheel={(e) => e.target.blur()} // ✅ prevent scroll
                                                         />
                                                     </div>
                                                     <div className="field">
@@ -421,6 +500,7 @@ const CateringAssign = () => {
                                                                         : Number(e.target.value)
                                                                 )
                                                             }
+                                                            onWheel={(e) => e.target.blur()} // ✅ prevent scroll
                                                         />
                                                     </div>
                                                 </div>
@@ -457,6 +537,7 @@ const CateringAssign = () => {
                                                                     : Number(e.target.value)
                                                             )
                                                         }
+                                                        onWheel={(e) => e.target.blur()} // ✅ prevent scroll
                                                     />
                                                 </div>
                                                 <div className="field">
@@ -474,6 +555,7 @@ const CateringAssign = () => {
                                                                     : Number(e.target.value)
                                                             )
                                                         }
+                                                        onWheel={(e) => e.target.blur()} // ✅ prevent scroll
                                                     />
                                                 </div>
                                                 <div className="field">
@@ -491,6 +573,7 @@ const CateringAssign = () => {
                                                                     : Number(e.target.value)
                                                             )
                                                         }
+                                                        onWheel={(e) => e.target.blur()} // ✅ prevent scroll
                                                     />
                                                 </div>
                                             </div>
@@ -510,11 +593,8 @@ const CateringAssign = () => {
                                     .map(([dayName, dayMeals], dayIdx) => (
                                         <div key={dayIdx} className="menu-block">
                                             <h4>
-                                                {dayName} (
-                                                {dayMeals.date
-                                                    ? new Date(dayMeals.date).toLocaleDateString("en-GB")
-                                                    : ""}
-                                                )
+                                                {dayName}
+                                                ({dayMeals.date ? convertToISTDate(dayMeals.date) : ""})
                                             </h4>
 
                                             {/* Meals for that day */}
@@ -559,6 +639,7 @@ const CateringAssign = () => {
                                                                             )
                                                                         }
                                                                         style={{ width: "100%", padding: "5px" }}
+                                                                        onWheel={(e) => e.target.blur()} // ✅ prevent scroll
                                                                     />
                                                                 </div>
 
@@ -576,6 +657,7 @@ const CateringAssign = () => {
                                                                             )
                                                                         }
                                                                         style={{ width: "100%", padding: "5px" }}
+                                                                        onWheel={(e) => e.target.blur()} // ✅ prevent scroll
                                                                     />
                                                                 </div>
 
@@ -593,6 +675,7 @@ const CateringAssign = () => {
                                                                             )
                                                                         }
                                                                         style={{ width: "100%", padding: "5px" }}
+                                                                        onWheel={(e) => e.target.blur()} // ✅ prevent scroll
                                                                     />
                                                                 </div>
                                                             </div>
@@ -622,6 +705,7 @@ const CateringAssign = () => {
                                 ❌ Cancel
                             </button>
                         </div>
+
                     </div>
                 </div>
             )}

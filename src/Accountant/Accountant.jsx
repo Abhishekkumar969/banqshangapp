@@ -21,6 +21,33 @@ const AccountantDetails = () => {
     const [fyOptions, setFyOptions] = useState([]);
     const [rawTransactions, setRawTransactions] = useState([]);
 
+    // Convert any date string or Firestore timestamp to IST
+    const toISTDate = (input) => {
+        let d;
+        if (!input) return null;
+
+        if (input?.toDate) {
+            d = input.toDate(); // Firestore timestamp
+        } else {
+            d = new Date(input);
+        }
+
+        // Add 5:30 hours for IST
+        const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+
+        const yyyy = ist.getFullYear();
+        const mm = String(ist.getMonth() + 1).padStart(2, "0");
+        const dd = String(ist.getDate()).padStart(2, "0");
+        const hh = String(ist.getHours()).padStart(2, "0");
+        const min = String(ist.getMinutes()).padStart(2, "0");
+        const sec = String(ist.getSeconds()).padStart(2, "0");
+
+        return {
+            date: `${yyyy}-${mm}-${dd}`,           // YYYY-MM-DD IST
+            dateTime: `${yyyy}-${mm}-${dd} ${hh}:${min}:${sec}` // Full IST datetime
+        };
+    };
+
     useEffect(() => {
         const fetchUser = async () => {
             const auth = getAuth();
@@ -72,8 +99,9 @@ const AccountantDetails = () => {
 
         if (fromDate && toDate) {
             filtered = filtered.filter((t) => {
-                const d = new Date(t.createdAt).toISOString().split("T")[0];
-                return d >= fromDate && d <= toDate;
+                const { date } = toISTDate(t.createdAt);
+                return date >= fromDate && date <= toDate;
+
             });
         }
 
@@ -178,11 +206,9 @@ const AccountantDetails = () => {
                         return;
                     }
 
-                    const receiptDateStr = receiptDate.toISOString().split("T")[0];
-
-                    // ✅ Only filter if fromDate/toDate exist
+                    const { date } = toISTDate(receiptDate);
                     if (fromDate && toDate) {
-                        if (receiptDateStr < fromDate || receiptDateStr > toDate) return;
+                        if (date < fromDate || date > toDate) return;
                     }
 
                     const amt = Number(receipt.amount || 0);
@@ -428,7 +454,7 @@ const AccountantDetails = () => {
                                     >
                                         {/* Date & Time */}
                                         <td>
-                                            {rec.date ? rec.date.split('-').reverse().join('-') : '-'}
+                                            {rec.createdAt ? toISTDate(rec.createdAt).dateTime : '-'}
                                         </td>
 
                                         {/* Name & User Type */}

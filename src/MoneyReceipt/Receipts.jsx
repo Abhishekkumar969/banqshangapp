@@ -21,46 +21,45 @@ const Receipts = () => {
   const [customParticularNature, setCustomParticularNature] = useState('');
   const [assignedUsers, setAssignedUsers] = useState([]);
   const [cashTo, setCashTo] = useState('');
-  const [manualDate, setManualDate] = useState(() => {
-    const today = new Date();
-    const yyyy = today.getUTCFullYear();
-    const mm = String(today.getUTCMonth() + 1).padStart(2, '0');
-    const dd = String(today.getUTCDate()).padStart(2, '0');
+
+  // --- IST helper functions ---
+  const getISTDate = (date = new Date()) => {
+    const utc = date.getTime() + date.getTimezoneOffset() * 60000;
+    const istOffset = 5.5 * 60 * 60000; // +5:30 in ms
+    const istTime = new Date(utc + istOffset);
+    const yyyy = istTime.getFullYear();
+    const mm = String(istTime.getMonth() + 1).padStart(2, '0');
+    const dd = String(istTime.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
-  });
+  };
+
+  const getISTDateTime = () => {
+    const utc = new Date().getTime() + new Date().getTimezoneOffset() * 60000;
+    const istOffset = 5.5 * 60 * 60000;
+    return new Date(utc + istOffset).toISOString();
+  };
+
+  const [manualDate, setManualDate] = useState(getISTDate());
 
   useEffect(() => {
     const fetchAssignedUsers = async () => {
       try {
         const bankSnap = await getDoc(doc(db, "accountant", "AssignBank"));
-
         let users = [];
-
         if (bankSnap.exists()) {
           const bankUsers = bankSnap.data().users || [];
-          users = users.concat(bankUsers.map(u => ({
-            name: u.name,
-            email: u.email,
-            type: "Bank"
-          })));
+          users = bankUsers.map(u => ({ name: u.name, email: u.email, type: "Bank" }));
         }
-
-        // Remove duplicates based on email + type
-        const uniqueUsers = Object.values(
-          users.reduce((acc, u) => {
-            // Create a unique key using both email + type
-            const key = `${u.email}-${u.type}`;
-            acc[key] = u;
-            return acc;
-          }, {})
-        );
-
+        const uniqueUsers = Object.values(users.reduce((acc, u) => {
+          const key = `${u.email}-${u.type}`;
+          acc[key] = u;
+          return acc;
+        }, {}));
         setAssignedUsers(uniqueUsers);
       } catch (err) {
         console.error("Error fetching assigned users:", err);
       }
     };
-
     fetchAssignedUsers();
   }, []);
 
@@ -69,19 +68,14 @@ const Receipts = () => {
       try {
         const auth = getAuth();
         const user = auth.currentUser;
-        if (!user) return; // agar user login nahi hai
-
-        // yaha user.email use karna hai, kyunki doc ka ID email hai
+        if (!user) return;
         const userRef = doc(db, "usersAccess", user.email);
         const snap = await getDoc(userRef);
-        if (snap.exists()) {
-          setMyName(snap.data().name || ""); // Firestore me "name" field
-        }
+        if (snap.exists()) setMyName(snap.data().name || "");
       } catch (err) {
         console.error("❌ Error fetching user name:", err);
       }
     };
-
     fetchUserName();
   }, []);
 
@@ -90,10 +84,8 @@ const Receipts = () => {
       'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen',
       'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
     const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-
     if (num === 0) return 'Zero only';
     if (num > 99999999) return 'Overflow';
-
     const numToWords = (n) => {
       if (n < 20) return a[n];
       if (n < 100) return b[Math.floor(n / 10)] + (n % 10 ? ' ' + a[n % 10] : '');
@@ -102,7 +94,6 @@ const Receipts = () => {
       if (n < 10000000) return numToWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + numToWords(n % 100000) : '');
       return numToWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + numToWords(n % 10000000) : '');
     };
-
     return numToWords(num).trim() + ' only';
   };
 
@@ -118,27 +109,18 @@ const Receipts = () => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchNextSlNo();
-  }, [fetchNextSlNo]);
+  useEffect(() => { fetchNextSlNo(); }, [fetchNextSlNo]);
 
   const handleSubmit = async () => {
     if (!myName || !partyName || !amount || !mode || !description) {
-      alert('Please fill all fields');
-      return;
+      alert('Please fill all fields'); return;
     }
-
-    if (mode === 'Cash' && !cashTo) {
-      alert('Please select "Cash To"');
-      return;
-    }
+    if (mode === 'Cash' && !cashTo) { alert('Please select "Cash To"'); return; }
 
     setIsSaving(true);
     try {
       const counterRef = doc(db, 'settings', 'slCounter');
       let newSlNo = '';
-
-      // Transaction to increment Sl No
       await runTransaction(db, async (transaction) => {
         const counterDoc = await transaction.get(counterRef);
         const data = counterDoc.exists() ? counterDoc.data() : {};
@@ -148,10 +130,7 @@ const Receipts = () => {
       });
 
       const amountWords = convertToWords(parseInt(amount));
-      const finalParticularNature =
-        type === 'Debit' && particularNature === 'Other'
-          ? customParticularNature
-          : particularNature;
+      const finalParticularNature = type === 'Debit' && particularNature === 'Other' ? customParticularNature : particularNature;
 
       const receiptData = {
         slNo: newSlNo,
@@ -160,7 +139,7 @@ const Receipts = () => {
         mode,
         cashTo,
         type: 'Voucher',
-        paymentFor: type, // "Debit" or "Credit"
+        paymentFor: type,
         partyPrefix: prefix,
         partyName,
         approval: 'No',
@@ -169,61 +148,48 @@ const Receipts = () => {
         particularNature: finalParticularNature,
         description,
         receiptDate: manualDate,
-        createdAt: new Date().toISOString()
+        createdAt: getISTDateTime(),
       };
 
-      // Month-Year doc id based on receiptDate
-      const jsDate = new Date(manualDate);
-      const monthYear = jsDate
-        .toLocaleString('en-US', { month: 'short', year: 'numeric' })
-        .replace(' ', '');
-      const docRef = doc(db, 'moneyReceipts', monthYear);
+      // Month-Year doc ID (IST)
+      const jsDate = new Date(manualDate + "T00:00:00");
+      const istMonthYear = jsDate.toLocaleString("en-IN", {
+        month: "short",
+        year: "numeric",
+        timeZone: "Asia/Kolkata"
+      }).replace(" ", "");
+      const docRef = doc(db, "moneyReceipts", istMonthYear);
 
-      // Unique receipt ID
       const receiptId = crypto.randomUUID();
-
       await setDoc(docRef, { [receiptId]: receiptData }, { merge: true });
 
-      // --- EXTRA: Save in accountant (if CashTo is selected) ---
       if (mode === 'Cash' && cashTo) {
         try {
-          const accountantRef = doc(db, 'accountant', cashTo); // e.g. "Abhishek-Bank"
-
+          const accountantRef = doc(db, 'accountant', cashTo);
           const newTransaction = {
-            slNo: newSlNo,           // 👈 Save the Sl No
+            slNo: newSlNo,
             amount: parseFloat(amount),
             approval: 'approved',
-            createdAt: new Date().toISOString(),
+            createdAt: getISTDateTime(),
             date: manualDate,
             description,
-            type: type,               // "Debit" or "Credit"
-            receiver: myName,         // 👈 Save who added the transaction
-            cashTo,                   // 👈 Save CashTo info
+            type,
+            receiver: myName,
+            cashTo,
           };
-
           const accSnap = await getDoc(accountantRef);
-
           if (accSnap.exists()) {
-            await updateDoc(accountantRef, {
-              transactions: arrayUnion(newTransaction),
-            });
+            await updateDoc(accountantRef, { transactions: arrayUnion(newTransaction) });
           } else {
             await setDoc(accountantRef, {
-              slNo: newSlNo,         // 👈 Save in doc root (optional)
-              name: cashTo.split('-')[0], // "Abhishek"
+              slNo: newSlNo,
+              name: cashTo.split('-')[0],
               email: '',
               transactions: [newTransaction],
-              type: cashTo.includes('Locker')
-                ? 'Locker'
-                : cashTo.includes('Cash')
-                  ? 'Cash'
-                  : 'Bank',
+              type: cashTo.includes('Locker') ? 'Locker' : cashTo.includes('Cash') ? 'Cash' : 'Bank',
             });
           }
-        } catch (err) {
-          console.error('❌ Error saving in accountant:', err);
-          alert('❌ Error saving in accountant');
-        }
+        } catch (err) { console.error('❌ Error saving in accountant:', err); alert('❌ Error saving in accountant'); }
       }
 
       alert(`${type} Receipt #${newSlNo} saved successfully.`);
@@ -234,27 +200,20 @@ const Receipts = () => {
       alert(`❌ Error saving receipt: ${err.message || err}`);
     } finally {
       setIsSaving(false);
-      setAmount('');
-      setMyName('');
-      setMobile('');
-      setPartyName('');
-      setDescription('');
-      setMode('Cash');
+      setAmount(''); setMyName(''); setMobile(''); setPartyName(''); setDescription(''); setMode('Cash');
       fetchNextSlNo();
     }
   };
-
   return (
     <div>
-      <div style={{ marginBottom: '30px' }}> <BackButton />  </div>
+      <div style={{ marginBottom: '30px' }}> <BackButton /> </div>
       <div className="receipt-container">
         <h2 className="title">Voucher</h2>
-
         {slNo && <p><strong>Sl No:</strong> V{slNo}</p>}
 
         <div className="input-row">
           <label>Receipt Type</label>
-          <select value={type} onChange={(e) => setType(e.target.value)}>
+          <select value={type} onChange={e => setType(e.target.value)}>
             <option value="Debit">Debit</option>
             <option value="Credit">Credit</option>
           </select>
@@ -263,45 +222,25 @@ const Receipts = () => {
         <div className="input-row">
           <label>{type === 'Credit' ? 'Receive From' : 'Pay To'}</label>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <select value={prefix} onChange={(e) => setPrefix(e.target.value)} style={{ width: '100px' }}>
+            <select value={prefix} onChange={e => setPrefix(e.target.value)} style={{ width: '100px' }}>
               <option value="Mr.">Mr.</option>
               <option value="Miss">Miss</option>
               <option value="Mrs.">Mrs.</option>
               <option value="Dr.">Dr.</option>
               <option value="Md.">Md.</option>
             </select>
-            <input
-              type="text"
-              value={partyName}
-              onChange={(e) => {
-                let value = e.target.value;
-                value = value.replace(/\b\w/g, (char) => char.toUpperCase());
-                setPartyName(value);
-              }}
-              placeholder={type === 'Credit' ? 'From getting money' : 'Giving money to'}
-            />
+            <input type="text" value={partyName} onChange={e => setPartyName(e.target.value.replace(/\b\w/g, c => c.toUpperCase()))} placeholder={type === 'Credit' ? 'From getting money' : 'Giving money to'} />
           </div>
         </div>
 
         <div className="input-row">
           <label>Mobile No.</label>
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            placeholder="Enter Mobile No."
-            value={mobile}
-            onChange={(e) => {
-              const val = e.target.value.replace(/\D/g, ""); // only digits
-              setMobile(val);
-            }}
-          />
+          <input type="text" inputMode="numeric" pattern="[0-9]*" placeholder="Enter Mobile No." value={mobile} onChange={e => setMobile(e.target.value.replace(/\D/g, ""))} />
         </div>
-
 
         <div className="input-row">
           <label>Payment Mode</label>
-          <select value={mode} onChange={(e) => setMode(e.target.value)}>
+          <select value={mode} onChange={e => setMode(e.target.value)}>
             <option value="Cash">Cash</option>
             <option value="BOI">BOI</option>
             <option value="SBI">SBI</option>
@@ -316,101 +255,49 @@ const Receipts = () => {
             <select value={cashTo} onChange={e => setCashTo(e.target.value)}>
               <option value="">-- Select --</option>
               <option value="Cash-Cash">Cash</option>
-              {assignedUsers.map(u => (
-                <option key={`${u.email}-${u.type}`} value={`${u.name}-${u.type}`}>
-                  {u.name} - ({u.type})
-                </option>
-              ))}
+              {assignedUsers.map(u => <option key={`${u.email}-${u.type}`} value={`${u.name}-${u.type}`}>{u.name} - ({u.type})</option>)}
             </select>
           </div>
         )}
 
         <div className="input-row">
           <label>Amount</label>
-          <input
-            type="text"
-            inputMode="decimal"
-            placeholder="Enter amount"
-            value={amount}
-            onChange={(e) => {
-              let val = e.target.value.replace(/[^0-9.]/g, ""); // allow only numbers and dot
-              if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1); // prevent multiple dots
-              setAmount(val);
-            }}
-          />
+          <input type="text" inputMode="decimal" placeholder="Enter amount" value={amount} onChange={e => {
+            let val = e.target.value.replace(/[^0-9.]/g, "");
+            if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
+            setAmount(val);
+          }} />
         </div>
 
-
         <div className="input-row" style={{ display: 'none' }}>
-          <input
-            type="text"
-            value={myName || "Fetching name..."}
-          />
+          <input type="text" value={myName || "Fetching name..."} />
         </div>
 
         <div className="input-row">
           <label>Particular Nature</label>
-
-          {type === 'Credit' ? (
-            <>
-              <select
-                value={particularNature}
-                onChange={(e) => setParticularNature(e.target.value)}
-              >
-                <option value="">-- Select Particular Nature --</option>
-                <option value="Banquet Booking">Banquet Booking</option>
-                <option value="Vendor Party">Vendor Party</option>
-                <option value="Other">Other (Specify Below)</option>
-              </select>
-
-              {particularNature === 'Other' && (
-                <input
-                  type="text"
-                  placeholder="Enter custom description"
-                  value={customParticularNature}
-                  onChange={(e) => setCustomParticularNature(e.target.value)}
-                  style={{ marginTop: '8px' }}
-                />
-              )}
-            </>
-          ) : (
-            <>
-              <select
-                value={particularNature}
-                onChange={(e) => setParticularNature(e.target.value)}
-              >
-                <option value="">-- Select Particular Nature --</option>
-                <option value="Khana Khazana">Khana Khazana</option>
-                <option value="Ravi Catering">Ravi Catering</option>
-                <option value="Fuel Expense">Fuel Expense</option>
-                <option value="Labour Charges">Labour Charges</option>
-                <option value="Repair & Maintenance">Repair & Maintenance</option>
-                <option value="Party Expense">Party Expense</option>
-                <option value="Office Expense">Office Expense</option>
-                <option value="Other">Other (Specify Below)</option>
-              </select>
-
-              {particularNature === 'Other' && (
-                <input
-                  type="text"
-                  placeholder="Enter custom description"
-                  value={customParticularNature}
-                  onChange={(e) => setCustomParticularNature(e.target.value)}
-                  style={{ marginTop: '8px' }}
-                />
-              )}
-            </>
-          )}
+          <select value={particularNature} onChange={e => setParticularNature(e.target.value)}>
+            <option value="">-- Select Particular Nature --</option>
+            {type === 'Credit' ? <>
+              <option value="Banquet Booking">Banquet Booking</option>
+              <option value="Vendor Party">Vendor Party</option>
+              <option value="Other">Other (Specify Below)</option>
+            </> : <>
+              <option value="Khana Khazana">Khana Khazana</option>
+              <option value="Ravi Catering">Ravi Catering</option>
+              <option value="Fuel Expense">Fuel Expense</option>
+              <option value="Labour Charges">Labour Charges</option>
+              <option value="Repair & Maintenance">Repair & Maintenance</option>
+              <option value="Party Expense">Party Expense</option>
+              <option value="Office Expense">Office Expense</option>
+              <option value="Other">Other (Specify Below)</option>
+            </>}
+          </select>
+          {particularNature === 'Other' && <input type="text" placeholder="Enter custom description" value={customParticularNature} onChange={e => setCustomParticularNature(e.target.value)} style={{ marginTop: '8px' }} />}
         </div>
 
         <div className="input-row">
           <label>Description</label>
-          <input
-            type="text"
-            placeholder='Enter description'
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
+          <input type="text" placeholder='Enter description' value={description} onChange={e => setDescription(e.target.value)} />
         </div>
 
         <div className="input-row">

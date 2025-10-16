@@ -5,14 +5,21 @@ import '../styles/Calendar.css';
 import { db } from '../firebaseConfig';
 import { collection, getDocs } from 'firebase/firestore';
 
+const toISTDate = (dateInput) => {
+    if (!dateInput) return new Date();
+    let date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+    // add 5.5 hours
+    return new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
+};
+
 const parseToDate = (val) => {
     if (!val) return new Date();
-    if (val instanceof Date) return val;
+    if (val instanceof Date) return toISTDate(val);
     if (typeof val === "string") {
         const [y, m, d] = val.split("-").map(Number);
-        return new Date(y, m - 1, d);
+        return toISTDate(new Date(y, m - 1, d));
     }
-    return new Date();
+    return toISTDate(new Date());
 };
 
 const CalendarInput = ({

@@ -8,6 +8,50 @@ import VendorLogPopupCell from './VendorLogPopupCell.jsx';
 import { query, where } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
+const toIST = (date) => {
+  if (!date) return null;
+  const d = new Date(date);
+  return new Date(d.getTime() + 5.5 * 60 * 60 * 1000); // +5.5 hours
+};
+
+const formatDate = (date) => {
+  const d = toIST(date);
+  if (!d) return "-";
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const year = d.getUTCFullYear();
+  return `${day}-${month}-${year}`;
+};
+
+const formatDateTime = (date) => {
+  const d = toIST(date);
+  if (!d) return "-";
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const year = d.getUTCFullYear();
+
+  let hours = d.getUTCHours();
+  const minutes = String(d.getUTCMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
+
+  return `${day}-${month}-${year}, ${hours}:${minutes} ${ampm}`;
+};
+
+const convertTo12HourIST = (timeStr) => {
+  if (!timeStr) return "-";
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  const date = new Date();
+  date.setUTCHours(hours, minutes);
+  const istDate = toIST(date);
+  let hrs = istDate.getUTCHours();
+  const mins = String(istDate.getUTCMinutes()).padStart(2, "0");
+  const ampm = hrs >= 12 ? "PM" : "AM";
+  hrs = hrs % 12 || 12;
+  return `${hrs}:${mins} ${ampm}`;
+};
+
+
 const VendorTable = () => {
   const [allBookings, setAllBookings] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -17,6 +61,9 @@ const VendorTable = () => {
   const [sortOrder, setSortOrder] = useState("desc");
   const [vendorProfile, setVendorProfile] = useState(null);
   const navigate = useNavigate();
+
+
+
 
   useEffect(() => {
     const auth = getAuth();
@@ -119,21 +166,6 @@ const VendorTable = () => {
     const ampm = hours >= 12 ? 'PM' : 'AM';
     const hour12 = hours % 12 || 12;
     return `${hour12}:${String(minutes).padStart(2, '0')} ${ampm}`;
-  };
-
-  const formatDateTime = (timestamp) => {
-    if (!timestamp) return "-";
-
-    const d = new Date(timestamp);
-
-    // Convert to IST by adding 5.5 hours (19800000 ms)
-    const istTime = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
-
-    const day = String(istTime.getUTCDate()).padStart(2, "0");
-    const month = String(istTime.getUTCMonth() + 1).padStart(2, "0");
-    const year = istTime.getUTCFullYear();
-
-    return `${day}-${month}-${year}`;
   };
 
   const parseMoney = (val) => {
@@ -655,34 +687,6 @@ function BookingRow({ v, idx, filteredCount, convertTo12Hour, getAdvanceTotal, g
   const totalPayOut = royaltyPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   const remainingPayout = totalRoyalty - totalPayOut;
 
-  // const formatDate = (date) => {
-  //   if (!date) return "-";
-  //   const d = new Date(date);
-  //   const istTime = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
-  //   const day = String(istTime.getUTCDate()).padStart(2, "0");
-  //   const month = String(istTime.getUTCMonth() + 1).padStart(2, "0");
-  //   const year = istTime.getUTCFullYear();
-  //   return `${day}-${month}-${year}`;
-  // };
-
-  const formatDate = (date) => {
-    if (!date) return "-";
-    const d = new Date(date);
-    const istTime = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
-
-    const day = String(istTime.getUTCDate()).padStart(2, "0");
-    const month = String(istTime.getUTCMonth() + 1).padStart(2, "0");
-    const year = istTime.getUTCFullYear();
-
-    let hours = istTime.getUTCHours();
-    const minutes = String(istTime.getUTCMinutes()).padStart(2, "0");
-    const ampm = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12 || 12; // convert to 12-hour format
-
-    return `${day}-${month}-${year}, ${hours}:${minutes} ${ampm}`;
-  };
-
-
   const handlePrintPayment = useCallback((receipt, adv) => {
     const firm = vendorProfile?.firmName || "Vendor Firm Name";
     const address = vendorProfile?.address || "Vendor Address";
@@ -779,7 +783,7 @@ function BookingRow({ v, idx, filteredCount, convertTo12Hour, getAdvanceTotal, g
       <td>{v.address}</td>
       <td>{v.eventType}</td>
       <td>{v.venueType}</td>
-      <td>{convertTo12Hour(v.startTime)} - {convertTo12Hour(v.endTime)}</td>
+      <td>{convertTo12HourIST(v.startTime)} - {convertTo12HourIST(v.endTime)}</td>
       <td>₹{v.summary?.totalPackageCost || 0}</td>
       <td>₹{v.summary?.discount || 0}</td>
       <td>₹{v.summary?.gstAmount || 0}</td>
@@ -821,6 +825,7 @@ function BookingRow({ v, idx, filteredCount, convertTo12Hour, getAdvanceTotal, g
               }}
             >
               <span>₹{a.amount} ({formatDate(a.date)})</span>
+
               <button
                 onClick={() => handlePrintPayment(v, a)}
                 style={{

@@ -1,16 +1,41 @@
 import React, { useEffect, useState } from "react";
 import styles from "../styles/Vendor.module.css";
 import { useLocation } from "react-router-dom";
-import { doc, serverTimestamp, runTransaction, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, runTransaction, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import BackButton from "../components/BackButton";
 import { useNavigate } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
+// Convert a JS Date to IST string "YYYY-MM-DD"
+const toISTDate = (date) => {
+    if (!date) return "";
+    const d = new Date(date);
+    const istTime = new Date(d.getTime() + 5.5 * 60 * 60 * 1000); // UTC +5:30
+    const year = istTime.getUTCFullYear();
+    const month = String(istTime.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(istTime.getUTCDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+};
+
+// Convert JS Date to IST datetime string "YYYY-MM-DD HH:MM:SS"
+const toISTDateTime = (date) => {
+    if (!date) return "";
+    const d = new Date(date);
+    const istTime = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+    const year = istTime.getUTCFullYear();
+    const month = String(istTime.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(istTime.getUTCDate()).padStart(2, "0");
+    const hours = String(istTime.getUTCHours()).padStart(2, "0");
+    const minutes = String(istTime.getUTCMinutes()).padStart(2, "0");
+    const seconds = String(istTime.getUTCSeconds()).padStart(2, "0");
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
 const Vendor = () => {
     const location = useLocation();
     const [editData, setEditData] = useState(null);
-    const [form, setForm] = useState({ customerName: "", venueType: "", address: "", contactNo: "", typeOfEvent: "", date: "", startTime: "", endTime: "", bookedOn: " " });
+    const [form, setForm] = useState({ customerName: "", venueType: "", address: "", contactNo: "", typeOfEvent: "", date: "", startTime: "", endTime: "", bookedOn: toISTDate(new Date()), });
     const [customEvent, setCustomEvent] = useState("");
     const [services, setServices] = useState([]);
     const [customService, setCustomService] = useState("");
@@ -26,6 +51,7 @@ const Vendor = () => {
     const [selectAll, setSelectAll] = useState(false);
     const [vendor, setVendor] = useState(null);
     const [predefinedEvents, setPredefinedEvents] = useState([]);
+
 
     useEffect(() => {
         const auth = getAuth();
@@ -214,12 +240,13 @@ const Vendor = () => {
             venueType: editData.venueType || "",
             contactNo: editData.contactNo || "",
             typeOfEvent: editData.eventType || "",
-            date: editData.date || "",
+            date: toISTDate(editData.date),
             startTime: editData.startTime || "",
             endTime: editData.endTime || "",
-            banquetName: editData.banquetName || "", // ✅ added this line
-            bookedOn: editData.bookedOn || new Date().toISOString().split("T")[0],
+            banquetName: editData.banquetName || "",
+            bookedOn: toISTDate(editData.bookedOn) || toISTDate(new Date()),
         });
+
 
         // Services mapping (same as before)
         const eventName = (editData.eventType || "").toLowerCase();
@@ -298,8 +325,8 @@ const Vendor = () => {
                 eventType: customEvent.trim() || form.typeOfEvent,
                 services: filteredServicesToSave,
                 summary: summaryFields,
-                updatedAt: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
-                userEmail: currentUser.email // <-- this line added
+                updatedAt: toISTDateTime(new Date()), // IST timestamp
+                userEmail: currentUser.email
             };
 
             const monthDocRef = doc(db, "vendor", monthYear);
@@ -351,7 +378,7 @@ const Vendor = () => {
                     const newVendorData = {
                         ...vendorData,
                         slNo,
-                        createdAt: serverTimestamp(),
+                        createdAt: toISTDateTime(new Date()), // IST timestamp
                     };
 
                     transaction.set(

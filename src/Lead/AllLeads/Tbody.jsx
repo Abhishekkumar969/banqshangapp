@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 
 const Tbody = ({ leads, isEditing, editing, handleFieldChange, handleEdit, handleDateChange, startEdit, moveLeadToDrop, handlePrint }) => {
     const [localValue, setLocalValue] = useState({});
-    const [showDropReasonFor, setShowDropReasonFor] = useState(null);
-    const [dropReason, setDropReason] = useState('');
+    // const [showDropReasonFor, setShowDropReasonFor] = useState(null);
+    // const [dropReason, setDropReason] = useState('');
     const [tempFollowUps, setTempFollowUps] = useState({});
     const [modalData, setModalData] = useState(null);
 
@@ -698,7 +698,7 @@ const Tbody = ({ leads, isEditing, editing, handleFieldChange, handleEdit, handl
                             </td>
                         ))}
 
-                        <td key={`${lead.id}-delete`}>
+                        {/* <td key={`${lead.id}-delete`}>
                             {showDropReasonFor === lead.id ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                     <textarea
@@ -748,7 +748,7 @@ const Tbody = ({ leads, isEditing, editing, handleFieldChange, handleEdit, handl
                                     Drop
                                 </button>
                             )}
-                        </td>
+                        </td> */}
 
                     </tr>
                 ))}

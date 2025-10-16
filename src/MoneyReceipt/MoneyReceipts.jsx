@@ -224,13 +224,17 @@ const MoneyReceipts = () => {
 
     const d = new Date(date);
 
-    // Always UTC (no timezone shift)
-    const day = String(d.getUTCDate()).padStart(2, "0");
-    const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-    const year = d.getUTCFullYear();
+    // Convert to IST by adding 5 hours 30 minutes (in milliseconds)
+    const istOffset = 5 * 60 + 30; // in minutes
+    const istDate = new Date(d.getTime() + istOffset * 60 * 1000);
 
-    return `${day}-${month}-${year}`; // DD-MM-YYYY
+    const day = String(istDate.getUTCDate()).padStart(2, "0");
+    const month = String(istDate.getUTCMonth() + 1).padStart(2, "0");
+    const year = istDate.getUTCFullYear();
+
+    return `${day}-${month}-${year}`; // DD-MM-YYYY in IST
   };
+
 
   const getDisplayName = (receipt) => {
     return (receipt.customerPrefix || '') + ' ' +

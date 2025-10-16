@@ -13,6 +13,33 @@ const VendorTable = () => {
     const [vendorProfile, setVendorProfile] = useState(null);
     const [appUserName, setAppUserName] = useState("App User");
 
+    const formatDate = (date) => {
+        if (!date) return "-";
+        const d = new Date(date);
+        const istTime = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+
+        const day = String(istTime.getUTCDate()).padStart(2, "0");
+        const month = String(istTime.getUTCMonth() + 1).padStart(2, "0");
+        const year = istTime.getUTCFullYear();
+
+        let hours = istTime.getUTCHours();
+        const minutes = String(istTime.getUTCMinutes()).padStart(2, "0");
+        const ampm = hours >= 12 ? "PM" : "AM";
+        hours = hours % 12 || 12;
+
+        return `${day}-${month}-${year}, ${hours}:${minutes} ${ampm}`;
+    };
+
+    const convertTo12Hour = (timeStr) => {
+        if (!timeStr) return "-";
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const istHours = (hours + 5) % 24; // add 5h 30m for IST
+        const istMinutes = (minutes + 30) % 60;
+        const ampm = istHours >= 12 ? "PM" : "AM";
+        const hour12 = istHours % 12 || 12;
+        return `${hour12}:${String(istMinutes).padStart(2, '0')} ${ampm}`;
+    };
+
     useEffect(() => {
         const auth = getAuth();
         const currentUser = auth.currentUser;
@@ -111,14 +138,6 @@ const VendorTable = () => {
         );
     });
 
-    const convertTo12Hour = (timeStr) => {
-        if (!timeStr) return "-";
-        const [hours, minutes] = timeStr.split(':').map(Number);
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        const hour12 = hours % 12 || 12;
-        return `${hour12}:${String(minutes).padStart(2, '0')} ${ampm}`;
-    };
-
     const handleUndoDrop = async (v) => {
         try {
             const monthKey = v.month;
@@ -159,23 +178,6 @@ const VendorTable = () => {
             console.error("❌ Error saving refund:", err);
             alert("Failed to save refund.");
         }
-    };
-
-    const formatDate = (date) => {
-        if (!date) return "-";
-        const d = new Date(date);
-        const istTime = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
-
-        const day = String(istTime.getUTCDate()).padStart(2, "0");
-        const month = String(istTime.getUTCMonth() + 1).padStart(2, "0");
-        const year = istTime.getUTCFullYear();
-
-        let hours = istTime.getUTCHours();
-        const minutes = String(istTime.getUTCMinutes()).padStart(2, "0");
-        const ampm = hours >= 12 ? "PM" : "AM";
-        hours = hours % 12 || 12; // convert to 12-hour format
-
-        return `${day}-${month}-${year}, ${hours}:${minutes} ${ampm}`;
     };
 
     const handlePrintPayment = useCallback((receipt, adv) => {
@@ -331,7 +333,7 @@ const VendorTable = () => {
                                 return (
                                     <tr key={v.id}>
                                         <td>{filteredBookings.length - idx}</td>
-                                        <td>{v.finalDate ? new Date(v.finalDate).toLocaleDateString("en-GB").replace(/\//g, "-") : "-"}</td>
+                                        <td>{v.finalDate ? formatDate(v.finalDate).split(',')[0] : "-"}</td>
                                         <td>{v.customerName}</td>
                                         <td><a href={`tel:${v.contactNo}`} style={{ color: "black", textDecoration: "none" }}>{v.contactNo}</a></td>
                                         <td>{v.eventType}</td>

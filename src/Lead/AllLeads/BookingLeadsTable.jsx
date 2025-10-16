@@ -1512,7 +1512,8 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
                                         'Menu', 'Meal', 'Hall Charges', 'GST', 'Applicable GST', 'Grand Total', 'Edit',
                                         'Send to Bookings', 'Print', 'Extra Booking Amenities', 'Win Probability', 'Hold Up Date',
                                         'Follow Up Date 1', 'Follow Up Date 2', 'Follow Up Date 3', 'Follow Up Date 4',
-                                        'Follow Up Date 5', 'Source Of Customer', "Booked By", 'Drop',
+                                        'Follow Up Date 5', 'Source Of Customer', "Booked By",
+                                        // 'Drop',
                                     ].map(header => (
                                         <th key={header}>{header}</th>
                                     ))}

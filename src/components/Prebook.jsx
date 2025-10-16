@@ -8,6 +8,7 @@ import { db } from "../firebaseConfig";
 import DownloadPopup from '../pages/DownloadPopup'
 import BottomNavigationBar from './BottomNavigationBar';
 
+
 const bannerImages = [
   "/assets/1.jpeg",
   "/assets/2.jpeg",
@@ -120,6 +121,8 @@ const Prebook = () => {
 
   return (
     <>
+
+
       <div className="prebook-wrapper">
         {/* LogOut */}
         <div style={{
@@ -176,158 +179,162 @@ const Prebook = () => {
           </div>
         </div>
 
-        {/* BOOKINGS */}
-        {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
-          <>
-            {/* Booking Services */}
-            <div className="service-section">
-              <h3 className="service-section-text">Bookings</h3>
-              <div className="service-grid">
-                <ServiceBox label="Enquiry" onClick={() => navigate('/EnquiryForm')} icon="📨" />
-                <ServiceBox label="Lead" onClick={() => navigate('/bookingLead')} icon="🚀" />
-                <ServiceBox label="Booking" onClick={() => navigate('/Booking')} icon="💒" />
-                <ServiceBox label="Records" onClick={() => navigate('/leadstabcontainer')} icon="🗂️" />
-              </div>
-            </div>
-          </>
-        )}
+        <div>
 
-        {/* RECEIPTS */}
-        {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
-          <>
-            {/* Money Receipt */}
-            <div className="service-section">
-              <h3 className="service-section-text">Receipts</h3>
-              <div className="service-grid">
-                <ServiceBox label="Receipt" onClick={() => navigate('/MoneyReceipt')} icon="🧾" />
-                <ServiceBox label="Voucher" onClick={() => navigate('/Receipts')} icon="🎟️" />
-                <ServiceBox label="Records" onClick={() => navigate('/MoneyReceipts')} icon="📚" />
-                <ServiceBox label="Approve" onClick={() => navigate('/ApprovalPage')} icon="✅" />
+          {/* BOOKINGS */}
+          {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
+            <>
+              {/* Booking Services */}
+              <div className="service-section">
+                <h3 className="service-section-text">Bookings</h3>
+                <div className="service-grid">
+                  <ServiceBox label="Enquiry" onClick={() => navigate('/EnquiryForm')} icon="📨" />
+                  <ServiceBox label="Lead" onClick={() => navigate('/bookingLead')} icon="🚀" />
+                  <ServiceBox label="Booking" onClick={() => navigate('/Booking')} icon="💒" />
+                  <ServiceBox label="Records" onClick={() => navigate('/leadstabcontainer')} icon="🗂️" />
+                </div>
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
 
-        {/* ACCOUNTANT */}
-        {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
-          <>
-            {/* Vendor Section */}
-            <div className="service-section">
-              <h3 className="service-section-text">Accountant</h3>
-              <div className="service-grid">
-                <ServiceBox label="Cashflow" onClick={() => navigate('/AccountantForm')} icon="💸" />
-                <ServiceBox label="Accounts" onClick={() => navigate('/Accountant')} icon="📇" />
+          {/* RECEIPTS */}
+          {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
+            <>
+              {/* Money Receipt */}
+              <div className="service-section">
+                <h3 className="service-section-text">Receipts</h3>
+                <div className="service-grid">
+                  <ServiceBox label="Receipt" onClick={() => navigate('/MoneyReceipt')} icon="🧾" />
+                  <ServiceBox label="Voucher" onClick={() => navigate('/Receipts')} icon="🎟️" />
+                  <ServiceBox label="Records" onClick={() => navigate('/MoneyReceipts')} icon="📚" />
+                  <ServiceBox label="Approve" onClick={() => navigate('/ApprovalPage')} icon="✅" />
+                </div>
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
 
-        {/* UTILITIES */}
-        {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
-          <>
-            {/* Utilities */}
-            <div className="service-section">
-              <h3 className="service-section-text">Utilities</h3>
-              <div className="service-grid">
-                {/* <ServiceBox label="Profile" onClick={() => navigate('/AdminProfile')} icon="👤" /> */}
-                <ServiceBox label="Menu" onClick={() => navigate('/MenuItems')} icon=".🍽." />
-                <ServiceBox label="Calendar" onClick={() => setShowCalendar(true)} icon="📅" />
-                <ServiceBox label="GST" onClick={() => navigate('/GSTSummary')} icon="💹" />
+          {/* ACCOUNTANT */}
+          {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
+            <>
+              {/* Vendor Section */}
+              <div className="service-section">
+                <h3 className="service-section-text">Accountant</h3>
+                <div className="service-grid">
+                  <ServiceBox label="Cashflow" onClick={() => navigate('/AccountantForm')} icon="💸" />
+                  <ServiceBox label="Accounts" onClick={() => navigate('/Accountant')} icon="📇" />
+                </div>
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
 
-        {/* VENDOR */}
-        {(userAppType === 'A' || userAppType === 'D') && (
-          <>
-            <div className="service-section">
-              <h3 className="service-section-text">Vendor</h3>
-              <div className="service-grid">
-                <ServiceBox label="UpComings" onClick={() => navigate('/VendorTable')} icon="📇" />
-                <ServiceBox label="Booked" onClick={() => navigate('/VendorBookedTable')} icon="🗂️" />
-                <ServiceBox label="Dropped" onClick={() => navigate('/VendorDeoppedTable')} icon="🗑️" />
+          {/* UTILITIES */}
+          {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
+            <>
+              {/* Utilities */}
+              <div className="service-section">
+                <h3 className="service-section-text">Utilities</h3>
+                <div className="service-grid">
+                  {/* <ServiceBox label="Profile" onClick={() => navigate('/AdminProfile')} icon="👤" /> */}
+                  <ServiceBox label="Menu" onClick={() => navigate('/MenuItems')} icon="🍽" />
+                  <ServiceBox label="Calendar" onClick={() => setShowCalendar(true)} icon="📅" />
+                  <ServiceBox label="GST" onClick={() => navigate('/GSTSummary')} icon="💹" />
+                </div>
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
 
-        {/* VENDOR */}
-        {userAppType === 'C' && (
-          <div className="service-section">
-            <h3 className="service-section-text">Vendor</h3>
-            <div className="service-grid">
-              <ServiceBox label="Profile" onClick={() => navigate('/VendorProfile')} icon="🧑‍💼" />
-              {vendor?.functionTypes?.length > 0 && (
-                <>
-                  <ServiceBox label="Form" onClick={() => navigate('/VendorOtherForm')} icon="📝" />
+          {/* VENDOR */}
+          {(userAppType === 'A' || userAppType === 'D') && (
+            <>
+              <div className="service-section">
+                <h3 className="service-section-text">Vendor</h3>
+                <div className="service-grid">
                   <ServiceBox label="UpComings" onClick={() => navigate('/VendorTable')} icon="📇" />
                   <ServiceBox label="Booked" onClick={() => navigate('/VendorBookedTable')} icon="🗂️" />
                   <ServiceBox label="Dropped" onClick={() => navigate('/VendorDeoppedTable')} icon="🗑️" />
-                </>
-              )}
-            </div>
-          </div>
-        )}
+                </div>
+              </div>
+            </>
+          )}
 
-        {/* DECORATION */}
-        {(userAppType === 'A' || userAppType === 'D') && (
-          <>
+          {/* VENDOR */}
+          {userAppType === 'C' && (
             <div className="service-section">
-              <h3 className="service-section-text">Decoration</h3>
+              <h3 className="service-section-text">Vendor</h3>
               <div className="service-grid">
-                <ServiceBox label="UpComings" onClick={() => navigate('/DecorationTable')} icon="📇" />
-                <ServiceBox label="Booked" onClick={() => navigate('/DecorationBookedTable')} icon="🗂️" />
-                <ServiceBox label="Dropped" onClick={() => navigate('/DecorationDeoppedTable')} icon="🗑️" />
+                <ServiceBox label="Profile" onClick={() => navigate('/VendorProfile')} icon="🧑‍💼" />
+                {vendor?.functionTypes?.length > 0 && (
+                  <>
+                    <ServiceBox label="Form" onClick={() => navigate('/VendorOtherForm')} icon="📝" />
+                    <ServiceBox label="UpComings" onClick={() => navigate('/VendorTable')} icon="📇" />
+                    <ServiceBox label="Booked" onClick={() => navigate('/VendorBookedTable')} icon="🗂️" />
+                    <ServiceBox label="Dropped" onClick={() => navigate('/VendorDeoppedTable')} icon="🗑️" />
+                  </>
+                )}
               </div>
             </div>
-          </>
-        )}
+          )}
 
-        {/* DECORATION */}
-        {userAppType === 'E' && (
-          <div className="service-section">
-            <h3 className="service-section-text">Decoration</h3>
-            <div className="service-grid">
-              <ServiceBox label="Profile" onClick={() => navigate('/DecorationProfile')} icon="👤" />
-              {decoration?.functionTypes?.length > 0 && (
-                <>
-                  <ServiceBox label="Form" onClick={() => navigate('/DecorationOtherForm')} icon="📝" />
+          {/* DECORATION */}
+          {(userAppType === 'A' || userAppType === 'D') && (
+            <>
+              <div className="service-section">
+                <h3 className="service-section-text">Decoration</h3>
+                <div className="service-grid">
                   <ServiceBox label="UpComings" onClick={() => navigate('/DecorationTable')} icon="📇" />
                   <ServiceBox label="Booked" onClick={() => navigate('/DecorationBookedTable')} icon="🗂️" />
                   <ServiceBox label="Dropped" onClick={() => navigate('/DecorationDeoppedTable')} icon="🗑️" />
-                </>
-              )}
-            </div>
-          </div>
-        )}
+                </div>
+              </div>
+            </>
+          )}
 
-        {/* Catering */}
-        {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
-          <>
+          {/* DECORATION */}
+          {userAppType === 'E' && (
             <div className="service-section">
-              <h3 className="service-section-text">Catering</h3>
+              <h3 className="service-section-text">Decoration</h3>
               <div className="service-grid">
-                <ServiceBox label="Assign" onClick={() => navigate('/CateringAssign')} icon="📝" />
-                <ServiceBox label="Records" onClick={() => navigate('/CateringAssigned')} icon="🗂️" />
+                <ServiceBox label="Profile" onClick={() => navigate('/DecorationProfile')} icon="👤" />
+                {decoration?.functionTypes?.length > 0 && (
+                  <>
+                    <ServiceBox label="Form" onClick={() => navigate('/DecorationOtherForm')} icon="📝" />
+                    <ServiceBox label="UpComings" onClick={() => navigate('/DecorationTable')} icon="📇" />
+                    <ServiceBox label="Booked" onClick={() => navigate('/DecorationBookedTable')} icon="🗂️" />
+                    <ServiceBox label="Dropped" onClick={() => navigate('/DecorationDeoppedTable')} icon="🗑️" />
+                  </>
+                )}
               </div>
             </div>
-          </>
-        )}
+          )}
 
-        {/* Settings Sections */}
-        {(userAppType === 'A' || userAppType === 'D') && (
-          <>
-            <div className="service-section" >
-              <h3 className="service-section-text">Settings</h3>
-              <div className="service-grid">
-                <ServiceBox label="Business" onClick={() => navigate('/StatsPage')} icon="📈" />
-                <ServiceBox label="Access" onClick={() => navigate('/UserAccessPanel')} icon="🔐" />
-                <ServiceBox label="Download/ Delete" onClick={() => setShowDownload(true)} icon="📇" />
+          {/* Catering */}
+          {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
+            <>
+              <div className="service-section">
+                <h3 className="service-section-text">Catering</h3>
+                <div className="service-grid">
+                  <ServiceBox label="Assign" onClick={() => navigate('/CateringAssign')} icon="📝" />
+                  <ServiceBox label="Records" onClick={() => navigate('/CateringAssigned')} icon="🗂️" />
+                </div>
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
+
+          {/* Settings Sections */}
+          {(userAppType === 'A' || userAppType === 'D') && (
+            <>
+              <div className="service-section" >
+                <h3 className="service-section-text">Settings</h3>
+                <div className="service-grid">
+                  <ServiceBox label="Business" onClick={() => navigate('/StatsPage')} icon="📈" />
+                  <ServiceBox label="Access" onClick={() => navigate('/UserAccessPanel')} icon="🔐" />
+                  <ServiceBox label="Download/ Delete" onClick={() => setShowDownload(true)} icon="📇" />
+                </div>
+              </div>
+            </>
+          )}
+
+        </div>
 
         <div style={{ marginBottom: "150px" }}></div>
         <CalendarPopup isOpen={showCalendar} onClose={() => setShowCalendar(false)} />

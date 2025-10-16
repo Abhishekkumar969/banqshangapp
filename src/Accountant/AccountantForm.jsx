@@ -119,21 +119,26 @@ const AccountantCashReceipts = () => {
 
             const approvalStatus = user.type === "Bank" ? "approved" : "denied";
 
-            // Current UTC timestamp
-            const now = new Date(Date.now() + new Date().getTimezoneOffset() * 60000);
+            // IST = UTC + 5:30
+            const nowUTC = new Date();
+            const nowIST = new Date(nowUTC.getTime() + 5.5 * 60 * 60 * 1000);
 
-            const yyyy = now.getUTCFullYear();
-            const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
-            const dd = String(now.getUTCDate()).padStart(2, '0');
+            const yyyy = nowIST.getFullYear();
+            const mm = String(nowIST.getMonth() + 1).padStart(2, '0');
+            const dd = String(nowIST.getDate()).padStart(2, '0');
+            const hh = String(nowIST.getHours()).padStart(2, '0');
+            const min = String(nowIST.getMinutes()).padStart(2, '0');
+            const sec = String(nowIST.getSeconds()).padStart(2, '0');
 
             const newTransaction = {
                 amount,
                 type: modalType,
                 approval: approvalStatus,
                 description: modalDescription,
-                date: `${yyyy}-${mm}-${dd}`,   // YYYY-MM-DD UTC
-                createdAt: now.toISOString()   // full UTC timestamp
+                date: `${yyyy}-${mm}-${dd}`,          // YYYY-MM-DD IST
+                createdAt: `${yyyy}-${mm}-${dd}T${hh}:${min}:${sec}+05:30` // Full IST timestamp
             };
+
 
             const personSnap = await getDoc(personDocRef);
             if (personSnap.exists()) {
