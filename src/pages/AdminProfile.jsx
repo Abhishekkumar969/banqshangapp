@@ -297,178 +297,279 @@ const AdminProfile = () => {
               borderBottom: "1px dashed #cbd5e1",
               borderTop: "1px dashed #cbd5e1",
             }}>
-              <label htmlFor="venueType" className={styles.subHeading}>
-                Venue Types:
-              </label>
+
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <label htmlFor="venueType" className={styles.subHeading}>
+                  Venue Types:
+                </label>
+
+                <button
+                  type="button"
+                  className={styles.editButton}
+                  onClick={() => {
+                    setVenueMenuOpen((prev) => !prev);
+                    setFunctionMenuOpen(false);
+                  }}
+                  style={{
+                    fontSize: "1.2rem",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    // transform: venueMenuOpen ? "rotate(90deg)" : "none",
+                    transition: "transform 0.2s ease",
+                  }}
+                >
+                  {venueMenuOpen ? "▲" : ">"}
+                </button>
+              </div>
 
               {/* Display saved venue types */}
-              <div style={{ marginTop: "10px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                {adminProfile?.venueTypes?.map(ft => (
-                  <span key={ft} style={{
-                    padding: "4px 8px",
-                    backgroundColor: "#e0f7fa",
-                    borderRadius: "6px",
-                    fontSize: "0.85rem",
-                  }}>
+              <div
+                style={{
+                  marginTop: "10px",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                }}
+              >
+                {adminProfile?.venueTypes?.map((ft) => (
+                  <span
+                    key={ft}
+                    style={{
+                      padding: "4px 8px",
+                      backgroundColor: "#e0f7fa",
+                      borderRadius: "6px",
+                      fontSize: "0.85rem",
+                    }}
+                  >
                     {ft}
                   </span>
                 ))}
               </div>
 
-              <CreatableSelect
-                isMulti
-                components={{
-                  ...animatedComponents,
-                  DropdownIndicator: (props) => (
-                    <div
-                      {...props.innerProps}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setVenueMenuOpen(prev => !prev);
-                        setFunctionMenuOpen(false); // close function dropdown if open
+              {/* ✅ Dropdown appears only when arrow is clicked */}
+              {venueMenuOpen && (
+                <div style={{ marginTop: "15px" }}>
+                  <CreatableSelect
+                    isMulti
+                    components={{
+                      ...animatedComponents,
+                      ClearIndicator: () => null,
+                    }}
+                    options={[
+                      ...defaultVenueOptions.map((ft) => ({
+                        value: ft,
+                        label: ft,
+                      })),
+                      ...venueTypes
+                        .filter((ft) => !defaultVenueOptions.includes(ft))
+                        .map((ft) => ({ value: ft, label: ft })),
+                    ]}
+                    className={styles.selectBox}
+                    placeholder="Select or add venue types..."
+                    onChange={(selected) => {
+                      const selectedValues = selected
+                        ? selected.map((s) => s.value)
+                        : [];
+                      setVenueTypes(selectedValues);
+                      setHasVenueChanges(
+                        JSON.stringify(selectedValues) !==
+                        JSON.stringify(adminProfile?.venueTypes || [])
+                      );
+                    }}
+                    onCreateOption={(inputValue) => {
+                      const newType = inputValue.trim();
+                      if (
+                        !newType ||
+                        venueTypes.includes(newType) ||
+                        defaultVenueOptions.includes(newType)
+                      )
+                        return;
+                      setVenueTypes([...venueTypes, newType]);
+                      setHasVenueChanges(true);
+                    }}
+                    value={venueTypes.map((ft) => ({
+                      value: ft,
+                      label: ft,
+                    }))}
+                    isSearchable
+                    closeMenuOnSelect={false}
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        borderRadius: "10px",
+                        borderColor: "#ccc",
+                        padding: "3px",
+                      }),
+                    }}
+                    formatCreateLabel={(inputValue) => `${inputValue} ➕`}
+                  />
+
+                  {hasVenueChanges && (
+                    <button
+                      type="button"
+                      style={{ marginTop: "15px" }}
+                      onClick={async () => {
+                        if (!adminProfile) return;
+                        const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
+                        await updateDoc(adminProfileRef, { venueTypes });
+                        setHasVenueChanges(false);
+                        setVenueMenuOpen(false);
                       }}
-                      style={{ cursor: "pointer", paddingRight: "8px", display: "flex", alignItems: "center" }}
+                      className={styles.button}
                     >
-                      {venueMenuOpen ? "▲" : "▼"}
-                    </div>
-                  ),
-                  ClearIndicator: () => null,
-                }}
-                options={[
-                  ...defaultVenueOptions.map(ft => ({ value: ft, label: ft })),
-                  ...venueTypes.filter(ft => !defaultVenueOptions.includes(ft)).map(ft => ({ value: ft, label: ft }))
-                ]}
-                className={styles.selectBox}
-                placeholder="Select or add venue types..."
-
-                onChange={(selected) => {
-                  const selectedValues = selected ? selected.map(s => s.value) : [];
-                  setVenueTypes(selectedValues); // ✅ sirf selected values
-                  setHasVenueChanges(JSON.stringify(selectedValues) !== JSON.stringify(adminProfile?.venueTypes || []));
-                }}
-                onCreateOption={(inputValue) => {
-                  const newType = inputValue.trim();
-                  if (!newType || venueTypes.includes(newType) || defaultVenueOptions.includes(newType)) return;
-                  setVenueTypes([...venueTypes, newType]);
-                  setHasVenueChanges(true);
-                }}
-                value={venueTypes.map(ft => ({ value: ft, label: ft }))} // ✅ koi "Default" nahi
-
-                isSearchable
-                closeMenuOnSelect={false}
-                menuIsOpen={venueMenuOpen && venueTypes.length + defaultVenueOptions.length > 0} onMenuOpen={() => setVenueMenuOpen(true)}
-                onMenuClose={() => setVenueMenuOpen(false)}
-                styles={{
-                  control: (base) => ({ ...base, borderRadius: "10px", borderColor: "#ccc", padding: "3px" }),
-                }}
-                formatCreateLabel={(inputValue) => `${inputValue} ➕`}
-              />
-
-              {hasVenueChanges && (
-                <button
-                  type="button"
-                  style={{ marginTop: "15px" }}
-                  onClick={async () => {
-                    if (!adminProfile) return;
-                    const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
-                    await updateDoc(adminProfileRef, { venueTypes });
-                    setHasVenueChanges(false);
-                  }}
-                  className={styles.button}
-                >
-                  Save Update
-                </button>
+                      Save Update
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
             {/* ---------- Function Types ---------- */}
-            <div className={styles.fieldRow} style={{
-              marginBottom: "20px",
-              paddingBottom: "15px",
-              borderBottom: "1px dashed #cbd5e1",
-            }}>
-              <label htmlFor="functionType" className={styles.subHeading}>
-                Function Types:
-              </label>
+            <div
+              className={styles.fieldRow}
+              style={{
+                marginBottom: "20px",
+                paddingBottom: "15px",
+                borderBottom: "1px dashed #cbd5e1",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <label htmlFor="functionType" className={styles.subHeading}>
+                  Function Types:
+                </label>
+
+                {/* Toggle button */}
+                <button
+                  type="button"
+                  className={styles.editButton}
+                  onClick={() => {
+                    setFunctionMenuOpen((prev) => !prev);
+                    setVenueMenuOpen(false); // close venue dropdown if open
+                  }}
+                  style={{
+                    fontSize: "1.2rem",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    transform: functionMenuOpen ? "rotate(90deg)" : "none",
+                    transition: "transform 0.2s ease",
+                  }}
+                >
+                  {functionMenuOpen ? "▲" : ">"}
+                </button>
+              </div>
 
               {/* Display saved function types */}
-              <div style={{ marginTop: "10px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                {adminProfile?.functionTypes?.map(ft => (
-                  <span key={ft} style={{
-                    padding: "4px 8px",
-                    backgroundColor: "#e0f7fa",
-                    borderRadius: "6px",
-                    fontSize: "0.85rem",
-                  }}>
+              <div
+                style={{
+                  marginTop: "10px",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                }}
+              >
+                {adminProfile?.functionTypes?.map((ft) => (
+                  <span
+                    key={ft}
+                    style={{
+                      padding: "4px 8px",
+                      backgroundColor: "#e0f7fa",
+                      borderRadius: "6px",
+                      fontSize: "0.85rem",
+                    }}
+                  >
                     {ft}
                   </span>
                 ))}
               </div>
 
-              <CreatableSelect
-                isMulti
-                components={{
-                  ...animatedComponents,
-                  DropdownIndicator: (props) => (
-                    <div
-                      {...props.innerProps}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFunctionMenuOpen(prev => !prev);
-                        setVenueMenuOpen(false); // close venue dropdown if open
+              {/* ✅ Dropdown only appears when arrow clicked */}
+              {functionMenuOpen && (
+                <div style={{ marginTop: "15px" }}>
+                  <CreatableSelect
+                    isMulti
+                    components={{
+                      ...animatedComponents,
+                      ClearIndicator: () => null,
+                    }}
+                    options={[
+                      ...defaultFunctionOptions.map((ft) => ({
+                        value: ft,
+                        label: ft,
+                      })),
+                      ...functionTypes
+                        .filter((ft) => !defaultFunctionOptions.includes(ft))
+                        .map((ft) => ({ value: ft, label: ft })),
+                    ]}
+                    className={styles.selectBox}
+                    placeholder="Select or add function types..."
+                    onChange={(selected) => {
+                      const selectedValues = selected ? selected.map((s) => s.value) : [];
+                      setFunctionTypes(selectedValues);
+                      setHasFunctionChanges(
+                        JSON.stringify(selectedValues) !==
+                        JSON.stringify(adminProfile?.functionTypes || [])
+                      );
+                    }}
+                    onCreateOption={(inputValue) => {
+                      const newType = inputValue.trim();
+                      if (
+                        !newType ||
+                        functionTypes.includes(newType) ||
+                        defaultFunctionOptions.includes(newType)
+                      )
+                        return;
+                      setFunctionTypes([...functionTypes, newType]);
+                      setHasFunctionChanges(true);
+                    }}
+                    value={functionTypes.map((ft) => ({
+                      value: ft,
+                      label: ft,
+                    }))}
+                    isSearchable
+                    closeMenuOnSelect={false}
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        borderRadius: "10px",
+                        borderColor: "#ccc",
+                        padding: "3px",
+                      }),
+                    }}
+                    formatCreateLabel={(inputValue) => `${inputValue} ➕`}
+                  />
+
+                  {hasFunctionChanges && (
+                    <button
+                      type="button"
+                      style={{ marginTop: "15px" }}
+                      onClick={async () => {
+                        if (!adminProfile) return;
+                        const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
+                        await updateDoc(adminProfileRef, { functionTypes });
+                        setHasFunctionChanges(false);
+                        setFunctionMenuOpen(false); // ✅ auto-close after save
                       }}
-                      style={{ cursor: "pointer", paddingRight: "8px", display: "flex", alignItems: "center" }}
+                      className={styles.button}
                     >
-                      {functionMenuOpen ? "▲" : "▼"}
-                    </div>
-                  ),
-                  ClearIndicator: () => null,
-                }}
-                options={[
-                  ...defaultFunctionOptions.map(ft => ({ value: ft, label: ft })),
-                  ...functionTypes.filter(ft => !defaultFunctionOptions.includes(ft)).map(ft => ({ value: ft, label: ft }))
-                ]}
-                className={styles.selectBox}
-                placeholder="Select or add function types..."
-
-                onChange={(selected) => {
-                  const selectedValues = selected ? selected.map(s => s.value) : [];
-                  setFunctionTypes(selectedValues); // ✅ sirf selected values
-                  setHasFunctionChanges(JSON.stringify(selectedValues) !== JSON.stringify(adminProfile?.functionTypes || []));
-                }}
-                onCreateOption={(inputValue) => {
-                  const newType = inputValue.trim();
-                  if (!newType || functionTypes.includes(newType) || defaultFunctionOptions.includes(newType)) return;
-                  setFunctionTypes([...functionTypes, newType]);
-                  setHasFunctionChanges(true);
-                }}
-                value={functionTypes.map(ft => ({ value: ft, label: ft }))} // ✅ koi "Default" nahi
-
-                isSearchable
-                closeMenuOnSelect={false}
-                menuIsOpen={functionMenuOpen && functionTypes.length + defaultFunctionOptions.length > 0}
-                onMenuOpen={() => setFunctionMenuOpen(true)}
-                onMenuClose={() => setFunctionMenuOpen(false)}
-                styles={{
-                  control: (base) => ({ ...base, borderRadius: "10px", borderColor: "#ccc", padding: "3px" }),
-                }}
-                formatCreateLabel={(inputValue) => `${inputValue} ➕`}
-              />
-
-              {hasFunctionChanges && (
-                <button
-                  type="button"
-                  style={{ marginTop: "15px" }}
-                  onClick={async () => {
-                    if (!adminProfile) return;
-                    const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
-                    await updateDoc(adminProfileRef, { functionTypes });
-                    setHasFunctionChanges(false);
-                  }}
-                  className={styles.button}
-                >
-                  Save Update
-                </button>
+                      Save Update
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
@@ -479,11 +580,41 @@ const AdminProfile = () => {
                 marginBottom: "20px",
                 paddingBottom: "15px",
                 borderBottom: "1px dashed #cbd5e1",
+                borderTop: "1px dashed #cbd5e1",
               }}
             >
-              <label htmlFor="amenities" className={styles.subHeading}>
-                Complimentary Booking Amenities:
-              </label>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <label htmlFor="amenities" className={styles.subHeading}>
+                  Complimentary Booking Amenities:
+                </label>
+
+                {/* Toggle button */}
+                <button
+                  type="button"
+                  className={styles.editButton}
+                  onClick={() => {
+                    setAmenitiesMenuOpen((prev) => !prev);
+                    setFunctionMenuOpen(false);
+                    setVenueMenuOpen(false);
+                  }}
+                  style={{
+                    fontSize: "1.2rem",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    transform: amenitiesMenuOpen ? "rotate(90deg)" : "none",
+                    transition: "transform 0.2s ease",
+                  }}
+                >
+                  {amenitiesMenuOpen ? "▲" : ">"}
+                </button>
+              </div>
 
               {/* ✅ Display saved amenities */}
               <div
@@ -515,94 +646,82 @@ const AdminProfile = () => {
                 )}
               </div>
 
-              {/* ✅ Editable dropdown */}
-              <CreatableSelect
-                isMulti
-                components={{
-                  ...animatedComponents,
-                  DropdownIndicator: (props) => (
-                    <div
-                      {...props.innerProps}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setAmenitiesMenuOpen((prev) => !prev);
-                        setFunctionMenuOpen(false);
-                        setVenueMenuOpen(false);
-                      }}
-                      style={{
-                        cursor: "pointer",
-                        paddingRight: "8px",
-                        display: "flex",
-                        alignItems: "center",
-                      }}
-                    >
-                      {amenitiesMenuOpen ? "▲" : "▼"}
-                    </div>
-                  ),
-                  ClearIndicator: () => null,
-                }}
-                options={[
-                  ...defaultAmenityOptions.map((am) => ({ value: am, label: am })),
-                  ...(amenities?.filter(
-                    (am) => !defaultAmenityOptions.includes(am)
-                  ) || []).map((am) => ({ value: am, label: am })),
-                ]}
-                className={styles.selectBox}
-                placeholder="Select or add amenities..."
-                onChange={(selected) => {
-                  const selectedValues = selected ? selected.map((s) => s.value) : [];
-                  setAmenities(selectedValues);
-                  setHasAmenitiesChanges(
-                    JSON.stringify(selectedValues) !==
-                    JSON.stringify(adminProfile?.amenities || [])
-                  );
-                }}
-                onCreateOption={(inputValue) => {
-                  const newAmenity = inputValue.trim();
-                  if (
-                    !newAmenity ||
-                    amenities.includes(newAmenity) ||
-                    defaultAmenityOptions.includes(newAmenity)
-                  )
-                    return;
-                  setAmenities([...amenities, newAmenity]);
-                  setHasAmenitiesChanges(true);
-                }}
-                value={amenities.map((am) => ({ value: am, label: am }))}
-                isSearchable
-                closeMenuOnSelect={false}
-                menuIsOpen={
-                  amenitiesMenuOpen && amenities.length + defaultAmenityOptions.length > 0
-                }
-                onMenuOpen={() => setAmenitiesMenuOpen(true)}
-                onMenuClose={() => setAmenitiesMenuOpen(false)}
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    borderRadius: "10px",
-                    borderColor: "#ccc",
-                    padding: "3px",
-                  }),
-                }}
-                formatCreateLabel={(inputValue) => `${inputValue} ➕`}
-              />
+              {/* ✅ Dropdown only visible when toggled open */}
+              {amenitiesMenuOpen && (
+                <div style={{ marginTop: "15px" }}>
+                  <CreatableSelect
+                    isMulti
+                    components={{
+                      ...animatedComponents,
+                      ClearIndicator: () => null,
+                    }}
+                    options={[
+                      ...defaultAmenityOptions.map((am) => ({
+                        value: am,
+                        label: am,
+                      })),
+                      ...(amenities?.filter(
+                        (am) => !defaultAmenityOptions.includes(am)
+                      ) || []).map((am) => ({ value: am, label: am })),
+                    ]}
+                    className={styles.selectBox}
+                    placeholder="Select or add amenities..."
+                    onChange={(selected) => {
+                      const selectedValues = selected ? selected.map((s) => s.value) : [];
+                      setAmenities(selectedValues);
+                      setHasAmenitiesChanges(
+                        JSON.stringify(selectedValues) !==
+                        JSON.stringify(adminProfile?.amenities || [])
+                      );
+                    }}
+                    onCreateOption={(inputValue) => {
+                      const newAmenity = inputValue.trim();
+                      if (
+                        !newAmenity ||
+                        amenities.includes(newAmenity) ||
+                        defaultAmenityOptions.includes(newAmenity)
+                      )
+                        return;
+                      setAmenities([...amenities, newAmenity]);
+                      setHasAmenitiesChanges(true);
+                    }}
+                    value={amenities.map((am) => ({
+                      value: am,
+                      label: am,
+                    }))}
+                    isSearchable
+                    closeMenuOnSelect={false}
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        borderRadius: "10px",
+                        borderColor: "#ccc",
+                        padding: "3px",
+                      }),
+                    }}
+                    formatCreateLabel={(inputValue) => `${inputValue} ➕`}
+                  />
 
-              {hasAmenitiesChanges && (
-                <button
-                  type="button"
-                  style={{ marginTop: "15px" }}
-                  onClick={async () => {
-                    if (!adminProfile) return;
-                    const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
-                    await updateDoc(adminProfileRef, { amenities });
-                    setHasAmenitiesChanges(false);
-                  }}
-                  className={styles.button}
-                >
-                  Save Update
-                </button>
+                  {hasAmenitiesChanges && (
+                    <button
+                      type="button"
+                      style={{ marginTop: "15px" }}
+                      onClick={async () => {
+                        if (!adminProfile) return;
+                        const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
+                        await updateDoc(adminProfileRef, { amenities });
+                        setHasAmenitiesChanges(false);
+                        setAmenitiesMenuOpen(false); // ✅ auto-close after save
+                      }}
+                      className={styles.button}
+                    >
+                      Save Update
+                    </button>
+                  )}
+                </div>
               )}
             </div>
+
 
             {/* ---------- Add-Ons Charges ---------- */}
             <div
@@ -611,13 +730,44 @@ const AdminProfile = () => {
                 marginBottom: "20px",
                 paddingBottom: "15px",
                 borderBottom: "1px dashed #cbd5e1",
+                borderTop: "1px dashed #cbd5e1",
               }}
             >
-              <label htmlFor="addons" className={styles.subHeading}>
-                Add-Ons Charges:
-              </label>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <label htmlFor="addons" className={styles.subHeading}>
+                  Add-Ons Charges:
+                </label>
 
-              {/* ✅ Display saved Add-ons */}
+                {/* Toggle button */}
+                <button
+                  type="button"
+                  className={styles.editButton}
+                  onClick={() => {
+                    setAddonsMenuOpen((prev) => !prev);
+                    setFunctionMenuOpen(false);
+                    setVenueMenuOpen(false);
+                    setAmenitiesMenuOpen(false);
+                  }}
+                  style={{
+                    fontSize: "1.2rem",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    transform: addonsMenuOpen ? "rotate(90deg)" : "none",
+                    transition: "transform 0.2s ease",
+                  }}
+                >
+                  {addonsMenuOpen ? "▲" : ">"}
+                </button>
+              </div>
+
+              {/* ✅ Display saved Add-Ons */}
               <div
                 style={{
                   marginTop: "10px",
@@ -647,90 +797,73 @@ const AdminProfile = () => {
                 )}
               </div>
 
-              <CreatableSelect
-                isMulti
-                components={{
-                  ...animatedComponents,
-                  DropdownIndicator: (props) => (
-                    <div
-                      {...props.innerProps}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFunctionMenuOpen(false);
-                        setVenueMenuOpen(false);
-                        setAmenitiesMenuOpen(false);
-                        setAddonsMenuOpen((prev) => !prev);
-                      }}
-                      style={{
-                        cursor: "pointer",
-                        paddingRight: "8px",
-                        display: "flex",
-                        alignItems: "center",
-                      }}
-                    >
-                      {addonsMenuOpen ? "▲" : "▼"}
-                    </div>
-                  ),
-                  ClearIndicator: () => null,
-                }}
-                options={[
-                  ...defaultAddonsOptions.map((a) => ({ value: a, label: a })),
-                  ...(addons?.filter((a) => !defaultAddonsOptions.includes(a)) || []).map(
-                    (a) => ({ value: a, label: a })
-                  ),
-                ]}
-                className={styles.selectBox}
-                placeholder="Select or add Add-Ons..."
-                onChange={(selected) => {
-                  const selectedValues = selected ? selected.map((s) => s.value) : [];
-                  setAddons(selectedValues);
-                  setHasAddonsChanges(
-                    JSON.stringify(selectedValues) !==
-                    JSON.stringify(adminProfile?.addons || [])
-                  );
-                }}
-                onCreateOption={(inputValue) => {
-                  const newAddon = inputValue.trim();
-                  if (
-                    !newAddon ||
-                    addons.includes(newAddon) ||
-                    defaultAddonsOptions.includes(newAddon)
-                  )
-                    return;
-                  setAddons([...addons, newAddon]);
-                  setHasAddonsChanges(true);
-                }}
-                value={addons.map((a) => ({ value: a, label: a }))}
-                isSearchable
-                closeMenuOnSelect={false}
-                menuIsOpen={addonsMenuOpen && addons.length + defaultAddonsOptions.length > 0}
-                onMenuOpen={() => setAddonsMenuOpen(true)}
-                onMenuClose={() => setAddonsMenuOpen(false)}
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    borderRadius: "10px",
-                    borderColor: "#ccc",
-                    padding: "3px",
-                  }),
-                }}
-                formatCreateLabel={(inputValue) => `${inputValue} ➕`}
-              />
+              {/* ✅ Dropdown only visible when toggled open */}
+              {addonsMenuOpen && (
+                <div style={{ marginTop: "15px" }}>
+                  <CreatableSelect
+                    isMulti
+                    components={{
+                      ...animatedComponents,
+                      ClearIndicator: () => null,
+                    }}
+                    options={[
+                      ...defaultAddonsOptions.map((a) => ({ value: a, label: a })),
+                      ...(addons?.filter((a) => !defaultAddonsOptions.includes(a)) || []).map(
+                        (a) => ({ value: a, label: a })
+                      ),
+                    ]}
+                    className={styles.selectBox}
+                    placeholder="Select or add Add-Ons..."
+                    onChange={(selected) => {
+                      const selectedValues = selected ? selected.map((s) => s.value) : [];
+                      setAddons(selectedValues);
+                      setHasAddonsChanges(
+                        JSON.stringify(selectedValues) !==
+                        JSON.stringify(adminProfile?.addons || [])
+                      );
+                    }}
+                    onCreateOption={(inputValue) => {
+                      const newAddon = inputValue.trim();
+                      if (
+                        !newAddon ||
+                        addons.includes(newAddon) ||
+                        defaultAddonsOptions.includes(newAddon)
+                      )
+                        return;
+                      setAddons([...addons, newAddon]);
+                      setHasAddonsChanges(true);
+                    }}
+                    value={addons.map((a) => ({ value: a, label: a }))}
+                    isSearchable
+                    closeMenuOnSelect={false}
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        borderRadius: "10px",
+                        borderColor: "#ccc",
+                        padding: "3px",
+                      }),
+                    }}
+                    formatCreateLabel={(inputValue) => `${inputValue} ➕`}
+                  />
 
-              {hasAddonsChanges && (
-                <button
-                  type="button"
-                  style={{ marginTop: "15px" }}
-                  onClick={async () => {
-                    if (!adminProfile) return;
-                    const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
-                    await updateDoc(adminProfileRef, { addons });
-                    setHasAddonsChanges(false);
-                  }}
-                  className={styles.button}
-                >
-                  Save Update
-                </button>
+                  {hasAddonsChanges && (
+                    <button
+                      type="button"
+                      style={{ marginTop: "15px" }}
+                      onClick={async () => {
+                        if (!adminProfile) return;
+                        const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
+                        await updateDoc(adminProfileRef, { addons });
+                        setHasAddonsChanges(false);
+                        setAddonsMenuOpen(false); // ✅ auto-close after save
+                      }}
+                      className={styles.button}
+                    >
+                      Save Update
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
@@ -741,11 +874,43 @@ const AdminProfile = () => {
                 marginBottom: "20px",
                 paddingBottom: "15px",
                 borderBottom: "1px dashed #cbd5e1",
+                borderTop: "1px dashed #cbd5e1",
               }}
             >
-              <label htmlFor="menuItems" className={styles.subHeading}>
-                Menu Item Charges:
-              </label>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <label htmlFor="menuItems" className={styles.subHeading}>
+                  Menu Item Charges:
+                </label>
+
+                {/* Toggle button */}
+                <button
+                  type="button"
+                  className={styles.editButton}
+                  onClick={() => {
+                    setMenuItemsMenuOpen((prev) => !prev);
+                    setFunctionMenuOpen(false);
+                    setVenueMenuOpen(false);
+                    setAmenitiesMenuOpen(false);
+                    setAddonsMenuOpen(false);
+                  }}
+                  style={{
+                    fontSize: "1.2rem",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    transform: menuItemsMenuOpen ? "rotate(90deg)" : "none",
+                    transition: "transform 0.2s ease",
+                  }}
+                >
+                  {menuItemsMenuOpen ? "▲" : ">"}
+                </button>
+              </div>
 
               {/* ✅ Display saved menu items */}
               <div
@@ -757,17 +922,17 @@ const AdminProfile = () => {
                 }}
               >
                 {adminProfile?.menuItems?.length > 0 ? (
-                  adminProfile.menuItems.map((mi) => (
+                  adminProfile.menuItems.map((item) => (
                     <span
-                      key={mi}
+                      key={item}
                       style={{
                         padding: "4px 8px",
-                        backgroundColor: "#e3f2fd",
+                        backgroundColor: "#fff3e0",
                         borderRadius: "6px",
                         fontSize: "0.85rem",
                       }}
                     >
-                      {mi}
+                      {item}
                     </span>
                   ))
                 ) : (
@@ -777,95 +942,71 @@ const AdminProfile = () => {
                 )}
               </div>
 
-              <CreatableSelect
-                isMulti
-                components={{
-                  ...animatedComponents,
-                  DropdownIndicator: (props) => (
-                    <div
-                      {...props.innerProps}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFunctionMenuOpen(false);
-                        setVenueMenuOpen(false);
-                        setAmenitiesMenuOpen(false);
-                        setMenuItemsMenuOpen((prev) => !prev);
-                      }}
-                      style={{
-                        cursor: "pointer",
-                        paddingRight: "8px",
-                        display: "flex",
-                        alignItems: "center",
-                      }}
-                    >
-                      {menuItemsMenuOpen ? "▲" : "▼"}
-                    </div>
-                  ),
-                  ClearIndicator: () => null,
-                }}
-                options={[
-                  ...defaultMenuItemOptions.map((m) => ({ value: m, label: m })),
-                  ...(menuItems?.filter((m) => !defaultMenuItemOptions.includes(m)) || []).map(
-                    (m) => ({ value: m, label: m })
-                  ),
-                ]}
-                className={styles.selectBox}
-                placeholder="Select or add Menu Items..."
-                onChange={(selected) => {
-                  const selectedValues = selected ? selected.map((s) => s.value) : [];
-                  setMenuItems(selectedValues);
-                  setHasMenuItemsChanges(
-                    JSON.stringify(selectedValues) !==
-                    JSON.stringify(adminProfile?.menuItems || [])
-                  );
-                }}
-                onCreateOption={(inputValue) => {
-                  const newMenuItem = inputValue.trim();
-                  if (
-                    !newMenuItem ||
-                    menuItems.includes(newMenuItem) ||
-                    defaultMenuItemOptions.includes(newMenuItem)
-                  )
-                    return;
-                  setMenuItems([...menuItems, newMenuItem]);
-                  setHasMenuItemsChanges(true);
-                }}
-                value={menuItems.map((m) => ({ value: m, label: m }))}
-                isSearchable
-                closeMenuOnSelect={false}
-                menuIsOpen={
-                  menuItemsMenuOpen && menuItems.length + defaultMenuItemOptions.length > 0
-                }
-                onMenuOpen={() => setMenuItemsMenuOpen(true)}
-                onMenuClose={() => setMenuItemsMenuOpen(false)}
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    borderRadius: "10px",
-                    borderColor: "#ccc",
-                    padding: "3px",
-                  }),
-                }}
-                formatCreateLabel={(inputValue) => `${inputValue} ➕`}
-              />
+              {/* ✅ Dropdown only visible when toggled open */}
+              {menuItemsMenuOpen && (
+                <div style={{ marginTop: "15px" }}>
+                  <CreatableSelect
+                    isMulti
+                    components={{
+                      ...animatedComponents,
+                      ClearIndicator: () => null,
+                    }}
+                    options={[
+                      ...defaultMenuItemOptions.map((m) => ({ value: m, label: m })),
+                      ...(menuItems?.filter((m) => !defaultMenuItemOptions.includes(m)) || []).map(
+                        (m) => ({ value: m, label: m })
+                      ),
+                    ]}
+                    className={styles.selectBox}
+                    placeholder="Select or add menu items..."
+                    onChange={(selected) => {
+                      const selectedValues = selected ? selected.map((s) => s.value) : [];
+                      setMenuItems(selectedValues);
+                      setHasMenuItemsChanges(
+                        JSON.stringify(selectedValues) !==
+                        JSON.stringify(adminProfile?.menuItems || [])
+                      );
+                    }}
+                    onCreateOption={(inputValue) => {
+                      const newItem = inputValue.trim();
+                      if (!newItem || menuItems.includes(newItem) || defaultMenuItemOptions.includes(newItem))
+                        return;
+                      setMenuItems([...menuItems, newItem]);
+                      setHasMenuItemsChanges(true);
+                    }}
+                    value={menuItems.map((m) => ({ value: m, label: m }))}
+                    isSearchable
+                    closeMenuOnSelect={false}
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        borderRadius: "10px",
+                        borderColor: "#ccc",
+                        padding: "3px",
+                      }),
+                    }}
+                    formatCreateLabel={(inputValue) => `${inputValue} ➕`}
+                  />
 
-              {hasMenuItemsChanges && (
-                <button
-                  type="button"
-                  style={{ marginTop: "15px" }}
-                  onClick={async () => {
-                    if (!adminProfile) return;
-                    const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
-                    await updateDoc(adminProfileRef, { menuItems });
-                    setHasMenuItemsChanges(false);
-                  }}
-                  className={styles.button}
-                >
-                  Save Update
-                </button>
+                  {hasMenuItemsChanges && (
+                    <button
+                      type="button"
+                      style={{ marginTop: "15px" }}
+                      onClick={async () => {
+                        if (!adminProfile) return;
+                        const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
+                        await updateDoc(adminProfileRef, { menuItems });
+                        setHasMenuItemsChanges(false);
+                        setMenuItemsMenuOpen(false); // ✅ auto-close after save
+                      }}
+                      className={styles.button}
+                    >
+                      Save Update
+                    </button>
+                  )}
+                </div>
               )}
             </div>
-
 
           </>
         ) : (
