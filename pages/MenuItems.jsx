@@ -54,15 +54,24 @@ const styles = {
         fontWeight: "500",
         flex: "0 0 auto",
     },
-    cardContainer1: { display: "flex", justifyContent: "center" },
-    cardContainer: { display: "grid", gap: "15px", width: "70vw" },
+    cardContainer1: {
+        display: "flex",
+        justifyContent: "center"
+    },
+
+    cardContainer: {
+        display: "grid",
+        gap: "15px",
+        width: "70vw"
+    },
+
     card: {
-        background: "#fff8f0",
+        background: "#fff8f0b2",
         borderRadius: "12px",
         padding: "12px",
-        boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
         border: "1px solid black",
     },
+
     cardHeader: {
         fontWeight: "600",
         marginBottom: "6px",
@@ -282,7 +291,7 @@ const MenuItems = () => {
 
                                 return (
                                     <div
-                                        key={`${menuType}_${cat}`} // ✅ stable key to prevent jumps
+                                        key={`${menuType}_${cat}`}
                                         style={{ ...styles.card, display: "flex", flexDirection: "column" }}
                                     >
                                         {/* 🔹 Category Header */}
@@ -355,6 +364,7 @@ const MenuItems = () => {
                                                     >
                                                         Price:
                                                     </span>
+
                                                     {editingPrice[cat] ? (
                                                         <>
                                                             <input
@@ -382,7 +392,7 @@ const MenuItems = () => {
                                                                     const newPrice = Number(priceInputs[cat] || 0);
                                                                     const docRef = doc(db, "menu", menuType);
 
-                                                                    // ✅ 1. Agar name change hua to puri category rename karni hogi
+                                                                    // ✅ Rename category if name changed
                                                                     if (newName !== cat) {
                                                                         const menuSnap = await getDoc(docRef);
                                                                         if (menuSnap.exists()) {
@@ -399,7 +409,7 @@ const MenuItems = () => {
                                                                             await updateDoc(docRef, { categories: updatedCategories });
                                                                         }
                                                                     } else {
-                                                                        // ✅ 2. Sirf price update karna ho
+                                                                        // ✅ Only update price
                                                                         await updateDoc(docRef, {
                                                                             [`categories.${cat.toLowerCase()}.price`]: newPrice,
                                                                         });
@@ -438,6 +448,33 @@ const MenuItems = () => {
                                                             >
                                                                 Cancel
                                                             </button>
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (window.confirm(`Delete category "${cat}" ?`)) {
+                                                                        const docRef = doc(db, "menu", menuType);
+                                                                        const menuSnap = await getDoc(docRef);
+                                                                        if (menuSnap.exists()) {
+                                                                            const data = menuSnap.data();
+                                                                            const categories = data.categories || {};
+
+                                                                            const updatedCategories = { ...categories };
+                                                                            delete updatedCategories[cat.toLowerCase()];
+
+                                                                            await updateDoc(docRef, { categories: updatedCategories });
+                                                                            fetchItems();
+                                                                        }
+                                                                    }
+                                                                }}
+                                                                style={{
+                                                                    padding: "4px 8px",
+                                                                    marginLeft: "5px",
+                                                                    borderRadius: "6px",
+                                                                    background: "#e74c3c",
+                                                                    color: "#fff",
+                                                                }}
+                                                            >
+                                                                Delete
+                                                            </button>
                                                         </>
                                                     ) : (
                                                         <>
@@ -471,7 +508,7 @@ const MenuItems = () => {
                                             <div
                                                 style={{
                                                     paddingLeft: "12px",
-                                                    marginTop: "8px",
+                                                    marginTop: "5px",
                                                     borderTop: "1px solid red",
                                                     display: "flex",
                                                     flexDirection: "column",
@@ -481,7 +518,7 @@ const MenuItems = () => {
                                                 }}
                                             >
                                                 {/* 🔹 Add new category item */}
-                                                <div style={{ display: "flex", gap: "6px" }}>
+                                                <div style={{ display: "flex", gap: "6px", marginTop: '10px' }}>
                                                     <input
                                                         type="text"
                                                         placeholder="New category item"
@@ -570,8 +607,7 @@ const MenuItems = () => {
                                                                                     // 🔹 rename subcategory (keep items + price safe)
                                                                                     const updatedCategory = {
                                                                                         ...categoryObj,
-                                                                                        [subcatEditValue.toLowerCase()]:
-                                                                                            categoryObj[catItem.toLowerCase()],
+                                                                                        [subcatEditValue.toLowerCase()]: categoryObj[catItem.toLowerCase()],
                                                                                     };
                                                                                     delete updatedCategory[catItem.toLowerCase()];
 
@@ -612,13 +648,49 @@ const MenuItems = () => {
                                                                             >
                                                                                 Cancel
                                                                             </button>
-                                                                        </>
 
+                                                                            {/* 🔹 Delete Subcategory */}
+                                                                            <button
+                                                                                onClick={async () => {
+                                                                                    if (window.confirm(`Delete subcategory "${catItem}"?`)) {
+                                                                                        const docRef = doc(db, "menu", menuType);
+                                                                                        const snap = await getDoc(docRef);
+                                                                                        if (!snap.exists()) return;
+
+                                                                                        const data = snap.data();
+                                                                                        const categories = data.categories || {};
+                                                                                        const categoryObj = categories[cat.toLowerCase()] || {};
+
+                                                                                        const updatedCategory = { ...categoryObj };
+                                                                                        delete updatedCategory[catItem.toLowerCase()];
+
+                                                                                        await updateDoc(docRef, {
+                                                                                            [`categories.${cat.toLowerCase()}`]: updatedCategory,
+                                                                                        });
+
+                                                                                        setEditingPrice((prev) => ({
+                                                                                            ...prev,
+                                                                                            [`subcat_${key}`]: false,
+                                                                                        }));
+                                                                                        fetchItems();
+                                                                                    }
+                                                                                }}
+                                                                                style={{
+                                                                                    padding: "2px 8px",
+                                                                                    marginLeft: "5px",
+                                                                                    borderRadius: "6px",
+                                                                                    background: "#e74c3c",
+                                                                                    color: "#fff",
+                                                                                }}
+                                                                            >
+                                                                                Delete
+                                                                            </button>
+                                                                        </>
                                                                     ) : (
                                                                         <>
                                                                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                                                 <span>{catItem.toUpperCase()}</span>
-                                                                                <div>
+                                                                                <div style={{ whiteSpace: 'nowrap' }}>
                                                                                     <span>{isCatItemExpanded ? "▲" : "▼"}</span>
                                                                                     <button
                                                                                         onClick={(e) => {
@@ -644,6 +716,7 @@ const MenuItems = () => {
                                                                             </div>
                                                                         </>
                                                                     )}
+
                                                                 </div>
 
                                                                 {/* 🔹 Subcategory Items */}
@@ -689,19 +762,14 @@ const MenuItems = () => {
 
                                                                                                     const data = snap.data();
                                                                                                     const existingItems =
-                                                                                                        data.categories?.[cat.toLowerCase()]?.[
-                                                                                                            catItem.toLowerCase()
-                                                                                                        ]?.menuItems || [];
+                                                                                                        data.categories?.[cat.toLowerCase()]?.[catItem.toLowerCase()]?.menuItems || [];
 
                                                                                                     const updatedItems = existingItems.map((x) =>
-                                                                                                        x.id === itm.id
-                                                                                                            ? { ...x, name: editValue }
-                                                                                                            : x
+                                                                                                        x.id === itm.id ? { ...x, name: editValue } : x
                                                                                                     );
 
                                                                                                     await updateDoc(docRef, {
-                                                                                                        [`categories.${cat.toLowerCase()}.${catItem.toLowerCase()}.menuItems`]:
-                                                                                                            updatedItems,
+                                                                                                        [`categories.${cat.toLowerCase()}.${catItem.toLowerCase()}.menuItems`]: updatedItems,
                                                                                                     });
 
                                                                                                     setEditingPrice((prev) => ({
@@ -737,6 +805,41 @@ const MenuItems = () => {
                                                                                             >
                                                                                                 Cancel
                                                                                             </button>
+                                                                                            {/* 🔹 Delete Item */}
+                                                                                            <button
+                                                                                                onClick={async () => {
+                                                                                                    if (window.confirm(`Delete item "${itm.name}"?`)) {
+                                                                                                        const docRef = doc(db, "menu", menuType);
+                                                                                                        const snap = await getDoc(docRef);
+                                                                                                        if (!snap.exists()) return;
+
+                                                                                                        const data = snap.data();
+                                                                                                        const existingItems =
+                                                                                                            data.categories?.[cat.toLowerCase()]?.[catItem.toLowerCase()]?.menuItems || [];
+
+                                                                                                        const updatedItems = existingItems.filter((x) => x.id !== itm.id);
+
+                                                                                                        await updateDoc(docRef, {
+                                                                                                            [`categories.${cat.toLowerCase()}.${catItem.toLowerCase()}.menuItems`]: updatedItems,
+                                                                                                        });
+
+                                                                                                        setEditingPrice((prev) => ({
+                                                                                                            ...prev,
+                                                                                                            [editKey]: false,
+                                                                                                        }));
+                                                                                                        fetchItems();
+                                                                                                    }
+                                                                                                }}
+                                                                                                style={{
+                                                                                                    padding: "4px 8px",
+                                                                                                    marginLeft: "5px",
+                                                                                                    borderRadius: "6px",
+                                                                                                    background: "#e74c3c",
+                                                                                                    color: "#fff",
+                                                                                                }}
+                                                                                            >
+                                                                                                Delete
+                                                                                            </button>
                                                                                         </>
                                                                                     ) : (
                                                                                         <>
@@ -762,15 +865,11 @@ const MenuItems = () => {
                                                                                                     Edit
                                                                                                 </button>
                                                                                                 <button
-                                                                                                    onClick={() =>
-                                                                                                        toggleVisibility(cat, catItem, itm.id)
-                                                                                                    }
+                                                                                                    onClick={() => toggleVisibility(cat, catItem, itm.id)}
                                                                                                     style={{
                                                                                                         padding: "4px 8px",
                                                                                                         borderRadius: "6px",
-                                                                                                        background: itm.visibility
-                                                                                                            ? "#2ecc71"
-                                                                                                            : "#e74c3c",
+                                                                                                        background: itm.visibility ? "#2ecc71" : "#e74c3c",
                                                                                                         color: "#fff",
                                                                                                         cursor: "pointer",
                                                                                                     }}
@@ -781,7 +880,6 @@ const MenuItems = () => {
                                                                                         </>
                                                                                     )}
                                                                                 </div>
-
                                                                             );
                                                                         })}
 
@@ -822,9 +920,7 @@ const MenuItems = () => {
                             })}
                     </div>
                 </div>
-            ) : (
-                <p style={styles.noItems}>No items found for {menuType}</p>
-            )}
+            ) : (<p style={styles.noItems}>No items found for {menuType}</p>)}
 
         </div>
     );

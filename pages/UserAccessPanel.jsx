@@ -122,7 +122,7 @@ const UserAccessPanel = () => {
                 );
             }
 
-            alert("✅ Edit permissions updated.");
+            // alert("✅ Edit permissions updated.");
             setShowEditModal(false);
         } catch (err) {
             console.error(err);
@@ -161,7 +161,7 @@ const UserAccessPanel = () => {
                     u.email === email ? { ...u, access: newAccess } : u
                 )
             );
-            alert(`🔁 Access ${newAccess === "enable" ? "enabled" : "disabled"} for ${email}`);
+            // alert(`🔁 Access ${newAccess === "enable" ? "enabled" : "disabled"} for ${email}`);
         } catch (err) {
             console.error(err);
             alert("Error toggling access.");
@@ -194,7 +194,7 @@ const UserAccessPanel = () => {
                 }
             ]);
 
-            alert(`✅ Access granted to ${request.name}`);
+            // alert(`✅ Access granted to ${request.name}`);
         } catch (err) {
             console.error(err);
             alert("Error approving request.");
@@ -433,24 +433,12 @@ const UserAccessPanel = () => {
                                     <th>Email</th>
                                 </tr>
                             </thead>
+
                             <tbody>
                                 {accessRequests.map((r, i) => (
                                     <tr key={i}>
                                         <td>{r.name}</td>
-
-                                        <td>
-                                            {r.currentApp === "B"
-                                                ? "Main"
-                                                : r.currentApp === "C"
-                                                    ? "Vendor"
-                                                    : r.currentApp === "D"
-                                                        ? "Partner"
-                                                        : r.currentApp === "E"
-                                                            ? "Decoration"
-                                                            : r.currentApp === "F"
-                                                                ? "Accountant"
-                                                                : "Unknown"}
-                                        </td>
+                                        <td style={{whiteSpace:'nowrap'}}> {r.currentApp === "B" ? "Manager" : r.currentApp === "C" ? "Vendor" : r.currentApp === "D" ? "Partner" : r.currentApp === "E" ? "Decoration" : r.currentApp === "F" ? "Accountant" : r.currentApp === "G" ? "User" : r.currentApp === "H" ? "Enquiry Executive" : "Unknown"} </td>
                                         <td>
                                             {new Date(r.requestedAt).toLocaleDateString()}{" "}
                                             {new Date(r.requestedAt).toLocaleTimeString([], {
@@ -509,17 +497,7 @@ const UserAccessPanel = () => {
                                 {approvedUsers.map((u, i) => (
                                     <tr key={i}>
                                         <td>{u.name}</td>
-                                        <td>
-                                            {u.accessToApp === "B"
-                                                ? "Main"
-                                                : u.accessToApp === "C"
-                                                    ? "Vendor"
-                                                    : u.accessToApp === "D"
-                                                        ? "Partner"
-                                                        : u.accessToApp === "E"
-                                                            ? "Decoration"
-                                                            : "Unknown"}
-                                        </td>
+                                        <td style={{whiteSpace:'nowrap'}}> {u.accessToApp === "B" ? "Manager" : u.accessToApp === "C" ? "Vendor" : u.accessToApp === "D" ? "Partner" : u.accessToApp === "E" ? "Decoration" : u.accessToApp === "F" ? "Accountant" : u.accessToApp === "G" ? "User" : u.accessToApp === "H" ? "Enquiry Executive" : "Unknown"} </td>
                                         <td>
                                             {new Date(u.approvedAt).toLocaleDateString()}{" "}
                                             {new Date(u.approvedAt).toLocaleTimeString([], {
