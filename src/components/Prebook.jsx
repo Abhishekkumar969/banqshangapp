@@ -325,7 +325,7 @@ const Prebook = () => {
                 <div className="service-grid">
                   <ServiceBox label="Business" onClick={() => navigate('/StatsPage')} icon="📈" />
                   <ServiceBox label="Access" onClick={() => navigate('/UserAccessPanel')} icon="🔐" />
-                  <ServiceBox label="Download/ Delete" onClick={() => setShowDownload(true)} icon="📇" />
+                  <ServiceBox label="Save/ Delete" onClick={() => setShowDownload(true)} icon="📇" />
                 </div>
               </div>
             </>

@@ -78,44 +78,6 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
 
     return (
         <>
-            {/* Enquiry Date */}
-            <div
-                style={{
-                    position: "absolute", top: "60px", right: "30px",
-                    zIndex: 999,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                }}
-            >
-                <label
-                    style={{
-                        fontWeight: 600,
-                        fontSize: "14px",
-                        color: "#333",
-                        whiteSpace: "nowrap",
-                        textTransform: 'uppercase'
-                    }}
-                >
-                    Booking on:
-                </label>
-                <input
-                    type="date"
-                    name="enquiryDate"
-                    value={form.enquiryDate}
-                    onChange={handleChange}
-                    style={{
-                        padding: "6px 12px",
-                        borderRadius: "4px",
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        color: 'red',
-                        boxShadow: "1px 1px 2px rgba(111, 111, 111, 1)",
-                    }}
-                />
-            </div>
-
-
             {/* Customer Name */}
             <div className="form-group">
                 <label>Customer Name</label>

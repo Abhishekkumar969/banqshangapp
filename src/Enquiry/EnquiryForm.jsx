@@ -212,23 +212,15 @@ const EnquiryPage = () => {
             <div style={{ color: "black" }}>
                 <BackButton />
 
-                <form style={{ marginTop: "70px" }} onSubmit={handleSubmit}>
-                    <div
-                        style={{
-                            position: "absolute", top: "60px", right: "30px",
-                            zIndex: 999,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                        }}
-                    >
+                <form style={{ marginTop: "70px", display: 'flex', justifyContent: 'space-between' }} onSubmit={handleSubmit}>
+                    <div></div>
+                    <div className="BookedOn">
                         <label
                             style={{
                                 fontWeight: 600,
                                 fontSize: "14px",
                                 color: "#333",
                                 whiteSpace: "nowrap",
-                                textTransform: 'uppercase'
                             }}
                         >
                             Booking on:
@@ -238,17 +230,11 @@ const EnquiryPage = () => {
                             name="enquiryDate"
                             value={formData.enquiryDate}
                             onChange={handleChange}
-                            style={{
-                                padding: "6px 20px",
-                                borderRadius: "4px",
-                                fontSize: "14px",
-                                fontWeight: '600',
-                                color: 'red',
-                                boxShadow: "1px 1px 2px rgba(111, 111, 111, 1)",
-                            }}
+                            style={{ color: 'red', width: '150px' }}
                         />
                     </div>
                 </form>
+
 
                 <div className="booking-lead-container">
                     <h2>{enquiry ? "Edit Enquiry" : "New Enquiry"}</h2>
@@ -387,14 +373,15 @@ const EnquiryPage = () => {
                         </div>
                     </form>
 
-                    <div style={{ paddingBottom: '60px' }}></div>
                     {toast && (
                         <div className="custom-toast">
                             {toast}
                             <div className="toast-progress"></div>
                         </div>
                     )}
+
                 </div>
+                <div style={{ paddingBottom: '60px' }}></div>
             </div>
             <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
         </>

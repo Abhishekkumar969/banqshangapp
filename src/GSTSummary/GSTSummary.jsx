@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import './GSTSummary.css';
+import { getAuth } from "firebase/auth";
 import BackButton from "../components/BackButton";
+import BottomNavigationBar from "../components/BottomNavigationBar";
+import { useNavigate } from 'react-router-dom';
 
 const GSTSummary = () => {
+    const navigate = useNavigate();
     const [data, setData] = useState([]);
     const [filteredData, setFilteredData] = useState([]);
     const [paymentMode, setPaymentMode] = useState('');
@@ -14,6 +18,27 @@ const GSTSummary = () => {
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [sortConfig, setSortConfig] = useState({ key: "date", direction: "desc" });
+    const [userAppType, setUserAppType] = useState(null);
+
+    useEffect(() => {
+        const fetchUserAppType = async () => {
+            const auth = getAuth();
+            const user = auth.currentUser;
+            if (user) {
+                try {
+                    const userRef = doc(db, 'usersAccess', user.email);
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        const data = userSnap.data();
+                        setUserAppType(data.accessToApp);
+                    }
+                } catch (err) {
+                    console.error("Error fetching user app type:", err);
+                }
+            }
+        };
+        fetchUserAppType();
+    }, []);
 
     const toISTDate = (dateInput) => {
         if (!dateInput) return new Date();
@@ -171,133 +196,138 @@ const GSTSummary = () => {
     const baseAmt = totalAll - gst;
 
     return (
-        <div className="gst-summary-wrapper">
-            <div style={{ marginBottom: '30px' }}>
-                <BackButton />
-            </div>
+        <>
+            <div className="gst-summary-wrapper">
+                <div style={{ marginBottom: '30px' }}>
+                    <BackButton />
+                </div>
 
-            <h2 className="gst-title">📊 GST Summary (FY: {financialYear}-{financialYear + 1})</h2>
+                <h2 className="gst-title">📊 GST Summary (FY: {financialYear}-{financialYear + 1})</h2>
 
-            {/* Filters */}
-            <div className="filters no-print">
-                <select
-                    value={financialYear ?? ''}
-                    onChange={e => setFinancialYear(Number(e.target.value))}
-                >
-                    {financialYears.length === 0 ? (
-                        <option value="">No FY Found</option>
+                {/* Filters */}
+                <div className="filters no-print">
+                    <select
+                        value={financialYear ?? ''}
+                        onChange={e => setFinancialYear(Number(e.target.value))}
+                    >
+                        {financialYears.length === 0 ? (
+                            <option value="">No FY Found</option>
+                        ) : (
+                            financialYears.map(y => (
+                                <option key={y} value={y}>
+                                    FY {y}-{y + 1}
+                                </option>
+                            ))
+                        )}
+                    </select>
+
+                    {/* From & To Date Pickers */}
+                    <label>
+                        From:
+                        <input
+                            type="date"
+                            value={fromDate}
+                            onChange={e => setFromDate(e.target.value)}
+                        />
+                    </label>
+
+                    <label>
+                        To:
+                        <input
+                            type="date"
+                            value={toDate}
+                            onChange={e => setToDate(e.target.value)}
+                        />
+                    </label>
+
+                    <select value={paymentMode} onChange={e => setPaymentMode(e.target.value)}>
+                        <option value="">All Modes</option>
+                        <option value="SBI">SBI</option>
+                        <option value="BOI">BOI</option>
+                        <option value="Cheque">Cheque</option>
+                        <option value="Card">Card</option>
+                    </select>
+
+                    <div className="filter-buttons">
+                        <button onClick={handleFilter}>🔍 Apply</button>
+                        <button onClick={handlePrint}>🖨️ Print</button>
+                    </div>
+                </div>
+
+                <div id="print-area">
+                    {loading ? (
+                        <p className="loading">Loading data...</p>
                     ) : (
-                        financialYears.map(y => (
-                            <option key={y} value={y}>
-                                FY {y}-{y + 1}
-                            </option>
-                        ))
+                        <>
+                            <div className="gst-summary">
+                                <p><strong>BOI:</strong> ₹{totalSBI.toLocaleString('en-IN')}</p>
+                                <p><strong>SBI:</strong> ₹{totalBOI.toLocaleString('en-IN')}</p>
+                                <p><strong>Total Bank Account:</strong> ₹{totalBank.toLocaleString('en-IN')}</p>
+                                <br />
+                                <p><strong>Total Cheque:</strong> ₹{totalCheque.toLocaleString('en-IN')}</p>
+                                <p><strong>Total Card:</strong> ₹{totalCard.toLocaleString('en-IN')}</p>
+                                <p style={{ fontWeight: 'bold', color: '#006db6' }}>
+                                    <strong>Total Amount:</strong> ₹{totalAll.toLocaleString('en-IN')} (including GST)
+                                </p>
+
+                                <p style={{ fontWeight: 'bold', color: 'red' }}>
+                                    <strong>GST @18%:</strong> ₹{gst.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
+                                <p style={{ fontWeight: 'bold', color: '#006db6' }}>
+                                    <strong>Base Amount:</strong> ₹{baseAmt.toLocaleString('en-IN')} (excluding GST)
+                                </p>
+                            </div>
+
+                            {filteredData.length > 0 ? (
+                                <div className="gst-table-wrapper">
+                                    <div style={{ overflowX: "auto" }}>
+                                        <table className="gst-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Sl No.</th>
+                                                    <th>Name</th>
+                                                    <th>
+                                                        <button style={{ backgroundColor: 'transparent', padding: '0px' }} onClick={() => toggleSort("functionDate")}>
+                                                            Function Date {sortConfig.key === "functionDate" ? (sortConfig.direction === "asc" ? "▲" : "▼") : ""}
+                                                        </button>
+                                                    </th>
+                                                    <th>
+                                                        <button style={{ backgroundColor: 'transparent', padding: '0px' }} onClick={() => toggleSort("date")}>
+                                                            Receipt Date {sortConfig.key === "date" ? (sortConfig.direction === "asc" ? "▲" : "▼") : ""}
+                                                        </button>
+                                                    </th>
+                                                    <th>Amount</th>
+                                                    <th>Payment Mode</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {filteredData.map((entry, idx) => (
+                                                    <tr key={idx}>
+                                                        <td>{filteredData.length - idx}.</td>
+                                                        <td>{entry.name}</td>
+                                                        <td>
+                                                            {entry.functionDate ? formatDateIST(entry.functionDate) : "-"}
+                                                        </td>
+                                                        <td>{formatDateIST(entry.date)}</td>
+                                                        <td>₹{Number(entry.amount).toLocaleString("en-IN")}</td>
+                                                        <td>{entry.mode}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="no-records">No records match the filters.</p>
+                            )}
+                        </>
                     )}
-                </select>
-
-                {/* From & To Date Pickers */}
-                <label>
-                    From:
-                    <input
-                        type="date"
-                        value={fromDate}
-                        onChange={e => setFromDate(e.target.value)}
-                    />
-                </label>
-
-                <label>
-                    To:
-                    <input
-                        type="date"
-                        value={toDate}
-                        onChange={e => setToDate(e.target.value)}
-                    />
-                </label>
-
-                <select value={paymentMode} onChange={e => setPaymentMode(e.target.value)}>
-                    <option value="">All Modes</option>
-                    <option value="SBI">SBI</option>
-                    <option value="BOI">BOI</option>
-                    <option value="Cheque">Cheque</option>
-                    <option value="Card">Card</option>
-                </select>
-
-                <div className="filter-buttons">
-                    <button onClick={handleFilter}>🔍 Apply</button>
-                    <button onClick={handlePrint}>🖨️ Print</button>
                 </div>
             </div>
 
-            <div id="print-area">
-                {loading ? (
-                    <p className="loading">Loading data...</p>
-                ) : (
-                    <>
-                        <div className="gst-summary">
-                            <p><strong>BOI:</strong> ₹{totalSBI.toLocaleString('en-IN')}</p>
-                            <p><strong>SBI:</strong> ₹{totalBOI.toLocaleString('en-IN')}</p>
-                            <p><strong>Total Bank Account:</strong> ₹{totalBank.toLocaleString('en-IN')}</p>
-                            <br />
-                            <p><strong>Total Cheque:</strong> ₹{totalCheque.toLocaleString('en-IN')}</p>
-                            <p><strong>Total Card:</strong> ₹{totalCard.toLocaleString('en-IN')}</p>
-                            <p style={{ fontWeight: 'bold', color: '#006db6' }}>
-                                <strong>Total Amount:</strong> ₹{totalAll.toLocaleString('en-IN')} (including GST)
-                            </p>
-
-                            <p style={{ fontWeight: 'bold', color: 'red' }}>
-                                <strong>GST @18%:</strong> ₹{gst.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                            <p style={{ fontWeight: 'bold', color: '#006db6' }}>
-                                <strong>Base Amount:</strong> ₹{baseAmt.toLocaleString('en-IN')} (excluding GST)
-                            </p>
-                        </div>
-
-                        {filteredData.length > 0 ? (
-                            <div className="gst-table-wrapper">
-                                <div style={{ overflowX: "auto" }}>
-                                    <table className="gst-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Sl No.</th>
-                                                <th>Name</th>
-                                                <th>
-                                                    <button style={{ backgroundColor: 'transparent', padding: '0px' }} onClick={() => toggleSort("functionDate")}>
-                                                        Function Date {sortConfig.key === "functionDate" ? (sortConfig.direction === "asc" ? "▲" : "▼") : ""}
-                                                    </button>
-                                                </th>
-                                                <th>
-                                                    <button style={{ backgroundColor: 'transparent', padding: '0px' }} onClick={() => toggleSort("date")}>
-                                                        Receipt Date {sortConfig.key === "date" ? (sortConfig.direction === "asc" ? "▲" : "▼") : ""}
-                                                    </button>
-                                                </th>
-                                                <th>Amount</th>
-                                                <th>Payment Mode</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {filteredData.map((entry, idx) => (
-                                                <tr key={idx}>
-                                                    <td>{filteredData.length - idx}.</td>
-                                                    <td>{entry.name}</td>
-                                                    <td>
-                                                        {entry.functionDate ? formatDateIST(entry.functionDate) : "-"}
-                                                    </td>
-                                                    <td>{formatDateIST(entry.date)}</td>
-                                                    <td>₹{Number(entry.amount).toLocaleString("en-IN")}</td>
-                                                    <td>{entry.mode}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        ) : (
-                            <p className="no-records">No records match the filters.</p>
-                        )}
-                    </>
-                )}
-            </div>
-        </div>
+            <div style={{ marginBottom: "50px" }}></div>
+            <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
+        </>
     );
 };
 

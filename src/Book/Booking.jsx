@@ -85,13 +85,11 @@ const BookingLead = () => {
         fetchUserAppType();
     }, []);
 
-    // Toast handler
     const triggerToast = () => {
         setShowToast(true);
         setTimeout(() => setShowToast(false), 3000);
     };
 
-    // Convert date to MonthYear format (e.g., Sep2025)
     const getMonthYear = (dateStr) => {
         if (!dateStr) return "";
         const date = new Date(dateStr);
@@ -100,7 +98,6 @@ const BookingLead = () => {
         return `${monthNames[date.getMonth()]}${date.getFullYear()}`;
     };
 
-    // Load editor info
     useEffect(() => {
         const loadEditor = async () => {
             if (currentUser?.email) {
@@ -115,7 +112,6 @@ const BookingLead = () => {
         loadEditor();
     }, [currentUser]);
 
-    // Handle form changes
     const handleChange = (e, index = null) => {
         if (e.target.name === 'followUpDates') {
             const updated = [...form.followUpDates];
@@ -126,7 +122,6 @@ const BookingLead = () => {
         }
     };
 
-    // Submit handler
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (isSaving) return;
@@ -237,7 +232,6 @@ const BookingLead = () => {
         }
     };
 
-    // Load lead for editing
     useEffect(() => {
         if (location.state?.leadToEdit) {
             const incoming = location.state.leadToEdit;
@@ -285,6 +279,29 @@ const BookingLead = () => {
 
     return (
         <>
+            <form style={{ marginTop: "50px", display: 'flex', justifyContent: 'space-between' }} onSubmit={handleSubmit}>
+                <div></div>
+                <div className="BookedOn">
+                    <label
+                        style={{
+                            fontWeight: 600,
+                            fontSize: "14px",
+                            color: "#333",
+                            whiteSpace: "nowrap",
+                        }}
+                    >
+                        Booking on:
+                    </label>
+                    <input
+                        type="date"
+                        name="enquiryDate"
+                        value={form.enquiryDate}
+                        onChange={handleChange}
+                        style={{ color: 'red', width: '150px' }}
+                    />
+                </div>
+            </form>
+
             <div className="booking-lead-container">
                 <BackButton />
 
