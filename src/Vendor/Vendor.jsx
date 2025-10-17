@@ -11,8 +11,9 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import BottomNavigationBar from "../components/BottomNavigationBar";
 
 const Vendor = () => {
-    const location = useLocation();
+    const navigate = useNavigate();
     const [editData, setEditData] = useState(null);
+    const location = useLocation();
     const [form, setForm] = useState({ customerName: "", venueType: "", address: "", contactNo: "", typeOfEvent: "", date: "", startTime: "", endTime: "", bookedOn: " " });
     const [customEvent, setCustomEvent] = useState("");
     const [services, setServices] = useState([]);
@@ -22,7 +23,6 @@ const Vendor = () => {
     const [formErrors, setFormErrors] = useState({});
     const [showValidationPopup, setShowValidationPopup] = useState(false);
     const [isGSTManuallyEdited, setIsGSTManuallyEdited] = useState(false);
-    const navigate = useNavigate();
     const [isSaving, setIsSaving] = useState(false);
     const [summaryFields, setSummaryFields] = useState({ totalPackageCost: "", overAllPackageCost: "", discount: "", gstApplicableAmount: "", gstAmount: "", grandTotal: "", });
     const [enableRoyalty, setEnableRoyalty] = useState(false);

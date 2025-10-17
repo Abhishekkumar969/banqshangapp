@@ -35,6 +35,7 @@ const MealSelection = forwardRef(({ meals, setMeals, functionDate, dayNight }, r
 
                 newMenuData[meal] = { categories };
             }
+
             // 🚀 Merge Dinner into Lunch
             if (newMenuData["Lunch"] && newMenuData["Dinner"]) {
                 const lunchCats = newMenuData["Lunch"].categories || {};
@@ -66,6 +67,7 @@ const MealSelection = forwardRef(({ meals, setMeals, functionDate, dayNight }, r
                     .flatMap(subCat => (subCat.menuItems || []).filter(i => i.visibility).map(i => i.name)) || [];
                 dayMeals[meal] = {
                     pax: "",
+                    extraPlates: "",
                     rate: "",
                     startTime: "",
                     endTime: "",
@@ -87,10 +89,11 @@ const MealSelection = forwardRef(({ meals, setMeals, functionDate, dayNight }, r
             const dayMeals = updated[dayKey] || {};
             const item = dayMeals[meal] || {};
             const newItem = { ...item, [field]: value };
-            if (field === "rate" || field === "pax") {
+            if (field === "rate" || field === "pax" || field === "extraPlates") {
                 const rate = parseFloat(newItem.rate) || 0;
-                const pax = parseFloat(newItem.pax) || 0;
-                newItem.total = rate * pax;
+                const pax = parseInt(newItem.pax) || 0;
+                const extra = parseInt(newItem.extraPlates) || 0;
+                newItem.total = rate * (pax + extra);
             }
             dayMeals[meal] = newItem;
             updated[dayKey] = dayMeals;
@@ -181,8 +184,7 @@ const MealSelection = forwardRef(({ meals, setMeals, functionDate, dayNight }, r
                                     {selected && (
                                         <div className="meal-inputs-wrapper">
                                             <div className="meal-option-dropdown">
-
-                                                <div className="num-days" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
+                                                <div className="num-days" style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                     <label style={{ display: 'flex', alignItems: 'center' }}>Options: </label>
                                                     <select
                                                         style={{ width: '40vw' }}
@@ -202,11 +204,12 @@ const MealSelection = forwardRef(({ meals, setMeals, functionDate, dayNight }, r
                                                     </select>
                                                 </div>
 
-                                                <div className="num-days" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
+                                                <div className="num-days" style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                     <label style={{ display: 'flex', alignItems: 'center' }}>Menu Items: </label>
 
                                                     <button style={{
-                                                        marginTop: '10',
+                                                        width: '40vw',
+                                                        marginTop: 10,
                                                         padding: "6px 12px",
                                                         backgroundColor: "#eea220ff",
                                                         color: "white",
@@ -219,24 +222,31 @@ const MealSelection = forwardRef(({ meals, setMeals, functionDate, dayNight }, r
                                                     >🍽 Menu</button>
                                                 </div>
 
-                                                <div className="meal-inputs" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
-                                                    <label style={{ display: 'flex', alignItems: 'center' }}>Rate:</label>
-                                                    <input style={{ width: '40vw' }} type="text" placeholder="" value={data.rate || ""} onChange={e => handleChange(dayKey, meal, "rate", e.target.value.replace(/[^0-9.]/g, ""))} />
-                                                </div>
-
-                                                <div className="meal-inputs" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
-                                                    <label style={{ display: 'flex', alignItems: 'center' }}>Qty:</label>
-                                                    <input style={{ width: '40vw' }} type="text" placeholder="" value={data.pax || ""} onChange={e => handleChange(dayKey, meal, "pax", e.target.value.replace(/[^0-9]/g, ""))} />
-                                                </div>
-
-                                                <div className="meal-inputs" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
-                                                    <label style={{ display: 'flex', alignItems: 'center' }}>Extra Plates:</label>
-                                                    <input style={{ width: '40vw' }} type="text" placeholder="" value={data.extraPlates || ""} onChange={e => handleChange(dayKey, meal, "extraPlates", e.target.value.replace(/[^0-9]/g, ""))} />
-                                                </div>
-
-                                                <div className="meal-inputs" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
-                                                    <label style={{ display: 'flex', alignItems: 'center' }}></label>
-                                                    <span>Total: ₹{data.total?.toFixed(0) || 0}</span>
+                                                <div className="meal-inputs">
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
+                                                        <label style={{ display: "flex", alignItems: 'center' }}>Rate:</label>
+                                                        <input style={{ width: '40vw' }} type="text" placeholder="" value={data.rate || ""} onChange={e => handleChange(dayKey, meal, "rate", e.target.value.replace(/[^0-9.]/g, ""))} />
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
+                                                        <label style={{ display: "flex", alignItems: 'center' }}>Pax:</label>
+                                                        <input style={{ width: '40vw' }} type="text" placeholder="" value={data.pax || ""} onChange={e => handleChange(dayKey, meal, "pax", e.target.value.replace(/[^0-9]/g, ""))} />
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
+                                                        <label style={{ display: "flex", alignItems: 'center' }}>Extra Plates:</label>
+                                                        <input
+                                                            style={{ width: '40vw' }}
+                                                            type="text"
+                                                            placeholder=""
+                                                            value={data.extraPlates || ""}
+                                                            onChange={e =>
+                                                                handleChange(dayKey, meal, "extraPlates", e.target.value.replace(/[^0-9]/g, ""))
+                                                            }
+                                                        />
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
+                                                        <label style={{ display: "flex", alignItems: 'center' }}></label>
+                                                        <span>Total: ₹{data.total?.toFixed(0) || 0}</span>
+                                                    </div>
                                                 </div>
 
                                                 <div className="meal-inputs" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
@@ -254,7 +264,6 @@ const MealSelection = forwardRef(({ meals, setMeals, functionDate, dayNight }, r
                                 </div>
                             );
                         })}
-
                     </div>
                 );
             })}
@@ -276,7 +285,6 @@ const MealSelection = forwardRef(({ meals, setMeals, functionDate, dayNight }, r
                                             const isChecked = meals[currentDayKey][currentMeal]?.selectedItems?.includes(item);
                                             return (
                                                 <label key={item} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-
                                                     <input
                                                         type="checkbox"
                                                         checked={isChecked}
@@ -358,16 +366,20 @@ const MealSelection = forwardRef(({ meals, setMeals, functionDate, dayNight }, r
                         <button
                             onClick={() => setShowMealModal(false)}
                             style={{
-                                marginTop: 10,
-                                padding: "6px 12px",
-                                backgroundColor: "#ed4e2eff",
-                                color: "white",
+                                marginTop: "16px",
+                                padding: "8px 14px",
+                                borderRadius: "12px",
                                 border: "none",
-                                borderRadius: 4,
-                                cursor: "pointer"
+                                background: "#36ce22ff",
+                                color: "#fff",
+                                cursor: "pointer",
+                                fontSize: "14px",
+                                width: "100%",
+                                boxShadow: "inset 4px 4px 6px #1fa00eff, inset -4px -4px 6px #90fc82ff",
+                                transition: "all 0.1s",
                             }}
                         >
-                            Close
+                            Save & Close
                         </button>
                     </div>
                 </div>

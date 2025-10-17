@@ -1,17 +1,41 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { collection, getDocs, onSnapshot, doc, updateDoc, deleteField, arrayUnion } from 'firebase/firestore';
+import { getDoc, collection, getDocs, onSnapshot, doc, updateDoc, deleteField, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import '../styles/DecorationTable.css';
 import BackButton from "../components/BackButton";
 import { query, where } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import BottomNavigationBar from "../components/BottomNavigationBar";
 
 const DecorationTable = () => {
+    const navigate = useNavigate();
     const [allBookings, setAllBookings] = useState([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [sortOrder, setSortOrder] = useState("desc");
     const [decorationProfile, setDecorationProfile] = useState(null);
     const [appUserName, setAppUserName] = useState("App User");
+    const [userAppType, setUserAppType] = useState(null);
+
+    useEffect(() => {
+        const fetchUserAppType = async () => {
+            const auth = getAuth();
+            const user = auth.currentUser;
+            if (user) {
+                try {
+                    const userRef = doc(db, 'usersAccess', user.email);
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        const data = userSnap.data();
+                        setUserAppType(data.accessToApp);
+                    }
+                } catch (err) {
+                    console.error("Error fetching user app type:", err);
+                }
+            }
+        };
+        fetchUserAppType();
+    }, []);
 
     const convertToISTDate = (dateStr) => {
         if (!dateStr) return "-";
@@ -284,179 +308,185 @@ const DecorationTable = () => {
     }, [decorationProfile, appUserName]);
 
     return (
-        <div>
-            <BackButton />
-            <div style={{ marginTop: '60px' }}>
-                <div style={{ textAlign: 'center' }}><h3>📋 Dropped Decoration Bookings</h3></div>
+        <>
 
-                <div style={{ textAlign: "center", margin: "15px 0" }}>
-                    <input
-                        type="text"
-                        placeholder="Search by Name, Contact, Event Type, Date (dd-mm-yyyy)"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        style={{
-                            width: "70%",
-                            padding: "8px",
-                            borderRadius: "8px",
-                            border: "1px solid #ccc",
-                            fontSize: "14px"
-                        }}
-                    />
-                </div>
+            <div>
+                <BackButton />
+                <div style={{ marginTop: '60px' }}>
+                    <div style={{ textAlign: 'center' }}><h3>📋 Dropped Decoration Bookings</h3></div>
 
-                <div className="decoration-table-container">
-                    <table className="main-decoration-table">
-                        <thead>
-                            <tr>
-                                <th>Sl No.</th>
-                                <th style={{ cursor: "pointer" }} onClick={toggleSort}>
-                                    Function Date {sortOrder === "asc" ? "▲" : "▼"}
-                                </th>
-                                <th>Name</th>
-                                <th>Contact</th>
-                                <th>Event Type</th>
-                                <th>Venue Type</th>
-                                <th>Time</th>
-                                <th>Received</th>
-                                <th>Refund breakdowns</th>
-                                <th>Refund</th>
-                                <th>Drop Reason</th>
-                                {decorationProfile?.accessToApp === "C" && (
-                                    <>
-                                        <th>Actions</th>
-                                    </>
-                                )}
-                            </tr>
-                        </thead>
+                    <div style={{ textAlign: "center", margin: "15px 0" }}>
+                        <input
+                            type="text"
+                            placeholder="Search by Name, Contact, Event Type, Date (dd-mm-yyyy)"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            style={{
+                                width: "70%",
+                                padding: "8px",
+                                borderRadius: "8px",
+                                border: "1px solid #ccc",
+                                fontSize: "14px"
+                            }}
+                        />
+                    </div>
 
-                        <tbody>
-                            {filteredBookings.map((v, idx) => {
-                                const totalAdvance = Array.isArray(v.advance)
-                                    ? v.advance.reduce((sum, a) => sum + (Number(a.amount) || 0), 0)
-                                    : 0;
+                    <div className="decoration-table-container">
+                        <table className="main-decoration-table">
+                            <thead>
+                                <tr>
+                                    <th>Sl No.</th>
+                                    <th style={{ cursor: "pointer" }} onClick={toggleSort}>
+                                        Function Date {sortOrder === "asc" ? "▲" : "▼"}
+                                    </th>
+                                    <th>Name</th>
+                                    <th>Contact</th>
+                                    <th>Event Type</th>
+                                    <th>Venue Type</th>
+                                    <th>Time</th>
+                                    <th>Received</th>
+                                    <th>Refund breakdowns</th>
+                                    <th>Refund</th>
+                                    <th>Drop Reason</th>
+                                    {decorationProfile?.accessToApp === "C" && (
+                                        <>
+                                            <th>Actions</th>
+                                        </>
+                                    )}
+                                </tr>
+                            </thead>
 
-                                const totalRefund = Array.isArray(v.refundAmt)
-                                    ? v.refundAmt.reduce((sum, a) => sum + (Number(a.amount) || 0), 0)
-                                    : 0;
+                            <tbody>
+                                {filteredBookings.map((v, idx) => {
+                                    const totalAdvance = Array.isArray(v.advance)
+                                        ? v.advance.reduce((sum, a) => sum + (Number(a.amount) || 0), 0)
+                                        : 0;
 
-                                const refundAmt = (v.refundAmt || []).map((adv, index) => ({
-                                    ...adv,
-                                    customerName: v.customerName,
-                                    contactNo: v.contactNo,
-                                    eventType: v.typeOfEvent,
-                                    bookedOn: v.bookedOn,
-                                    slNo: index + 1,
-                                }));
+                                    const totalRefund = Array.isArray(v.refundAmt)
+                                        ? v.refundAmt.reduce((sum, a) => sum + (Number(a.amount) || 0), 0)
+                                        : 0;
 
-                                return (
-                                    <tr key={v.id}>
-                                        <td>{filteredBookings.length - idx}</td>
-                                        <td>{v.finalDate ? convertToISTDate(v.finalDate) : "-"}</td>
-                                        <td>{v.customerName}</td>
-                                        <td><a href={`tel:${v.contactNo}`} style={{ color: "black", textDecoration: "none" }}>{v.contactNo}</a></td>
-                                        <td>{v.eventType}</td>
-                                        <td>{v.venueType || "-"}</td>
-                                        <td>{convertTimeToIST(v.startTime)} - {convertTimeToIST(v.endTime)}</td>
+                                    const refundAmt = (v.refundAmt || []).map((adv, index) => ({
+                                        ...adv,
+                                        customerName: v.customerName,
+                                        contactNo: v.contactNo,
+                                        eventType: v.typeOfEvent,
+                                        bookedOn: v.bookedOn,
+                                        slNo: index + 1,
+                                    }));
 
-                                        <td><strong>₹{totalAdvance}</strong></td>
+                                    return (
+                                        <tr key={v.id}>
+                                            <td>{filteredBookings.length - idx}</td>
+                                            <td>{v.finalDate ? convertToISTDate(v.finalDate) : "-"}</td>
+                                            <td>{v.customerName}</td>
+                                            <td><a href={`tel:${v.contactNo}`} style={{ color: "black", textDecoration: "none" }}>{v.contactNo}</a></td>
+                                            <td>{v.eventType}</td>
+                                            <td>{v.venueType || "-"}</td>
+                                            <td>{convertTimeToIST(v.startTime)} - {convertTimeToIST(v.endTime)}</td>
 
-                                        <td >
-                                            <div style={{ display: 'flex' }}>
-                                                {refundAmt.map((a, i) => (
-                                                    <span
-                                                        key={i}
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            padding: '7px 10px',
-                                                            margin: '0px 5px',
-                                                            borderRadius: '7px',
-                                                            boxShadow: `
+                                            <td><strong>₹{totalAdvance}</strong></td>
+
+                                            <td >
+                                                <div style={{ display: 'flex' }}>
+                                                    {refundAmt.map((a, i) => (
+                                                        <span
+                                                            key={i}
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                padding: '7px 10px',
+                                                                margin: '0px 5px',
+                                                                borderRadius: '7px',
+                                                                boxShadow: `
                   inset -2px -2px 5px rgba(119, 119, 119, 0.6)
                 `,
-                                                            fontWeight: 'bold',
-                                                            transition: 'all 0.2s ease-in-out',
-                                                        }}
-                                                    >
-                                                        <span>₹{a.amount} ({formatDate(a.date)})</span>
-                                                        <button
-                                                            onClick={() => handlePrintPayment(v, a)}
-                                                            style={{
-                                                                marginLeft: '10px',
-                                                                background: '#b52e2e',
-                                                                color: '#fff',
-                                                                border: 'none',
-                                                                borderRadius: '4px',
-                                                                fontSize: '12px',
-                                                                padding: '2px 12px',
-                                                                boxShadow: '1px 1px 3px rgba(0,0,0,0.3)',
-                                                                cursor: 'pointer',
-                                                                transition: 'all 0.2s',
+                                                                fontWeight: 'bold',
+                                                                transition: 'all 0.2s ease-in-out',
                                                             }}
-                                                            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                                                            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
                                                         >
-                                                            Print
+                                                            <span>₹{a.amount} ({formatDate(a.date)})</span>
+                                                            <button
+                                                                onClick={() => handlePrintPayment(v, a)}
+                                                                style={{
+                                                                    marginLeft: '10px',
+                                                                    background: '#b52e2e',
+                                                                    color: '#fff',
+                                                                    border: 'none',
+                                                                    borderRadius: '4px',
+                                                                    fontSize: '12px',
+                                                                    padding: '2px 12px',
+                                                                    boxShadow: '1px 1px 3px rgba(0,0,0,0.3)',
+                                                                    cursor: 'pointer',
+                                                                    transition: 'all 0.2s',
+                                                                }}
+                                                                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                                                                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                                                            >
+                                                                Print
+                                                            </button>
+                                                        </span>
+
+                                                    ))}
+                                                </div>
+                                            </td>
+
+                                            <td style={{ color: totalRefund > 0 ? "red" : "gray" }}>
+                                                <strong>₹{totalRefund}</strong>
+                                            </td>
+                                            <td>{v.dropReason || "-"}</td>
+
+                                            {decorationProfile?.accessToApp === "C" && (
+                                                <>
+                                                    <td>
+                                                        <button
+                                                            onClick={() => handleRefund(v)}
+                                                            style={{
+                                                                backgroundColor: "#2196F3",
+                                                                color: "white",
+                                                                padding: "6px 10px",
+                                                                borderRadius: "6px",
+                                                                border: "none"
+                                                            }}
+                                                        >
+                                                            💸 Refund
                                                         </button>
-                                                    </span>
 
-                                                ))}
-                                            </div>
+                                                        <button
+                                                            onClick={() => handleUndoDrop(v)}
+                                                            style={{
+                                                                backgroundColor: "#FF9800",
+                                                                color: "white",
+                                                                borderRadius: "6px",
+                                                                border: "none"
+                                                            }}
+                                                        >
+                                                            ⬅️ Undo
+                                                        </button>
+                                                    </td>
+                                                </>
+                                            )}
+
+                                        </tr>
+                                    );
+                                })}
+
+                                {filteredBookings.length === 0 && (
+                                    <tr>
+                                        <td colSpan={11} style={{ textAlign: "center", padding: "20px" }}>
+                                            No dropped decoration bookings found.
                                         </td>
-
-                                        <td style={{ color: totalRefund > 0 ? "red" : "gray" }}>
-                                            <strong>₹{totalRefund}</strong>
-                                        </td>
-                                        <td>{v.dropReason || "-"}</td>
-
-                                        {decorationProfile?.accessToApp === "C" && (
-                                            <>
-                                                <td>
-                                                    <button
-                                                        onClick={() => handleRefund(v)}
-                                                        style={{
-                                                            backgroundColor: "#2196F3",
-                                                            color: "white",
-                                                            padding: "6px 10px",
-                                                            borderRadius: "6px",
-                                                            border: "none"
-                                                        }}
-                                                    >
-                                                        💸 Refund
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => handleUndoDrop(v)}
-                                                        style={{
-                                                            backgroundColor: "#FF9800",
-                                                            color: "white",
-                                                            borderRadius: "6px",
-                                                            border: "none"
-                                                        }}
-                                                    >
-                                                        ⬅️ Undo
-                                                    </button>
-                                                </td>
-                                            </>
-                                        )}
-
                                     </tr>
-                                );
-                            })}
-
-                            {filteredBookings.length === 0 && (
-                                <tr>
-                                    <td colSpan={11} style={{ textAlign: "center", padding: "20px" }}>
-                                        No dropped decoration bookings found.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <div style={{ marginBottom: "50px" }}></div>
+            <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
+        </>
     );
 };
 

@@ -6,6 +6,9 @@
   border-radius: 10px;
   font-family: 'Segoe UI', sans-serif;
   color: #333;
+
+  margin-top: 0px;
+  padding-top: 0px;
 }
 
 .decorationHeader {
@@ -139,6 +142,7 @@
   display: block;
   margin: 0 auto;
   margin-bottom: 20px;
+  width: 100%;
 }
 
 .popupOverlay {
@@ -221,6 +225,9 @@
 @media (max-width: 700px) {
   .decorationWrapper {
     padding: 20px 15px;
+
+    margin-top: 0px;
+    padding-top: 0px;
   }
 
   .decorationHeader {
@@ -291,5 +298,6 @@
 th label {
   display: flex;
   align-items: center;
-  gap: 5px; /* text aur checkbox ke beech space */
+  gap: 5px;
+  /* text aur checkbox ke beech space */
 }

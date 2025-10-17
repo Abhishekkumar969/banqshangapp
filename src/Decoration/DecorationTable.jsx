@@ -1,11 +1,13 @@
 // Upcoming 
 
 import React, { useEffect, useState } from 'react';
-import { collection, onSnapshot, doc, updateDoc, arrayUnion, serverTimestamp, setDoc, deleteField } from 'firebase/firestore';
+import { getDoc, collection, onSnapshot, doc, updateDoc, arrayUnion, serverTimestamp, setDoc, deleteField } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import '../styles/DecorationTable.css';
 import BackButton from "../components/BackButton";
 import { useNavigate } from 'react-router-dom';
+import { getAuth } from "firebase/auth";
+import BottomNavigationBar from "../components/BottomNavigationBar";
 
 const convertToISTDate = (dateStr) => {
     if (!dateStr) return "-";
@@ -36,6 +38,27 @@ const DecorationTable = () => {
     const [showPopup, setShowPopup] = useState(false);
     const [sortOrder, setSortOrder] = useState("desc"); // ✅ default descending
     const navigate = useNavigate();
+    const [userAppType, setUserAppType] = useState(null);
+
+    useEffect(() => {
+        const fetchUserAppType = async () => {
+            const auth = getAuth();
+            const user = auth.currentUser;
+            if (user) {
+                try {
+                    const userRef = doc(db, 'usersAccess', user.email);
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        const data = userSnap.data();
+                        setUserAppType(data.accessToApp);
+                    }
+                } catch (err) {
+                    console.error("Error fetching user app type:", err);
+                }
+            }
+        };
+        fetchUserAppType();
+    }, []);
 
     useEffect(() => {
         const decorationCollection = collection(db, "decoration");
@@ -167,185 +190,191 @@ const DecorationTable = () => {
     };
 
     return (
-        <div>
-            <BackButton />
-            <div style={{ marginTop: '60px' }}>
-                <div style={{ textAlign: 'center' }}><h3>📋 New Orders</h3></div>
-                <div style={{ textAlign: "center", margin: "15px 0" }}>
-                    <input
-                        type="text"
-                        placeholder="Search by Name, Contact, Event Type, Date (dd-mm-yyyy)"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        style={{ width: "70%", padding: "8px", borderRadius: "8px", border: "1px solid #ccc", fontSize: "14px" }}
-                    />
-                </div>
-                <div className="decoration-table-container">
-                    <table className="main-decoration-table">
-                        <thead>
-                            <tr>
-                                <th>Sl No.</th>
-                                <th style={{ cursor: "pointer" }} onClick={toggleSort}>
-                                    Function Date {sortOrder === "asc" ? "▲" : "▼"}
-                                </th>
-                                <th>Name</th>
-                                <th>Contact</th>
-                                <th>Event Type</th>
-                                <th>Venue Type</th>
-                                <th>Time</th>
-                                <th>Book / Drop</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredBookings.map((v, idx) => {
-                                return (
-                                    <tr key={v.id}>
-                                        <td>{filteredBookings.length - idx}</td>
-                                        <td>{v.finalDate ? convertToISTDate(v.finalDate) : "-"}</td>
-                                        <td>{v.customerName}</td>
-                                        <td><a href={`tel:${v.contactNo}`} style={{ color: "black", textDecoration: "none" }}>{v.contactNo}</a></td>
-                                        <td>{v.eventType}</td>
-                                        <td>{v.venueType}</td>
-                                        <td>{convertToIST12Hour(v.startTime)} - {convertToIST12Hour(v.endTime)}</td>
+        <>
 
-                                        <td>
-                                            {/* Update / Book button */}
-                                            {!v.dropReason && (
-                                                <button
-                                                    onClick={() => navigate("/Decoration", { state: { decorationData: v } })}
-                                                    style={{
-                                                        backgroundColor: v.source === "decoration" ? "#4CAF50" : "#2196F3",
-                                                        color: "white",
-                                                        padding: "6px 10px",
-                                                        borderRadius: "6px",
-                                                    }}
-                                                >
-                                                    {v.source === "decoration" ? "✏️ Update" : "📘 Book"}
-                                                </button>
-                                            )}
+            <div>
+                <BackButton />
+                <div style={{ marginTop: '60px' }}>
+                    <div style={{ textAlign: 'center' }}><h3>📋 New Orders</h3></div>
+                    <div style={{ textAlign: "center", margin: "15px 0" }}>
+                        <input
+                            type="text"
+                            placeholder="Search by Name, Contact, Event Type, Date (dd-mm-yyyy)"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            style={{ width: "70%", padding: "8px", borderRadius: "8px", border: "1px solid #ccc", fontSize: "14px" }}
+                        />
+                    </div>
+                    <div className="decoration-table-container">
+                        <table className="main-decoration-table">
+                            <thead>
+                                <tr>
+                                    <th>Sl No.</th>
+                                    <th style={{ cursor: "pointer" }} onClick={toggleSort}>
+                                        Function Date {sortOrder === "asc" ? "▲" : "▼"}
+                                    </th>
+                                    <th>Name</th>
+                                    <th>Contact</th>
+                                    <th>Event Type</th>
+                                    <th>Venue Type</th>
+                                    <th>Time</th>
+                                    <th>Book / Drop</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredBookings.map((v, idx) => {
+                                    return (
+                                        <tr key={v.id}>
+                                            <td>{filteredBookings.length - idx}</td>
+                                            <td>{v.finalDate ? convertToISTDate(v.finalDate) : "-"}</td>
+                                            <td>{v.customerName}</td>
+                                            <td><a href={`tel:${v.contactNo}`} style={{ color: "black", textDecoration: "none" }}>{v.contactNo}</a></td>
+                                            <td>{v.eventType}</td>
+                                            <td>{v.venueType}</td>
+                                            <td>{convertToIST12Hour(v.startTime)} - {convertToIST12Hour(v.endTime)}</td>
 
-                                            {/* Drop / Book Again buttons */}
-                                            {v.dropReason ? (
-                                                // Book Again
-                                                <button
-                                                    onClick={async () => {
-                                                        try {
-                                                            const monthKey = new Date(v.finalDate).toLocaleString("en-US", {
-                                                                month: "short",
-                                                                year: "numeric",
-                                                            }).replace(" ", ""); // e.g., "Apr2025"
+                                            <td>
+                                                {/* Update / Book button */}
+                                                {!v.dropReason && (
+                                                    <button
+                                                        onClick={() => navigate("/Decoration", { state: { decorationData: v } })}
+                                                        style={{
+                                                            backgroundColor: v.source === "decoration" ? "#4CAF50" : "#2196F3",
+                                                            color: "white",
+                                                            padding: "6px 10px",
+                                                            borderRadius: "6px",
+                                                        }}
+                                                    >
+                                                        {v.source === "decoration" ? "✏️ Update" : "📘 Book"}
+                                                    </button>
+                                                )}
 
-                                                            const ref = doc(db, "decoration", monthKey);
-                                                            await updateDoc(ref, {
-                                                                [`${v.id}.dropReason`]: deleteField(),
-                                                                [`${v.id}.dropAt`]: deleteField(),
-                                                            });
+                                                {/* Drop / Book Again buttons */}
+                                                {v.dropReason ? (
+                                                    // Book Again
+                                                    <button
+                                                        onClick={async () => {
+                                                            try {
+                                                                const monthKey = new Date(v.finalDate).toLocaleString("en-US", {
+                                                                    month: "short",
+                                                                    year: "numeric",
+                                                                }).replace(" ", ""); // e.g., "Apr2025"
 
-                                                            alert("✅ Booking restored!");
-                                                        } catch (err) {
-                                                            console.error(err);
-                                                            alert("❌ Failed to restore booking.");
-                                                        }
-                                                    }}
-                                                    style={{
-                                                        backgroundColor: "#FF9800",
-                                                        color: "white",
-                                                        padding: "6px 10px",
-                                                        borderRadius: "6px",
-                                                        marginLeft: "5px",
-                                                    }}
-                                                >
-                                                    📘 Book Again
-                                                </button>
-                                            ) : (
-                                                // Drop
-                                                <button
-                                                    onClick={async () => {
-                                                        const reason = prompt("Enter drop reason:");
-                                                        if (!reason) return;
-
-                                                        try {
-                                                            const monthKey = new Date(v.finalDate).toLocaleString("en-US", {
-                                                                month: "short",
-                                                                year: "numeric",
-                                                            }).replace(" ", ""); // e.g., "Apr2025"
-
-                                                            const ref = doc(db, "decoration", monthKey);
-
-                                                            if (v.source !== "decoration") {
-                                                                // Booking not yet in decoration, create month doc & add drop reason
-                                                                await setDoc(
-                                                                    ref,
-                                                                    {
-                                                                        [v.id]: {
-                                                                            ...v,
-                                                                            source: "decoration",
-                                                                            dropReason: reason,
-                                                                            createdAt: serverTimestamp(),
-                                                                        },
-                                                                    },
-                                                                    { merge: true }
-                                                                );
-                                                            } else {
-                                                                // Booking already exists, update drop reason inside month doc
+                                                                const ref = doc(db, "decoration", monthKey);
                                                                 await updateDoc(ref, {
-                                                                    [`${v.id}.dropReason`]: reason,
-                                                                    [`${v.id}.dropAt`]: serverTimestamp(),
+                                                                    [`${v.id}.dropReason`]: deleteField(),
+                                                                    [`${v.id}.dropAt`]: deleteField(),
                                                                 });
+
+                                                                alert("✅ Booking restored!");
+                                                            } catch (err) {
+                                                                console.error(err);
+                                                                alert("❌ Failed to restore booking.");
                                                             }
+                                                        }}
+                                                        style={{
+                                                            backgroundColor: "#FF9800",
+                                                            color: "white",
+                                                            padding: "6px 10px",
+                                                            borderRadius: "6px",
+                                                            marginLeft: "5px",
+                                                        }}
+                                                    >
+                                                        📘 Book Again
+                                                    </button>
+                                                ) : (
+                                                    // Drop
+                                                    <button
+                                                        onClick={async () => {
+                                                            const reason = prompt("Enter drop reason:");
+                                                            if (!reason) return;
 
-                                                            // alert("✅ Drop reason saved!");
-                                                        } catch (err) {
-                                                            console.error(err);
-                                                            alert("❌ Failed to save drop reason.");
-                                                        }
-                                                    }}
-                                                    style={{
-                                                        backgroundColor: "#f44336",
-                                                        color: "white",
-                                                        padding: "6px 10px",
-                                                        borderRadius: "6px",
-                                                        marginLeft: "5px",
-                                                    }}
-                                                >
-                                                    ⛔ Drop
-                                                </button>
-                                            )}
-                                        </td>
+                                                            try {
+                                                                const monthKey = new Date(v.finalDate).toLocaleString("en-US", {
+                                                                    month: "short",
+                                                                    year: "numeric",
+                                                                }).replace(" ", ""); // e.g., "Apr2025"
 
-                                    </tr>
-                                )
-                            })}
+                                                                const ref = doc(db, "decoration", monthKey);
 
-                        </tbody>
-                    </table>
+                                                                if (v.source !== "decoration") {
+                                                                    // Booking not yet in decoration, create month doc & add drop reason
+                                                                    await setDoc(
+                                                                        ref,
+                                                                        {
+                                                                            [v.id]: {
+                                                                                ...v,
+                                                                                source: "decoration",
+                                                                                dropReason: reason,
+                                                                                createdAt: serverTimestamp(),
+                                                                            },
+                                                                        },
+                                                                        { merge: true }
+                                                                    );
+                                                                } else {
+                                                                    // Booking already exists, update drop reason inside month doc
+                                                                    await updateDoc(ref, {
+                                                                        [`${v.id}.dropReason`]: reason,
+                                                                        [`${v.id}.dropAt`]: serverTimestamp(),
+                                                                    });
+                                                                }
 
-                    {showPopup && (
-                        <div className="popup-overlay">
-                            <div className="popup-box">
-                                <h3>Add Advance Amount</h3>
-                                <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    value={amount}
-                                    placeholder="Enter amount"
-                                    onChange={(e) => {
-                                        let val = e.target.value.replace(/[^0-9.]/g, "");
-                                        if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
-                                        setAmount(val);
-                                    }}
-                                />
-                                <div className="popup-actions">
-                                    <button onClick={handleSaveAmount}>Save</button>
-                                    <button onClick={() => setShowPopup(false)}>Cancel</button>
+                                                                // alert("✅ Drop reason saved!");
+                                                            } catch (err) {
+                                                                console.error(err);
+                                                                alert("❌ Failed to save drop reason.");
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            backgroundColor: "#f44336",
+                                                            color: "white",
+                                                            padding: "6px 10px",
+                                                            borderRadius: "6px",
+                                                            marginLeft: "5px",
+                                                        }}
+                                                    >
+                                                        ⛔ Drop
+                                                    </button>
+                                                )}
+                                            </td>
+
+                                        </tr>
+                                    )
+                                })}
+
+                            </tbody>
+                        </table>
+
+                        {showPopup && (
+                            <div className="popup-overlay">
+                                <div className="popup-box">
+                                    <h3>Add Advance Amount</h3>
+                                    <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={amount}
+                                        placeholder="Enter amount"
+                                        onChange={(e) => {
+                                            let val = e.target.value.replace(/[^0-9.]/g, "");
+                                            if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
+                                            setAmount(val);
+                                        }}
+                                    />
+                                    <div className="popup-actions">
+                                        <button onClick={handleSaveAmount}>Save</button>
+                                        <button onClick={() => setShowPopup(false)}>Cancel</button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
 
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <div style={{ marginBottom: "50px" }}></div>
+            <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
+        </>
     )
 }
 

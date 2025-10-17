@@ -125,7 +125,6 @@ const FoodMenuSelection = ({ selectedMenus, setSelectedMenus, noOfPlates, extraP
 
     if (loading) return <p>Loading menu...</p>;
 
-
     return (
         <div className="food-menu-selection">
             <h4>3. Food Menu Selection</h4>
@@ -269,7 +268,6 @@ const FoodMenuSelection = ({ selectedMenus, setSelectedMenus, noOfPlates, extraP
                 );
             })}
 
-            {/* Popup Menu for subitems */}
             {popupMenu && (
                 <div
                     className="menu-popup"
@@ -285,12 +283,12 @@ const FoodMenuSelection = ({ selectedMenus, setSelectedMenus, noOfPlates, extraP
                 >
                     <div
                         style={{
-                            backgroundColor: "#e0e0e0",
+                            backgroundColor: "#e0e0e0ff",
                             padding: "20px",
                             borderRadius: "16px",
                             maxWidth: "400px",
                             width: "90%",
-                            maxHeight: "95%",
+                            maxHeight: "75%",
                             overflowY: "auto",
                         }}
                     >
@@ -453,16 +451,16 @@ const FoodMenuSelection = ({ selectedMenus, setSelectedMenus, noOfPlates, extraP
                                 padding: "8px 14px",
                                 borderRadius: "12px",
                                 border: "none",
-                                background: "#f44336",
+                                background: "#36ce22ff",
                                 color: "#fff",
                                 cursor: "pointer",
                                 fontSize: "14px",
                                 width: "100%",
-                                boxShadow: "inset 4px 4px 6px #c32d28, inset -4px -4px 6px #f18e87",
+                                boxShadow: "inset 4px 4px 6px #1fa00eff, inset -4px -4px 6px #90fc82ff",
                                 transition: "all 0.1s",
                             }}
                         >
-                            Close
+                            Save & Close
                         </button>
                     </div>
                 </div>

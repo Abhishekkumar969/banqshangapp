@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../firebaseConfig";
-import { collection, getDocs, query, where, doc, updateDoc } from "firebase/firestore";
+import { getDoc, collection, getDocs, query, where, doc, updateDoc } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import styles from "../styles/decorationProfile.module.css";
+import { useNavigate } from "react-router-dom";
+import BottomNavigationBar from "../components/BottomNavigationBar";
 
 const DecorationProfile = () => {
+  const navigate = useNavigate();
   const [decoration, setDecoration] = useState(null);
   const [selectedFunction, setSelectedFunction] = useState("Default");
   const [itemName, setItemName] = useState("");
@@ -15,6 +18,27 @@ const DecorationProfile = () => {
   const [functionTypes, setFunctionTypes] = useState(["Default"]);
   const [newFunctionType, setNewFunctionType] = useState("");
   const [loading, setLoading] = useState(true);
+  const [userAppType, setUserAppType] = useState(null);
+
+  useEffect(() => {
+    const fetchUserAppType = async () => {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          const userRef = doc(db, 'usersAccess', user.email);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            setUserAppType(data.accessToApp);
+          }
+        } catch (err) {
+          console.error("Error fetching user app type:", err);
+        }
+      }
+    };
+    fetchUserAppType();
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 10000); // max 10 sec
@@ -197,333 +221,339 @@ const DecorationProfile = () => {
   };
 
   return (
-    <div className={styles.container}>
+    <>
 
-      {decoration ? (
-        <>
+      <div className={styles.container}>
 
-          <h2 className={styles.heading}>
-            Hi {decoration?.name ? decoration.name : decoration?.firmName ? decoration.firmName : "Decoration"} 👋
-          </h2>
+        {decoration ? (
+          <>
 
-          {/* Decoration Email Below the Heading */}
-          <div className={styles.emailContainer}>
-            {decoration?.email && (
-              <p className={styles.emailLine}>
-                📧 <strong>Email:</strong> {decoration.email}
-              </p>
-            )}
-          </div>
+            <h2 className={styles.heading}>
+              Hi {decoration?.name ? decoration.name : decoration?.firmName ? decoration.firmName : "Decoration"} 👋
+            </h2>
 
-          <div className={styles.emailContainer}>
-            <button type="button"
-              style={{ width: '100%', color: '#1a1a1aff' }}
-              className={styles.showDetails}
-              onClick={() => setShowDetails((prev) => !prev)}
-            >
-              {showDetails ? "▲" : "Edit Firm Data"}
-            </button>
-          </div>
+            {/* Decoration Email Below the Heading */}
+            <div className={styles.emailContainer}>
+              {decoration?.email && (
+                <p className={styles.emailLine}>
+                  📧 <strong>Email:</strong> {decoration.email}
+                </p>
+              )}
+            </div>
 
-          {/* Top Fields */}
-          {showDetails && (
-            <div className={styles.decorationInfo}>
-              {["firmName", "address", "contactNo", "termsAndConditions"].map((field) => (
-                <div key={field} className={styles.fieldRow}>
-                  {editField === field ? (
-                    <>
-                      <div>
+            <div className={styles.emailContainer}>
+              <button type="button"
+                style={{ width: '100%', color: '#1a1a1aff' }}
+                className={styles.showDetails}
+                onClick={() => setShowDetails((prev) => !prev)}
+              >
+                {showDetails ? "▲" : "Edit Firm Data"}
+              </button>
+            </div>
+
+            {/* Top Fields */}
+            {showDetails && (
+              <div className={styles.decorationInfo}>
+                {["firmName", "address", "contactNo", "termsAndConditions"].map((field) => (
+                  <div key={field} className={styles.fieldRow}>
+                    {editField === field ? (
+                      <>
                         <div>
-                          <strong style={{ whiteSpace: "nowrap" }}>
-                            {field === "contactNo"
-                              ? "Phone Number"
-                              : field === "firmName"
-                                ? "Firm Name"
-                                : field === "email"
-                                  ? "Email"
-                                  : field === "termsAndConditions"
-                                    ? "Terms & Conditions"
-                                    : field.charAt(0).toUpperCase() + field.slice(1)}
-                            :
-                          </strong>
-                        </div>
-
-                        <div>
-                          <span>
-                            <strong style={{ color: "orangered", marginLeft: "10px" }}>
-                              {decoration[field] || "Not Filled"}
+                          <div>
+                            <strong style={{ whiteSpace: "nowrap" }}>
+                              {field === "contactNo"
+                                ? "Phone Number"
+                                : field === "firmName"
+                                  ? "Firm Name"
+                                  : field === "email"
+                                    ? "Email"
+                                    : field === "termsAndConditions"
+                                      ? "Terms & Conditions"
+                                      : field.charAt(0).toUpperCase() + field.slice(1)}
+                              :
                             </strong>
-                          </span>
-                        </div>
-                      </div>
+                          </div>
 
-                      <div className={styles.itemButtons}>
-                        {field === "termsAndConditions" ? (
-                          <textarea
-                            rows={10}
-                            style={{ width: '100%', marginTop: '10px', padding: '10px', borderRadius: '10px', border: '1px solid gray' }}
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            className={styles.editTextarea}
-                            placeholder="Enter terms and conditions (one per line)..."
-                          />
-                        ) : (
-                          <input
-                            type="text"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            className={styles.editInput}
-                          />
-                        )}
-                        <button type="button"
-                          onClick={() => handleUpdateField(field)}
-                          className={styles.saveButton}
-                        >
-                          Save
-                        </button>
-                        <button type="button"
-                          onClick={() => setEditField(null)}
-                          className={styles.cancelButton}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <div>
-                          <strong style={{ whiteSpace: "nowrap" }}>
-                            {field === "contactNo"
-                              ? "Phone Number"
-                              : field === "firmName"
-                                ? "Firm Name"
-                                : field === "email"
-                                  ? "Email"
-                                  : field === "termsAndConditions"
-                                    ? "Terms & Conditions"
-                                    : field.charAt(0).toUpperCase() + field.slice(1)}
-                            :
-                          </strong>
+                          <div>
+                            <span>
+                              <strong style={{ color: "orangered", marginLeft: "10px" }}>
+                                {decoration[field] || "Not Filled"}
+                              </strong>
+                            </span>
+                          </div>
                         </div>
 
-                        <div style={{ marginLeft: "10px" }}>
+                        <div className={styles.itemButtons}>
                           {field === "termsAndConditions" ? (
-                            <div
-                              style={{
-                                color: "green",
-                                textTransform: "none",
-                                whiteSpace: "pre-line",
-                                fontWeight: 'bold'
-                              }}
-                            >
-                              {decoration[field] || "Not Filled"}
-                            </div>
+                            <textarea
+                              rows={10}
+                              style={{ width: '100%', marginTop: '10px', padding: '10px', borderRadius: '10px', border: '1px solid gray' }}
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              className={styles.editTextarea}
+                              placeholder="Enter terms and conditions (one per line)..."
+                            />
                           ) : (
-                            <strong style={{ color: "green", textTransform: "capitalize" }}>
-                              {decoration[field] || "Not Filled"}
-                            </strong>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className={styles.itemButtons}>
-                        <button type="button"
-                          onClick={() => {
-                            setEditField(field);
-                            setEditValue(decoration[field] || "");
-                          }}
-                          className={styles.editButton}
-                        >
-                          Edit
-                        </button>
-                        <button type="button"
-                          onClick={() => handleDeleteField(field)}
-                          className={styles.deleteButton}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))}
-
-              {/* Dynamic Function Types - All in one line */}
-              <div className={styles.fieldRow}>
-                <strong style={{ whiteSpace: "nowrap", marginRight: "10px" }}>Function Types:</strong>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                  {functionTypes
-                    .filter(ft => ft !== "Default")
-                    .map(ft => (
-                      <div key={ft} style={{ display: "flex", alignItems: "center", gap: "5px", backgroundColor: "#f0f0f0", padding: "5px 10px", borderRadius: "8px" }}>
-                        {editField === ft ? (
-                          <>
                             <input
                               type="text"
                               value={editValue}
                               onChange={(e) => setEditValue(e.target.value)}
                               className={styles.editInput}
-                              style={{ width: "100px" }}
                             />
-                            <button type="button"
-                              onClick={async () => {
-                                if (!editValue.trim() || !decoration) return;
-                                const updatedFunctions = functionTypes.map(f => f === ft ? editValue.trim() : f);
-                                const updatedItems = { ...items };
-                                if (updatedItems[ft]) {
-                                  updatedItems[editValue.trim()] = updatedItems[ft];
+                          )}
+                          <button type="button"
+                            onClick={() => handleUpdateField(field)}
+                            className={styles.saveButton}
+                          >
+                            Save
+                          </button>
+                          <button type="button"
+                            onClick={() => setEditField(null)}
+                            className={styles.cancelButton}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <div>
+                            <strong style={{ whiteSpace: "nowrap" }}>
+                              {field === "contactNo"
+                                ? "Phone Number"
+                                : field === "firmName"
+                                  ? "Firm Name"
+                                  : field === "email"
+                                    ? "Email"
+                                    : field === "termsAndConditions"
+                                      ? "Terms & Conditions"
+                                      : field.charAt(0).toUpperCase() + field.slice(1)}
+                              :
+                            </strong>
+                          </div>
+
+                          <div style={{ marginLeft: "10px" }}>
+                            {field === "termsAndConditions" ? (
+                              <div
+                                style={{
+                                  color: "green",
+                                  textTransform: "none",
+                                  whiteSpace: "pre-line",
+                                  fontWeight: 'bold'
+                                }}
+                              >
+                                {decoration[field] || "Not Filled"}
+                              </div>
+                            ) : (
+                              <strong style={{ color: "green", textTransform: "capitalize" }}>
+                                {decoration[field] || "Not Filled"}
+                              </strong>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className={styles.itemButtons}>
+                          <button type="button"
+                            onClick={() => {
+                              setEditField(field);
+                              setEditValue(decoration[field] || "");
+                            }}
+                            className={styles.editButton}
+                          >
+                            Edit
+                          </button>
+                          <button type="button"
+                            onClick={() => handleDeleteField(field)}
+                            className={styles.deleteButton}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+
+                {/* Dynamic Function Types - All in one line */}
+                <div className={styles.fieldRow}>
+                  <strong style={{ whiteSpace: "nowrap", marginRight: "10px" }}>Function Types:</strong>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                    {functionTypes
+                      .filter(ft => ft !== "Default")
+                      .map(ft => (
+                        <div key={ft} style={{ display: "flex", alignItems: "center", gap: "5px", backgroundColor: "#f0f0f0", padding: "5px 10px", borderRadius: "8px" }}>
+                          {editField === ft ? (
+                            <>
+                              <input
+                                type="text"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                className={styles.editInput}
+                                style={{ width: "100px" }}
+                              />
+                              <button type="button"
+                                onClick={async () => {
+                                  if (!editValue.trim() || !decoration) return;
+                                  const updatedFunctions = functionTypes.map(f => f === ft ? editValue.trim() : f);
+                                  const updatedItems = { ...items };
+                                  if (updatedItems[ft]) {
+                                    updatedItems[editValue.trim()] = updatedItems[ft];
+                                    delete updatedItems[ft];
+                                  }
+                                  const decorationRef = doc(db, "usersAccess", decoration.id);
+                                  await updateDoc(decorationRef, { functionTypes: updatedFunctions.filter(f => f !== "Default"), items: updatedItems });
+                                  setFunctionTypes(updatedFunctions);
+                                  setItems(updatedItems);
+                                  setEditField(null);
+                                  setEditValue("");
+                                }}
+                                className={styles.saveButton}
+                              >Save</button>
+                              <button type="button"
+                                onClick={() => setEditField(null)}
+                                className={styles.cancelButton}
+                              >Cancel</button>
+                            </>
+                          ) : (
+                            <>
+                              <span>{ft}</span>
+                              <button type="button"
+                                onClick={() => {
+                                  setEditField(ft);
+                                  setEditValue(ft);
+                                }}
+                                className={styles.editButton}
+                                style={{ padding: "2px 5px", fontSize: "0.8rem" }}
+                              >✏️</button>
+                              <button type="button"
+                                onClick={async () => {
+                                  if (!decoration) return;
+                                  const updatedFunctions = functionTypes.filter(f => f !== ft);
+                                  const updatedItems = { ...items };
                                   delete updatedItems[ft];
-                                }
-                                const decorationRef = doc(db, "usersAccess", decoration.id);
-                                await updateDoc(decorationRef, { functionTypes: updatedFunctions.filter(f => f !== "Default"), items: updatedItems });
-                                setFunctionTypes(updatedFunctions);
-                                setItems(updatedItems);
-                                setEditField(null);
-                                setEditValue("");
-                              }}
-                              className={styles.saveButton}
-                            >Save</button>
-                            <button type="button"
-                              onClick={() => setEditField(null)}
-                              className={styles.cancelButton}
-                            >Cancel</button>
-                          </>
-                        ) : (
-                          <>
-                            <span>{ft}</span>
-                            <button type="button"
-                              onClick={() => {
-                                setEditField(ft);
-                                setEditValue(ft);
-                              }}
-                              className={styles.editButton}
-                              style={{ padding: "2px 5px", fontSize: "0.8rem" }}
-                            >✏️</button>
-                            <button type="button"
-                              onClick={async () => {
-                                if (!decoration) return;
-                                const updatedFunctions = functionTypes.filter(f => f !== ft);
-                                const updatedItems = { ...items };
-                                delete updatedItems[ft];
-                                const decorationRef = doc(db, "usersAccess", decoration.id);
-                                await updateDoc(decorationRef, { functionTypes: updatedFunctions.filter(f => f !== "Default"), items: updatedItems });
-                                setFunctionTypes(updatedFunctions);
-                                setItems(updatedItems);
-                              }}
-                              className={styles.deleteButton}
-                              style={{ padding: "2px 5px", fontSize: "0.8rem" }}
-                            >🗑️</button>
-                          </>
-                        )}
-                      </div>
-                    ))}
+                                  const decorationRef = doc(db, "usersAccess", decoration.id);
+                                  await updateDoc(decorationRef, { functionTypes: updatedFunctions.filter(f => f !== "Default"), items: updatedItems });
+                                  setFunctionTypes(updatedFunctions);
+                                  setItems(updatedItems);
+                                }}
+                                className={styles.deleteButton}
+                                style={{ padding: "2px 5px", fontSize: "0.8rem" }}
+                              >🗑️</button>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                  </div>
                 </div>
+
+              </div>
+            )}
+
+            <div className={styles.InsertFields}>
+              <div>
+                <label htmlFor="functionType" className={styles.subHeading}>
+                  Add Function Type:
+                </label>
+                <input
+                  type="text"
+                  placeholder="Add new function type"
+                  value={newFunctionType}
+                  onChange={(e) => setNewFunctionType(e.target.value)}
+                  className={styles.inputBox}
+                />
+                <button type="button"
+                  style={{ marginTop: "15px" }}
+                  onClick={handleAddFunctionType}
+                  className={styles.button}
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.InsertFields}>
+              <div>
+                <label htmlFor="functionType" className={styles.subHeading}>
+                  Add Item:
+                </label>
+                <select
+                  id="functionType"
+                  value={selectedFunction}
+                  onChange={(e) => setSelectedFunction(e.target.value)}
+                  className={styles.selectBox}
+                >
+                  {functionTypes.map((ft) => (
+                    <option key={ft} value={ft}>{ft}</option>
+                  ))}
+                </select>
+
+                <span style={{ color: 'red', fontSize: '15px' }}>
+                  Default will add items in all the functions
+                </span>
               </div>
 
-            </div>
-          )}
-
-          <div className={styles.InsertFields}>
-            <div>
-              <label htmlFor="functionType" className={styles.subHeading}>
-                Add Function Type:
-              </label>
-              <input
-                type="text"
-                placeholder="Add new function type"
-                value={newFunctionType}
-                onChange={(e) => setNewFunctionType(e.target.value)}
-                className={styles.inputBox}
-              />
-              <button type="button"
-                style={{ marginTop: "15px" }}
-                onClick={handleAddFunctionType}
-                className={styles.button}
-              >
-                Add
-              </button>
-            </div>
-          </div>
-
-          <div className={styles.InsertFields}>
-            <div>
-              <label htmlFor="functionType" className={styles.subHeading}>
-                Add Item:
-              </label>
-              <select
-                id="functionType"
-                value={selectedFunction}
-                onChange={(e) => setSelectedFunction(e.target.value)}
-                className={styles.selectBox}
-              >
-                {functionTypes.map((ft) => (
-                  <option key={ft} value={ft}>{ft}</option>
-                ))}
-              </select>
-
-              <span style={{ color: 'red', fontSize: '15px' }}>
-                Default will add items in all the functions
-              </span>
-            </div>
-
-            {/* Add Item */}
-            <div style={{ marginTop: "15px" }}>
-              <input
-                type="text"
-                placeholder="Enter item name"
-                value={itemName}
-                onChange={(e) => setItemName(e.target.value)}
-                className={styles.inputBox}
-              />
-              <button type="button" style={{ marginTop: "15px" }} onClick={handleAddItem} className={styles.button}>
-                Add
-              </button>
-            </div>
-          </div>
-
-          {/* Accordion Items */}
-          <div className={styles.itemsSection}>
-            <h3>Items by Function</h3>
-            {functionTypes
-              .filter(fn => selectedFunction === "Default" || fn === selectedFunction)
-              .map(fn => (
-                <AccordionItem
-                  key={fn}
-                  title={fn}
-                  items={items[fn] || []}
-                  onUpdateItem={handleUpdateItem}
-                  onDeleteItem={handleDeleteItem}
-                  onAddItem={(newItem) => {
-                    const updatedItems = { ...items };
-                    if (!Array.isArray(updatedItems[fn])) updatedItems[fn] = [];
-                    updatedItems[fn].push(newItem);
-                    const decorationRef = doc(db, "usersAccess", decoration.id);
-                    updateDoc(decorationRef, { items: updatedItems });
-                    setItems(updatedItems);
-                  }}
+              {/* Add Item */}
+              <div style={{ marginTop: "15px" }}>
+                <input
+                  type="text"
+                  placeholder="Enter item name"
+                  value={itemName}
+                  onChange={(e) => setItemName(e.target.value)}
+                  className={styles.inputBox}
                 />
-              ))
-            }
-          </div>
-        </>
-      ) : (
-        <div className={styles.container}>
-          {loading ? (
-            <div className={styles.spinnerContainer}>
-              <div className={styles.spinner}></div>
+                <button type="button" style={{ marginTop: "15px" }} onClick={handleAddItem} className={styles.button}>
+                  Add
+                </button>
+              </div>
             </div>
-          ) : !decoration ? (
-            <p className={styles.message}>Pls Login With Decoration profile...</p>
-          ) : (
-            <div>
-              {/* Your Decoration content goes here */}
-              <h2>Welcome, {decoration.name}</h2>
-            </div>
-          )}
-        </div>)}
 
-    </div>
+            {/* Accordion Items */}
+            <div className={styles.itemsSection}>
+              <h3>Items by Function</h3>
+              {functionTypes
+                .filter(fn => selectedFunction === "Default" || fn === selectedFunction)
+                .map(fn => (
+                  <AccordionItem
+                    key={fn}
+                    title={fn}
+                    items={items[fn] || []}
+                    onUpdateItem={handleUpdateItem}
+                    onDeleteItem={handleDeleteItem}
+                    onAddItem={(newItem) => {
+                      const updatedItems = { ...items };
+                      if (!Array.isArray(updatedItems[fn])) updatedItems[fn] = [];
+                      updatedItems[fn].push(newItem);
+                      const decorationRef = doc(db, "usersAccess", decoration.id);
+                      updateDoc(decorationRef, { items: updatedItems });
+                      setItems(updatedItems);
+                    }}
+                  />
+                ))
+              }
+            </div>
+          </>
+        ) : (
+          <div className={styles.container}>
+            {loading ? (
+              <div className={styles.spinnerContainer}>
+                <div className={styles.spinner}></div>
+              </div>
+            ) : !decoration ? (
+              <p className={styles.message}>Pls Login With Decoration profile...</p>
+            ) : (
+              <div>
+                {/* Your Decoration content goes here */}
+                <h2>Welcome, {decoration.name}</h2>
+              </div>
+            )}
+          </div>)}
+
+      </div>
+
+      <div style={{ marginBottom: "50px" }}></div>
+      <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
+    </>
   );
 };
 

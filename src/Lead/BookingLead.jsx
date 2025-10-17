@@ -4,6 +4,7 @@ import BookingAmenities from './BookingAmenities';
 import LeadFollowUp from './LeadFollowUp';
 import LeadSummary from './LeadSummary';
 import MealSelection from './MealSelection';
+import BottomNavigationBar from "../components/BottomNavigationBar";
 
 import FoodMenuSelection from './FoodMenuSelection';
 import { db } from '../firebaseConfig';
@@ -19,7 +20,7 @@ const BookingLead = () => {
     const location = useLocation();
     const leadSummaryRef = useRef();
     const leadFollowUpRef = useRef();
-    const mealRef = useRef();
+
 
     const leadToEdit = location.state?.leadToEdit || location.state?.enquiry || null;
     const isUpdateMode = !!leadToEdit;
@@ -41,6 +42,29 @@ const BookingLead = () => {
     const [summaryData, setSummaryData] = useState([]);
     const [showToast, setShowToast] = useState(false);
     const [editorInfo, setEditorInfo] = useState({ name: "", email: "" });
+    const [userAppType, setUserAppType] = useState(null);
+
+    const mealRef = useRef();
+
+    useEffect(() => {
+        const fetchUserAppType = async () => {
+            const auth = getAuth();
+            const user = auth.currentUser;
+            if (user) {
+                try {
+                    const userRef = doc(db, 'usersAccess', user.email);
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        const data = userSnap.data();
+                        setUserAppType(data.accessToApp);
+                    }
+                } catch (err) {
+                    console.error("Error fetching user app type:", err);
+                }
+            }
+        };
+        fetchUserAppType();
+    }, []);
 
     const getEditorName = async (email) => {
         const q = query(collection(db, "usersAccess"), where("email", "==", email));
@@ -168,7 +192,7 @@ const BookingLead = () => {
                 bookingAmenities: selectedItems,
                 updatedAt: Timestamp.now(),
                 authorisedSignatory: editorInfo.name,
-                meals: sanitizedMeals,
+                meals,
                 authorisedEmail: editorInfo.email
             };
 
@@ -236,6 +260,7 @@ const BookingLead = () => {
             setSelectedMenus({});
             setSelectedItems([]);
             setGstBase("");
+            setMeals({});
             setTotalAmount(0);
             setGstAmount(0);
             setGrandTotal(0);
@@ -285,6 +310,7 @@ const BookingLead = () => {
                     <BookingAmenities selectedItems={selectedItems} setSelectedItems={setSelectedItems} />
                     <FoodMenuSelection
                         selectedMenus={selectedMenus}
+                        extraPlates={form.extraPlates}
                         setSelectedMenus={setSelectedMenus}
                         noOfPlates={form.noOfPlates}
                     />
@@ -329,6 +355,10 @@ const BookingLead = () => {
                     </div>
                 )}
             </div>
+
+            <div style={{ marginBottom: "50px" }}></div>
+            <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
+
         </>
     );
 };

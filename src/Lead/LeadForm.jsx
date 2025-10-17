@@ -208,6 +208,18 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
                 {errors.noOfPlates && <span className="error">Required</span>}
             </div>
 
+            {/* Extra Plates Date */}
+            <div className="form-group">
+                <label>Extra Plate</label>
+                <input
+                    type="text"
+                    inputMode="numeric"
+                    name="extraPlates"
+                    value={form.extraPlates || ""}
+                    onChange={(e) => handleChange({ target: { name: "extraPlates", value: e.target.value.replace(/[^0-9]/g, "") } })}
+                />
+            </div>
+
             {/* Function Date */}
             <div className="form-group">
                 <label>Date of Function</label>

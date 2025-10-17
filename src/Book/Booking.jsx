@@ -379,6 +379,8 @@ const BookingLead = () => {
                     </div>
                 )}
             </div>
+            
+            <div style={{ marginBottom: "50px" }}></div>
             <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
         </>
     );

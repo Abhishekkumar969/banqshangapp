@@ -118,10 +118,10 @@ body {
     flex-direction: column;
     margin-top: 15px;
     transition: all 0.3s ease;
-
     display: grid;
     grid-template-columns: 1fr 1.5fr;
-    /* border: ; */
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgb(230, 230, 230);
 }
 
 .form-group label {
@@ -130,6 +130,7 @@ body {
     color: #333;
     display: flex;
     align-items: center;
+
 }
 
 .form-group input,

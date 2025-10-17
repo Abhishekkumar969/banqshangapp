@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { collection, getDocs, doc, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
+import { getDoc, collection, getDocs, doc, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import '../styles/VendorTable.css';
 import BackButton from "../components/BackButton";
@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import VendorLogPopupCell from './VendorLogPopupCell.jsx';
 import { query, where } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import BottomNavigationBar from "../components/BottomNavigationBar";
 
 const toIST = (date) => {
   if (!date) return null;
@@ -51,7 +52,6 @@ const convertTo12HourIST = (timeStr) => {
   return `${hrs}:${mins} ${ampm}`;
 };
 
-
 const VendorTable = () => {
   const [allBookings, setAllBookings] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,9 +61,27 @@ const VendorTable = () => {
   const [sortOrder, setSortOrder] = useState("desc");
   const [vendorProfile, setVendorProfile] = useState(null);
   const navigate = useNavigate();
+  const [userAppType, setUserAppType] = useState(null);
 
-
-
+  useEffect(() => {
+    const fetchUserAppType = async () => {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          const userRef = doc(db, 'usersAccess', user.email);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            setUserAppType(data.accessToApp);
+          }
+        } catch (err) {
+          console.error("Error fetching user app type:", err);
+        }
+      }
+    };
+    fetchUserAppType();
+  }, []);
 
   useEffect(() => {
     const auth = getAuth();
@@ -505,109 +523,114 @@ const VendorTable = () => {
   };
 
   return (
-    <div>
-      <BackButton />
-      <div style={{ marginTop: '60px' }}>
-        <div style={{ textAlign: 'center' }}><h3>📋 All Bookings</h3></div>
+    <>
+      <div>
+        <BackButton />
+        <div style={{ marginTop: '60px' }}>
+          <div style={{ textAlign: 'center' }}><h3>📋 All Bookings</h3></div>
 
-        <div style={{ textAlign: "center", margin: "15px 0" }}>
-          <input
-            type="text"
-            placeholder="Search by Name, Contact, Event Type, Date (dd-mm-yyyy)"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ width: "70%", padding: "8px", borderRadius: "8px", border: "1px solid #ccc", fontSize: "14px" }}
-          />
-        </div>
+          <div style={{ textAlign: "center", margin: "15px 0" }}>
+            <input
+              type="text"
+              placeholder="Search by Name, Contact, Event Type, Date (dd-mm-yyyy)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ width: "70%", padding: "8px", borderRadius: "8px", border: "1px solid #ccc", fontSize: "14px" }}
+            />
+          </div>
 
-        <div className="vendor-table-container">
-          <table className="main-vendor-table">
-            <thead>
-              <tr>
+          <div className="vendor-table-container">
+            <table className="main-vendor-table">
+              <thead>
+                <tr>
 
-                {[
-                  '#'
-                ].map(header => (
-                  <th key={header}>{header}</th>
+                  {[
+                    '#'
+                  ].map(header => (
+                    <th key={header}>{header}</th>
+                  ))}
+
+                  <th onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")} style={{ cursor: "pointer" }}>
+                    Function Date {sortOrder === "asc" ? "↑" : "↓"}
+                  </th>
+
+                  {[
+                    'Name', 'Contact', 'Address', 'Event Type', 'Venue type', 'Time', 'Total', 'Discount',
+                    'GST Amt', `Grand Total: ₹${summary.grandTotal.toLocaleString("en-IN")}`, 'Advance Records',
+                    `Total Advance: ₹${summary.advanceTotal.toLocaleString("en-IN")}`,
+                    `Total Remaining: ₹${summary.remainingTotal.toLocaleString("en-IN")}`,
+                    'Services', 'Add Advance', 'Print', 'Update',
+                    'Logs', 'Notes', `Avg PayOut % : ${avgPayOutPercent}%`,
+                    `To be PayOut: ₹${summary.totalPayOut.toLocaleString("en-IN")}`,
+                    'Approval',
+                    'PayOut Records',
+                    `Total PayOut ₹${filteredBookings.reduce((acc, booking) => {
+                      // const sv = normalizeServices(booking.services);
+                      const totalPayOut = booking.royalityPayments?.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) || 0;
+                      return acc + totalPayOut;
+                    }, 0).toLocaleString("en-IN")}`,
+                    `Remaining Payout: ₹${filteredBookings.reduce((acc, booking) => {
+                      const sv = normalizeServices(booking.services);
+                      const totalRoyalty = sv.reduce((sum, srv) => sum + (Number(srv.royaltyAmount) || 0), 0) || 0;
+                      const totalPayOut = booking.royalityPayments?.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) || 0;
+                      return acc + (totalRoyalty - totalPayOut);
+                    }, 0).toLocaleString("en-IN")}`,
+                    'Booked By'
+                  ].map(header => (
+                    <th key={header}>{header}</th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {filteredBookings.map((v, idx) => (
+                  <BookingRow
+                    key={v.id}
+                    v={v}
+                    idx={idx}
+                    filteredCount={filteredBookings.length}
+                    convertTo12Hour={convertTo12Hour}
+                    formatDateTime={formatDateTime}
+                    getAdvanceTotal={getAdvanceTotal}
+                    getGrandTotal={getGrandTotal}
+                    normalizeServices={normalizeServices}
+                    navigate={navigate}
+                    getPrintFormat={getPrintFormat}
+                    handleAddAmountClick={handleAddAmountClick}
+                  />
                 ))}
+              </tbody>
+            </table>
 
-                <th onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")} style={{ cursor: "pointer" }}>
-                  Function Date {sortOrder === "asc" ? "↑" : "↓"}
-                </th>
-
-                {[
-                  'Name', 'Contact', 'Address', 'Event Type', 'Venue type', 'Time', 'Total', 'Discount',
-                  'GST Amt', `Grand Total: ₹${summary.grandTotal.toLocaleString("en-IN")}`, 'Advance Records',
-                  `Total Advance: ₹${summary.advanceTotal.toLocaleString("en-IN")}`,
-                  `Total Remaining: ₹${summary.remainingTotal.toLocaleString("en-IN")}`,
-                  'Services', 'Add Advance', 'Print', 'Update',
-                  'Logs', 'Notes', `Avg PayOut % : ${avgPayOutPercent}%`,
-                  `To be PayOut: ₹${summary.totalPayOut.toLocaleString("en-IN")}`,
-                  'Approval',
-                  'PayOut Records',
-                  `Total PayOut ₹${filteredBookings.reduce((acc, booking) => {
-                    // const sv = normalizeServices(booking.services);
-                    const totalPayOut = booking.royalityPayments?.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) || 0;
-                    return acc + totalPayOut;
-                  }, 0).toLocaleString("en-IN")}`,
-                  `Remaining Payout: ₹${filteredBookings.reduce((acc, booking) => {
-                    const sv = normalizeServices(booking.services);
-                    const totalRoyalty = sv.reduce((sum, srv) => sum + (Number(srv.royaltyAmount) || 0), 0) || 0;
-                    const totalPayOut = booking.royalityPayments?.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) || 0;
-                    return acc + (totalRoyalty - totalPayOut);
-                  }, 0).toLocaleString("en-IN")}`,
-                  'Booked By'
-                ].map(header => (
-                  <th key={header}>{header}</th>
-                ))}
-              </tr>
-            </thead>
-
-            <tbody>
-              {filteredBookings.map((v, idx) => (
-                <BookingRow
-                  key={v.id}
-                  v={v}
-                  idx={idx}
-                  filteredCount={filteredBookings.length}
-                  convertTo12Hour={convertTo12Hour}
-                  formatDateTime={formatDateTime}
-                  getAdvanceTotal={getAdvanceTotal}
-                  getGrandTotal={getGrandTotal}
-                  normalizeServices={normalizeServices}
-                  navigate={navigate}
-                  getPrintFormat={getPrintFormat}
-                  handleAddAmountClick={handleAddAmountClick}
-                />
-              ))}
-            </tbody>
-          </table>
-
-          {showPopup && (
-            <div className="popup-overlay">
-              <div className="popup-box">
-                <h3>Add Advance Amount</h3>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={amount}
-                  placeholder="Enter amount"
-                  onChange={(e) => {
-                    let val = e.target.value.replace(/[^0-9.]/g, "");
-                    if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
-                    setAmount(val);
-                  }}
-                />
-                <div className="popup-actions">
-                  <button onClick={handleSaveAmount}>Save</button>
-                  <button onClick={() => setShowPopup(false)}>Cancel</button>
+            {showPopup && (
+              <div className="popup-overlay">
+                <div className="popup-box">
+                  <h3>Add Advance Amount</h3>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={amount}
+                    placeholder="Enter amount"
+                    onChange={(e) => {
+                      let val = e.target.value.replace(/[^0-9.]/g, "");
+                      if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
+                      setAmount(val);
+                    }}
+                  />
+                  <div className="popup-actions">
+                    <button onClick={handleSaveAmount}>Save</button>
+                    <button onClick={() => setShowPopup(false)}>Cancel</button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      <div style={{ marginBottom: "50px" }}></div>
+      <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
+    </>
   );
 };
 

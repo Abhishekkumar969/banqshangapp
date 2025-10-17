@@ -6,6 +6,7 @@ import CalendarPopup from '../pages/CalendarPopup';
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import DownloadPopup from '../pages/DownloadPopup'
+import BackButton from "../components/BackButton";
 import BottomNavigationBar from './BottomNavigationBar';
 
 const bannerImages = [
@@ -119,6 +120,7 @@ const Prebook = () => {
 
   return (
     <>
+      <div style={{ marginBottom: '45px' }}> <BackButton />  </div>
       <div className="prebook-wrapper">
 
         {/* LogOut */}

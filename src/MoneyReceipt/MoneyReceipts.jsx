@@ -182,7 +182,6 @@ const MoneyReceipts = () => {
     );
   });
 
-  // Utility: Get FY from date
   const getFinancialYear = (dateStr) => {
     const date = new Date(dateStr);
     const year = date.getFullYear();
@@ -195,7 +194,6 @@ const MoneyReceipts = () => {
     }
   };
 
-  // Utility: Group receipts by FY and month
   const groupedData = {};
 
   filteredReceipts.forEach(receipt => {
@@ -223,7 +221,6 @@ const MoneyReceipts = () => {
     }
   });
 
-  // Convert to array and sort by FY and Month
   const tableData = Object.values(groupedData).sort((a, b) => {
     const fyA = a.fy.split('-')[0];
     const fyB = b.fy.split('-')[0];
@@ -231,7 +228,6 @@ const MoneyReceipts = () => {
     return a.month - b.month;
   });
 
-  // Calculate running balance
   let runningBalance = 0;
   const finalTableData = tableData.map(row => {
     runningBalance += row.credit - row.debit;
@@ -1971,7 +1967,6 @@ const MoneyReceipts = () => {
 
       <div style={{ marginBottom: "50px" }}></div>
       <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
-
     </>
   );
 };

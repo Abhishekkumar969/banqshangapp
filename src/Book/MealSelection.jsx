@@ -270,7 +270,7 @@ const MealSelection = forwardRef(({ meals, setMeals, functionDate, dayNight }, r
 
             {showMealModal && currentDayKey && currentMeal && (
                 <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxHeight: "70vh", overflowY: "auto" }}>
+                    <div className="modal-content" style={{ maxHeight: "60vh", overflowY: "auto" }}>
                         <h3>Select {currentMeal} Items</h3>
 
                         {Object.entries(
@@ -366,16 +366,20 @@ const MealSelection = forwardRef(({ meals, setMeals, functionDate, dayNight }, r
                         <button
                             onClick={() => setShowMealModal(false)}
                             style={{
-                                marginTop: 10,
-                                padding: "6px 12px",
-                                backgroundColor: "#ed4e2eff",
-                                color: "white",
+                                marginTop: "16px",
+                                padding: "8px 14px",
+                                borderRadius: "12px",
                                 border: "none",
-                                borderRadius: 4,
-                                cursor: "pointer"
+                                background: "#36ce22ff",
+                                color: "#fff",
+                                cursor: "pointer",
+                                fontSize: "14px",
+                                width: "100%",
+                                boxShadow: "inset 4px 4px 6px #1fa00eff, inset -4px -4px 6px #90fc82ff",
+                                transition: "all 0.1s",
                             }}
                         >
-                            Close
+                            Save & Close
                         </button>
                     </div>
                 </div>

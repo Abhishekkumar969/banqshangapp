@@ -1,10 +1,12 @@
 // src/pages/CateringAssign.jsx
 import React, { useEffect, useState } from "react";
 import { db } from "../firebaseConfig";
-import { collection, onSnapshot, doc, setDoc } from "firebase/firestore";
+import { getDoc, collection, onSnapshot, doc, setDoc } from "firebase/firestore";
 import "../styles/VendorTable.css";
 import BackButton from "../components/BackButton";
 import { useNavigate } from "react-router-dom";
+import { getAuth } from "firebase/auth";
+import BottomNavigationBar from "../components/BottomNavigationBar";
 
 const CateringAssign = () => {
     const [prebookings, setPrebookings] = useState([]);
@@ -13,6 +15,27 @@ const CateringAssign = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [sortOrder, setSortOrder] = useState("desc");
     const navigate = useNavigate();
+    const [userAppType, setUserAppType] = useState(null);
+
+    useEffect(() => {
+        const fetchUserAppType = async () => {
+            const auth = getAuth();
+            const user = auth.currentUser;
+            if (user) {
+                try {
+                    const userRef = doc(db, 'usersAccess', user.email);
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        const data = userSnap.data();
+                        setUserAppType(data.accessToApp);
+                    }
+                } catch (err) {
+                    console.error("Error fetching user app type:", err);
+                }
+            }
+        };
+        fetchUserAppType();
+    }, []);
 
     const convertToISTDate = (dateStr) => {
         if (!dateStr) return "-";
@@ -218,236 +241,311 @@ const CateringAssign = () => {
     });
 
     return (
-        <div className="vendor-table-container" style={{ padding: "40px 20px" }}>
-            <BackButton />
-            <h2>Catering Assignment</h2>
+        <>
 
-            <div style={{ marginBottom: "20px", textAlign: "center" }}>
-                <input
-                    type="text"
-                    placeholder="Search by name or date (25-12-2025)"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    style={{
-                        padding: "8px 12px",
-                        width: "300px",
-                        borderRadius: "6px",
-                        border: "1px solid #ccc",
-                    }}
-                />
-            </div>
+            <div className="vendor-table-container" style={{ padding: "40px 20px" }}>
+                <BackButton />
+                <h2>Catering Assignment</h2>
 
-            <div className="catering-table-wrapper">
-                <table className="main-vendor-table">
-                    <thead>
-                        <tr>
-                            <th>Sr No</th>
-                            <th>Name</th>
-                            <th
-                                onClick={() =>
-                                    setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-                                }
-                                style={{ cursor: "pointer" }}
-                            >
-                                Event Date {sortOrder === "asc" ? "⬆" : "⬇"}
-                            </th>
-                            <th>Selected Menus</th>
-                            <th>Custom Menu</th>
-                            <th>Meal</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {sortedBookings.map((booking, idx) => (
-                            <tr key={booking.id}>
-                                <td>{sortedBookings.length - idx}</td>
-                                <td>{booking.name}</td>
-                                <td>
-                                    {booking.functionDate
-                                        ? new Date(booking.functionDate).toLocaleDateString(
-                                            "en-GB"
-                                        )
-                                        : ""}
-                                </td>
-                                <td>
-                                    {booking.selectedMenus
-                                        ? Object.entries(booking.selectedMenus).map(
-                                            ([menuKey, menuVal], i) => (
+                <div style={{ marginBottom: "20px", textAlign: "center" }}>
+                    <input
+                        type="text"
+                        placeholder="Search by name or date (25-12-2025)"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{
+                            padding: "8px 12px",
+                            width: "300px",
+                            borderRadius: "6px",
+                            border: "1px solid #ccc",
+                        }}
+                    />
+                </div>
+
+                <div className="catering-table-wrapper">
+                    <table className="main-vendor-table">
+                        <thead>
+                            <tr>
+                                <th>Sr No</th>
+                                <th>Name</th>
+                                <th
+                                    onClick={() =>
+                                        setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+                                    }
+                                    style={{ cursor: "pointer" }}
+                                >
+                                    Event Date {sortOrder === "asc" ? "⬆" : "⬇"}
+                                </th>
+                                <th>Selected Menus</th>
+                                <th>Custom Menu</th>
+                                <th>Meal</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sortedBookings.map((booking, idx) => (
+                                <tr key={booking.id}>
+                                    <td>{sortedBookings.length - idx}</td>
+                                    <td>{booking.name}</td>
+                                    <td>
+                                        {booking.functionDate
+                                            ? new Date(booking.functionDate).toLocaleDateString(
+                                                "en-GB"
+                                            )
+                                            : ""}
+                                    </td>
+                                    <td>
+                                        {booking.selectedMenus
+                                            ? Object.entries(booking.selectedMenus).map(
+                                                ([menuKey, menuVal], i) => (
+                                                    <div key={i}>
+                                                        <b>{menuKey}</b> | Qty: {menuVal.qty} | Rate:
+                                                        ₹{menuVal.rate}
+                                                    </div>
+                                                )
+                                            )
+                                            : "No menus"}
+                                    </td>
+                                    <td>
+                                        {booking.customMenuCharges &&
+                                            booking.customMenuCharges.length > 0 ? (
+                                            booking.customMenuCharges.map((menuVal, i) => (
                                                 <div key={i}>
-                                                    <b>{menuKey}</b> | Qty: {menuVal.qty} | Rate:
+                                                    <b>{menuVal.name}</b> | Qty: {menuVal.qty} | Rate:
                                                     ₹{menuVal.rate}
                                                 </div>
-                                            )
-                                        )
-                                        : "No menus"}
-                                </td>
-                                <td>
-                                    {booking.customMenuCharges &&
-                                        booking.customMenuCharges.length > 0 ? (
-                                        booking.customMenuCharges.map((menuVal, i) => (
-                                            <div key={i}>
-                                                <b>{menuVal.name}</b> | Qty: {menuVal.qty} | Rate:
-                                                ₹{menuVal.rate}
-                                            </div>
-                                        ))
-                                    ) : (
-                                        ""
-                                    )}
-                                </td>
+                                            ))
+                                        ) : (
+                                            ""
+                                        )}
+                                    </td>
 
-                                <td>
-                                    {booking.meals ? (
-                                        <>
-                                            {Object.entries(booking.meals).map(([day, dayMeals]) => {
-                                                if (day === "No. of days") return null;
-                                                return (
-                                                    <div key={day} style={{ marginBottom: "10px" }}>
+                                    <td>
+                                        {booking.meals ? (
+                                            <>
+                                                {Object.entries(booking.meals).map(([day, dayMeals]) => {
+                                                    if (day === "No. of days") return null;
+                                                    return (
+                                                        <div key={day} style={{ marginBottom: "10px" }}>
 
-                                                        <strong style={{ borderBottom: '1px dashed red', marginBottom: '5px' }}>
-                                                            {day} (
-                                                            {(() => {
-                                                                const d = new Date(dayMeals.date);
-                                                                const day = String(d.getDate()).padStart(2, '0');
-                                                                const month = String(d.getMonth() + 1).padStart(2, '0');
-                                                                const year = d.getFullYear();
-                                                                return `${day}-${month}-${year}`;
-                                                            })()}
-                                                            ):
-                                                        </strong>
+                                                            <strong style={{ borderBottom: '1px dashed red', marginBottom: '5px' }}>
+                                                                {day} (
+                                                                {(() => {
+                                                                    const d = new Date(dayMeals.date);
+                                                                    const day = String(d.getDate()).padStart(2, '0');
+                                                                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                                                                    const year = d.getFullYear();
+                                                                    return `${day}-${month}-${year}`;
+                                                                })()}
+                                                                ):
+                                                            </strong>
 
-                                                        {Object.entries(dayMeals).map(([mealName, mealDetails]) => {
-                                                            if (mealName === "date") return null;
-                                                            return (
-                                                                <div key={mealName} style={{ paddingLeft: "10px" }}>
-                                                                    <b style={{ color: 'red' }} >{mealName}</b> | <b> {mealDetails.option} </b> | Pax: <b> {mealDetails.pax} </b>
-                                                                    | Rate: <b> ₹{mealDetails.rate} </b> | Start: <b>{convertToIST12Hour(mealDetails.startTime)}</b> | End: <b>{convertToIST12Hour(mealDetails.endTime)}</b> |
-                                                                    <b style={{ color: 'green' }} >  Total: ₹{mealDetails.total} </b>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                );
-                                            })}
-                                        </>
-                                    ) : (
-                                        "No meals"
-                                    )}
-                                </td>
+                                                            {Object.entries(dayMeals).map(([mealName, mealDetails]) => {
+                                                                if (mealName === "date") return null;
+                                                                return (
+                                                                    <div key={mealName} style={{ paddingLeft: "10px" }}>
+                                                                        <b style={{ color: 'red' }} >{mealName}</b> | <b> {mealDetails.option} </b> | Pax: <b> {mealDetails.pax} </b>
+                                                                        | Rate: <b> ₹{mealDetails.rate} </b> | Start: <b>{convertToIST12Hour(mealDetails.startTime)}</b> | End: <b>{convertToIST12Hour(mealDetails.endTime)}</b> |
+                                                                        <b style={{ color: 'green' }} >  Total: ₹{mealDetails.total} </b>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </>
+                                        ) : (
+                                            "No meals"
+                                        )}
+                                    </td>
 
-                                <td>
-                                    <button
-                                        onClick={() => {
-                                            setAssignments((prev) => ({
-                                                ...prev,
-                                                [booking.id]: {
-                                                    general: {
-                                                        bookedOn: booking.bookedOn ||
-                                                            new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().split("T")[0],
-                                                        CateringAssignName: booking.CateringAssignName || "",
-                                                        CateringAssignNumber: booking.CateringAssignNumber || "",
+                                    <td>
+                                        <button
+                                            onClick={() => {
+                                                setAssignments((prev) => ({
+                                                    ...prev,
+                                                    [booking.id]: {
+                                                        general: {
+                                                            bookedOn: booking.bookedOn ||
+                                                                new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().split("T")[0],
+                                                            CateringAssignName: booking.CateringAssignName || "",
+                                                            CateringAssignNumber: booking.CateringAssignNumber || "",
+                                                        },
+                                                        ...booking.assignedMenus, // keep menu assignments
                                                     },
-                                                    ...booking.assignedMenus, // keep menu assignments
-                                                },
-                                            }));
+                                                }));
 
-                                            setPopupBooking(booking);
-                                        }}
-                                        className={`assign-btn ${booking.assignedMenus &&
-                                            Object.keys(booking.assignedMenus).length > 0
-                                            ? "update-btn"
-                                            : "new-assign-btn"
-                                            }`}
-                                    >
-                                        {booking.assignedMenus &&
-                                            Object.keys(booking.assignedMenus).length > 0
-                                            ? "Update"
-                                            : "Assign"}
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                                                setPopupBooking(booking);
+                                            }}
+                                            className={`assign-btn ${booking.assignedMenus &&
+                                                Object.keys(booking.assignedMenus).length > 0
+                                                ? "update-btn"
+                                                : "new-assign-btn"
+                                                }`}
+                                        >
+                                            {booking.assignedMenus &&
+                                                Object.keys(booking.assignedMenus).length > 0
+                                                ? "Update"
+                                                : "Assign"}
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
 
-            {/* Modal */}
-            {popupBooking && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
-                        {/* ✅ Booked On (IST) */}
-                        <div style={{ marginBottom: "15px" }}>
-                            <div >
-                                <label style={{ marginRight: "8px", fontWeight: "bold", whiteSpace: 'nowrap' }}>Booked On:</label>
-                                <input
-                                    type="date"
-                                    value={assignments[popupBooking.id]?.general?.bookedOn || new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().split("T")[0]}
-                                    onChange={(e) =>
-                                        handleInputChange(popupBooking.id, "general", "bookedOn", e.target.value)
-                                    }
-                                />
-                            </div>
-                        </div>
-
-                        <h2 className="modal-title">🍽 Assign Catering</h2>
-
-                        {/* ✅ Name + Number */}
-                        <div className="menu-block">
-                            <div className="menu-fields">
-                                <div className="field">
-                                    <label>Name</label>
+                {/* Modal */}
+                {popupBooking && (
+                    <div className="modal-overlay">
+                        <div className="modal-content">
+                            {/* ✅ Booked On (IST) */}
+                            <div style={{ marginBottom: "15px" }}>
+                                <div >
+                                    <label style={{ marginRight: "8px", fontWeight: "bold", whiteSpace: 'nowrap' }}>Booked On:</label>
                                     <input
-                                        type="text"
-                                        value={
-                                            assignments[popupBooking.id]?.general
-                                                ?.CateringAssignName ||
-                                            popupBooking.CateringAssignName ||
-                                            ""
-                                        }
+                                        type="date"
+                                        value={assignments[popupBooking.id]?.general?.bookedOn || new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().split("T")[0]}
                                         onChange={(e) =>
-                                            handleInputChange(
-                                                popupBooking.id,
-                                                "general",
-                                                "CateringAssignName",
-                                                e.target.value
-                                            )
+                                            handleInputChange(popupBooking.id, "general", "bookedOn", e.target.value)
                                         }
                                     />
                                 </div>
-                                <div className="field">
-                                    <label>Number</label>
-                                    <input
-                                        type="number"
-                                        value={
-                                            assignments[popupBooking.id]?.general
-                                                ?.CateringAssignNumber ||
-                                            popupBooking.CateringAssignNumber ||
-                                            ""
-                                        }
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                popupBooking.id,
-                                                "general",
-                                                "CateringAssignNumber",
-                                                e.target.value
-                                            )
-                                        }
-                                        onWheel={(e) => e.target.blur()} // ✅ prevent scroll
-                                    />
+                            </div>
+
+                            <h2 className="modal-title">🍽 Assign Catering</h2>
+
+                            {/* ✅ Name + Number */}
+                            <div className="menu-block">
+                                <div className="menu-fields">
+                                    <div className="field">
+                                        <label>Name</label>
+                                        <input
+                                            type="text"
+                                            value={
+                                                assignments[popupBooking.id]?.general
+                                                    ?.CateringAssignName ||
+                                                popupBooking.CateringAssignName ||
+                                                ""
+                                            }
+                                            onChange={(e) =>
+                                                handleInputChange(
+                                                    popupBooking.id,
+                                                    "general",
+                                                    "CateringAssignName",
+                                                    e.target.value
+                                                )
+                                            }
+                                        />
+                                    </div>
+                                    <div className="field">
+                                        <label>Number</label>
+                                        <input
+                                            type="number"
+                                            value={
+                                                assignments[popupBooking.id]?.general
+                                                    ?.CateringAssignNumber ||
+                                                popupBooking.CateringAssignNumber ||
+                                                ""
+                                            }
+                                            onChange={(e) =>
+                                                handleInputChange(
+                                                    popupBooking.id,
+                                                    "general",
+                                                    "CateringAssignNumber",
+                                                    e.target.value
+                                                )
+                                            }
+                                            onWheel={(e) => e.target.blur()} // ✅ prevent scroll
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Selected Menus */}
-                        {popupBooking.selectedMenus && Object.keys(popupBooking.selectedMenus).length > 0 && (
-                            <div className="menus-container">
-                                <h3>Selected Menus</h3>
-                                {Object.entries(popupBooking.selectedMenus).map(
-                                    ([menuKey, menuVal]) => {
+                            {/* Selected Menus */}
+                            {popupBooking.selectedMenus && Object.keys(popupBooking.selectedMenus).length > 0 && (
+                                <div className="menus-container">
+                                    <h3>Selected Menus</h3>
+                                    {Object.entries(popupBooking.selectedMenus).map(
+                                        ([menuKey, menuVal]) => {
+                                            const assigned =
+                                                assignments[popupBooking.id]?.[menuKey] || {};
+                                            return (
+                                                <div key={menuKey} className="menu-block">
+                                                    <h4 className="menu-name">{menuKey}</h4>
+                                                    <div className="menu-fields">
+                                                        <div className="field">
+                                                            <label>Pax</label>
+                                                            <input
+                                                                type="number"
+                                                                value={assigned.qty ?? menuVal.qty ?? ""}
+                                                                onChange={(e) =>
+                                                                    handleInputChange(
+                                                                        popupBooking.id,
+                                                                        menuKey,
+                                                                        "qty",
+                                                                        e.target.value === ""
+                                                                            ? ""
+                                                                            : Number(e.target.value)
+                                                                    )
+                                                                }
+                                                                onWheel={(e) => e.target.blur()} // ✅ prevent scroll
+                                                            />
+                                                        </div>
+                                                        <div className="field">
+                                                            <label>Extra Plates</label>
+                                                            <input
+                                                                type="number"
+                                                                value={assigned.extQty ?? ""}
+                                                                onChange={(e) =>
+                                                                    handleInputChange(
+                                                                        popupBooking.id,
+                                                                        menuKey,
+                                                                        "extQty",
+                                                                        e.target.value === ""
+                                                                            ? ""
+                                                                            : Number(e.target.value)
+                                                                    )
+                                                                }
+                                                                onWheel={(e) => e.target.blur()} // ✅ prevent scroll
+                                                            />
+                                                        </div>
+                                                        <div className="field">
+                                                            <label>Rate (₹)</label>
+                                                            <input
+                                                                type="number"
+                                                                value={assigned.rate ?? menuVal.rate ?? ""}
+                                                                onChange={(e) =>
+                                                                    handleInputChange(
+                                                                        popupBooking.id,
+                                                                        menuKey,
+                                                                        "rate",
+                                                                        e.target.value === ""
+                                                                            ? ""
+                                                                            : Number(e.target.value)
+                                                                    )
+                                                                }
+                                                                onWheel={(e) => e.target.blur()} // ✅ prevent scroll
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                    )}
+                                </div>
+                            )}
+
+                            {/* ✅ Custom Menus */}
+                            {popupBooking.customMenuCharges && popupBooking.customMenuCharges.length > 0 && (
+                                <div className="menus-container">
+                                    <h3>Custom Menus</h3>
+                                    {popupBooking.customMenuCharges.map((menuVal, i) => {
                                         const assigned =
-                                            assignments[popupBooking.id]?.[menuKey] || {};
+                                            assignments[popupBooking.id]?.[`custom-${i}`] || {};
                                         return (
-                                            <div key={menuKey} className="menu-block">
-                                                <h4 className="menu-name">{menuKey}</h4>
+                                            <div key={`custom-${i}`} className="menu-block">
+                                                <h4 className="menu-name">{menuVal.name}</h4>
                                                 <div className="menu-fields">
                                                     <div className="field">
                                                         <label>Pax</label>
@@ -457,7 +555,7 @@ const CateringAssign = () => {
                                                             onChange={(e) =>
                                                                 handleInputChange(
                                                                     popupBooking.id,
-                                                                    menuKey,
+                                                                    `custom-${i}`,
                                                                     "qty",
                                                                     e.target.value === ""
                                                                         ? ""
@@ -475,7 +573,7 @@ const CateringAssign = () => {
                                                             onChange={(e) =>
                                                                 handleInputChange(
                                                                     popupBooking.id,
-                                                                    menuKey,
+                                                                    `custom-${i}`,
                                                                     "extQty",
                                                                     e.target.value === ""
                                                                         ? ""
@@ -493,7 +591,7 @@ const CateringAssign = () => {
                                                             onChange={(e) =>
                                                                 handleInputChange(
                                                                     popupBooking.id,
-                                                                    menuKey,
+                                                                    `custom-${i}`,
                                                                     "rate",
                                                                     e.target.value === ""
                                                                         ? ""
@@ -506,211 +604,142 @@ const CateringAssign = () => {
                                                 </div>
                                             </div>
                                         );
-                                    }
-                                )}
-                            </div>
-                        )}
+                                    })}
+                                </div>
+                            )}
 
-                        {/* ✅ Custom Menus */}
-                        {popupBooking.customMenuCharges && popupBooking.customMenuCharges.length > 0 && (
-                            <div className="menus-container">
-                                <h3>Custom Menus</h3>
-                                {popupBooking.customMenuCharges.map((menuVal, i) => {
-                                    const assigned =
-                                        assignments[popupBooking.id]?.[`custom-${i}`] || {};
-                                    return (
-                                        <div key={`custom-${i}`} className="menu-block">
-                                            <h4 className="menu-name">{menuVal.name}</h4>
-                                            <div className="menu-fields">
-                                                <div className="field">
-                                                    <label>Pax</label>
-                                                    <input
-                                                        type="number"
-                                                        value={assigned.qty ?? menuVal.qty ?? ""}
-                                                        onChange={(e) =>
-                                                            handleInputChange(
-                                                                popupBooking.id,
-                                                                `custom-${i}`,
-                                                                "qty",
-                                                                e.target.value === ""
-                                                                    ? ""
-                                                                    : Number(e.target.value)
-                                                            )
-                                                        }
-                                                        onWheel={(e) => e.target.blur()} // ✅ prevent scroll
-                                                    />
-                                                </div>
-                                                <div className="field">
-                                                    <label>Extra Plates</label>
-                                                    <input
-                                                        type="number"
-                                                        value={assigned.extQty ?? ""}
-                                                        onChange={(e) =>
-                                                            handleInputChange(
-                                                                popupBooking.id,
-                                                                `custom-${i}`,
-                                                                "extQty",
-                                                                e.target.value === ""
-                                                                    ? ""
-                                                                    : Number(e.target.value)
-                                                            )
-                                                        }
-                                                        onWheel={(e) => e.target.blur()} // ✅ prevent scroll
-                                                    />
-                                                </div>
-                                                <div className="field">
-                                                    <label>Rate (₹)</label>
-                                                    <input
-                                                        type="number"
-                                                        value={assigned.rate ?? menuVal.rate ?? ""}
-                                                        onChange={(e) =>
-                                                            handleInputChange(
-                                                                popupBooking.id,
-                                                                `custom-${i}`,
-                                                                "rate",
-                                                                e.target.value === ""
-                                                                    ? ""
-                                                                    : Number(e.target.value)
-                                                            )
-                                                        }
-                                                        onWheel={(e) => e.target.blur()} // ✅ prevent scroll
-                                                    />
-                                                </div>
+                            {/* ✅ Custom Meals */}
+                            {popupBooking.meals && Object.keys(popupBooking.meals).length > 0 && (
+                                <div className="menus-container">
+                                    <h3>Meals</h3>
+
+                                    {Object.entries(popupBooking.meals)
+                                        .filter(([key]) => key !== "No. of days" && key !== "note")
+                                        .map(([dayName, dayMeals], dayIdx) => (
+                                            <div key={dayIdx} className="menu-block">
+                                                <h4>
+                                                    {dayName}
+                                                    ({dayMeals.date ? convertToISTDate(dayMeals.date) : ""})
+                                                </h4>
+
+                                                {/* Meals for that day */}
+                                                {Object.entries(dayMeals)
+                                                    .filter(([mealName]) => mealName !== "date")
+                                                    .map(([mealName, mealDetails], mealIdx) => {
+                                                        const assigned =
+                                                            assignments[popupBooking.id]?.[`${dayName}-${mealName}`] || {};
+
+                                                        return (
+                                                            <div
+                                                                key={mealIdx}
+                                                                className="menu-fields"
+                                                                style={{
+                                                                    display: "flex",
+                                                                    flexWrap: "wrap",
+                                                                    gap: "15px",
+                                                                    marginBottom: "15px",
+                                                                    borderRadius: "5px",
+                                                                    backgroundColor: "#f9f9f9",
+                                                                    alignItems: "center",
+                                                                }}
+                                                            >
+                                                                {/* Meal Name */}
+                                                                <div style={{ flex: "1 1 100%", marginBottom: "5px" }}>
+                                                                    <strong>{mealName}</strong> | Option: {mealDetails.option}
+                                                                </div>
+
+                                                                {/* Inputs in a row */}
+                                                                <div style={{ display: "flex", flex: "1 1 100%", gap: "10px", flexWrap: "wrap" }}>
+                                                                    <div style={{ flex: "1 1 120px", minWidth: "120px" }}>
+                                                                        <label>Pax</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            value={assigned.qty ?? mealDetails.pax ?? ""}
+                                                                            onChange={(e) =>
+                                                                                handleInputChange(
+                                                                                    popupBooking.id,
+                                                                                    `${dayName}-${mealName}`,
+                                                                                    "qty",
+                                                                                    e.target.value === "" ? "" : Number(e.target.value)
+                                                                                )
+                                                                            }
+                                                                            style={{ width: "100%", padding: "5px" }}
+                                                                            onWheel={(e) => e.target.blur()} // ✅ prevent scroll
+                                                                        />
+                                                                    </div>
+
+                                                                    <div style={{ flex: "1 1 120px", minWidth: "120px" }}>
+                                                                        <label>Extra Plates</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            value={assigned.extQty ?? ""}
+                                                                            onChange={(e) =>
+                                                                                handleInputChange(
+                                                                                    popupBooking.id,
+                                                                                    `${dayName}-${mealName}`,
+                                                                                    "extQty",
+                                                                                    e.target.value === "" ? "" : Number(e.target.value)
+                                                                                )
+                                                                            }
+                                                                            style={{ width: "100%", padding: "5px" }}
+                                                                            onWheel={(e) => e.target.blur()} // ✅ prevent scroll
+                                                                        />
+                                                                    </div>
+
+                                                                    <div style={{ flex: "1 1 120px", minWidth: "120px" }}>
+                                                                        <label>Rate (₹)</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            value={assigned.rate ?? mealDetails.rate ?? ""}
+                                                                            onChange={(e) =>
+                                                                                handleInputChange(
+                                                                                    popupBooking.id,
+                                                                                    `${dayName}-${mealName}`,
+                                                                                    "rate",
+                                                                                    e.target.value === "" ? "" : Number(e.target.value)
+                                                                                )
+                                                                            }
+                                                                            style={{ width: "100%", padding: "5px" }}
+                                                                            onWheel={(e) => e.target.blur()} // ✅ prevent scroll
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+
+                                                    })}
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        ))}
+                                </div>
+                            )}
+
+                            <div className="modal-actions">
+                                <button
+                                    className="btn save"
+                                    onClick={() => handleAssign(popupBooking)}
+                                >
+                                    {popupBooking.assignedMenus &&
+                                        Object.keys(popupBooking.assignedMenus).length > 0
+                                        ? "🔄 Update"
+                                        : "💾 Save"}
+                                </button>
+                                <button
+                                    className="btn cancel"
+                                    onClick={() => setPopupBooking(null)}
+                                >
+                                    ❌ Cancel
+                                </button>
                             </div>
-                        )}
 
-                        {/* ✅ Custom Meals */}
-                        {popupBooking.meals && Object.keys(popupBooking.meals).length > 0 && (
-                            <div className="menus-container">
-                                <h3>Meals</h3>
-
-                                {Object.entries(popupBooking.meals)
-                                    .filter(([key]) => key !== "No. of days" && key !== "note")
-                                    .map(([dayName, dayMeals], dayIdx) => (
-                                        <div key={dayIdx} className="menu-block">
-                                            <h4>
-                                                {dayName}
-                                                ({dayMeals.date ? convertToISTDate(dayMeals.date) : ""})
-                                            </h4>
-
-                                            {/* Meals for that day */}
-                                            {Object.entries(dayMeals)
-                                                .filter(([mealName]) => mealName !== "date")
-                                                .map(([mealName, mealDetails], mealIdx) => {
-                                                    const assigned =
-                                                        assignments[popupBooking.id]?.[`${dayName}-${mealName}`] || {};
-
-                                                    return (
-                                                        <div
-                                                            key={mealIdx}
-                                                            className="menu-fields"
-                                                            style={{
-                                                                display: "flex",
-                                                                flexWrap: "wrap",
-                                                                gap: "15px",
-                                                                marginBottom: "15px",
-                                                                borderRadius: "5px",
-                                                                backgroundColor: "#f9f9f9",
-                                                                alignItems: "center",
-                                                            }}
-                                                        >
-                                                            {/* Meal Name */}
-                                                            <div style={{ flex: "1 1 100%", marginBottom: "5px" }}>
-                                                                <strong>{mealName}</strong> | Option: {mealDetails.option}
-                                                            </div>
-
-                                                            {/* Inputs in a row */}
-                                                            <div style={{ display: "flex", flex: "1 1 100%", gap: "10px", flexWrap: "wrap" }}>
-                                                                <div style={{ flex: "1 1 120px", minWidth: "120px" }}>
-                                                                    <label>Pax</label>
-                                                                    <input
-                                                                        type="number"
-                                                                        value={assigned.qty ?? mealDetails.pax ?? ""}
-                                                                        onChange={(e) =>
-                                                                            handleInputChange(
-                                                                                popupBooking.id,
-                                                                                `${dayName}-${mealName}`,
-                                                                                "qty",
-                                                                                e.target.value === "" ? "" : Number(e.target.value)
-                                                                            )
-                                                                        }
-                                                                        style={{ width: "100%", padding: "5px" }}
-                                                                        onWheel={(e) => e.target.blur()} // ✅ prevent scroll
-                                                                    />
-                                                                </div>
-
-                                                                <div style={{ flex: "1 1 120px", minWidth: "120px" }}>
-                                                                    <label>Extra Plates</label>
-                                                                    <input
-                                                                        type="number"
-                                                                        value={assigned.extQty ?? ""}
-                                                                        onChange={(e) =>
-                                                                            handleInputChange(
-                                                                                popupBooking.id,
-                                                                                `${dayName}-${mealName}`,
-                                                                                "extQty",
-                                                                                e.target.value === "" ? "" : Number(e.target.value)
-                                                                            )
-                                                                        }
-                                                                        style={{ width: "100%", padding: "5px" }}
-                                                                        onWheel={(e) => e.target.blur()} // ✅ prevent scroll
-                                                                    />
-                                                                </div>
-
-                                                                <div style={{ flex: "1 1 120px", minWidth: "120px" }}>
-                                                                    <label>Rate (₹)</label>
-                                                                    <input
-                                                                        type="number"
-                                                                        value={assigned.rate ?? mealDetails.rate ?? ""}
-                                                                        onChange={(e) =>
-                                                                            handleInputChange(
-                                                                                popupBooking.id,
-                                                                                `${dayName}-${mealName}`,
-                                                                                "rate",
-                                                                                e.target.value === "" ? "" : Number(e.target.value)
-                                                                            )
-                                                                        }
-                                                                        style={{ width: "100%", padding: "5px" }}
-                                                                        onWheel={(e) => e.target.blur()} // ✅ prevent scroll
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    );
-
-                                                })}
-                                        </div>
-                                    ))}
-                            </div>
-                        )}
-
-                        <div className="modal-actions">
-                            <button
-                                className="btn save"
-                                onClick={() => handleAssign(popupBooking)}
-                            >
-                                {popupBooking.assignedMenus &&
-                                    Object.keys(popupBooking.assignedMenus).length > 0
-                                    ? "🔄 Update"
-                                    : "💾 Save"}
-                            </button>
-                            <button
-                                className="btn cancel"
-                                onClick={() => setPopupBooking(null)}
-                            >
-                                ❌ Cancel
-                            </button>
                         </div>
-
                     </div>
-                </div>
-            )}
+                )}
 
-        </div>
+            </div>
+
+            <div style={{ marginBottom: "50px" }}></div>
+            <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
+        </>
     );
 };
 

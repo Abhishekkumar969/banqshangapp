@@ -86,7 +86,7 @@ const FunctionTypeSelector = ({ selectedType = "", onSelect = () => {} }) => {
           <div className="drawer" onClick={(e) => e.stopPropagation()}>
             <div className="drawer-header">
               <h3>Select Function Type</h3>
-              <button onClick={() => setDrawerOpen(false)}>✕</button>
+              <button style={{backgroundColor:'red'}} onClick={() => setDrawerOpen(false)}>✕</button>
             </div>
 
             {/* ✅ All fetched function types */}
@@ -130,9 +130,11 @@ const FunctionTypeSelector = ({ selectedType = "", onSelect = () => {} }) => {
                 </ul>
               )}
             </div>
+          <div style={{ marginBottom: "70px" }}></div>
           </div>
         </div>
       )}
+
     </div>
   );
 };
