@@ -503,6 +503,11 @@ section,
 
 
 /* ===================== Mobile Tweaks ===================== */
+@media (max-width: 1200px) {
+    .banner-track {
+        margin: 0px 50px !important;
+    }
+}
 
 @media (max-width: 600px) {
     .banner-text {
@@ -519,6 +524,8 @@ section,
     /* .service-box {
         padding: 0px;
     } */
+
+
 
     .service-grid {
         display: grid;
@@ -731,7 +738,16 @@ section,
 .banner-track {
     display: flex;
     transition: transform 1s ease-in-out;
+    /* margin: 0px 280px !important; */
+
 }
+
+@media (min-width: 1250px) and (max-width: 1800px) {
+    .banner-track {
+        margin: 0px 280px !important;
+    }
+}
+
 
 .banner-image {
     min-width: 100%;

@@ -9,12 +9,7 @@ import DownloadPopup from '../pages/DownloadPopup'
 import BackButton from "../components/BackButton";
 import BottomNavigationBar from './BottomNavigationBar';
 
-const bannerImages = [
-  "/assets/1.jpeg",
-  "/assets/2.jpeg",
-  "/assets/3.jpeg",
-  "/assets/4.jpeg",
-];
+const bannerImages = ["/assets/1.jpeg", "/assets/2.jpeg", "/assets/3.jpeg", "/assets/4.jpeg",];
 
 const Prebook = () => {
   const navigate = useNavigate();
