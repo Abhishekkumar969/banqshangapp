@@ -8,7 +8,6 @@ import { db } from "../firebaseConfig";
 import DownloadPopup from '../pages/DownloadPopup'
 import BottomNavigationBar from './BottomNavigationBar';
 
-
 const bannerImages = [
   "/assets/1.jpeg",
   "/assets/2.jpeg",
@@ -52,7 +51,6 @@ const Prebook = () => {
 
     fetchUserData();
   }, []);
-
 
   useEffect(() => {
     const fetchUserName = async () => {
@@ -121,9 +119,8 @@ const Prebook = () => {
 
   return (
     <>
-
-
       <div className="prebook-wrapper">
+
         {/* LogOut */}
         <div style={{
           position: 'fixed',
@@ -175,7 +172,7 @@ const Prebook = () => {
             ))}
           </div>
           <div className="banner-text">
-            Management Gets Easier with Event Management App ✨✨
+            Simplify Banquet Management
           </div>
         </div>
 
@@ -334,9 +331,9 @@ const Prebook = () => {
             </>
           )}
 
+          <div style={{ marginBottom: "150px" }}></div>
         </div>
 
-        <div style={{ marginBottom: "150px" }}></div>
         <CalendarPopup isOpen={showCalendar} onClose={() => setShowCalendar(false)} />
         <DownloadPopup isOpen={showDownload} onClose={() => setShowDownload(false)} />
 

@@ -1,15 +1,15 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// Utility function to define the full navigation configuration based on userAppType
 const getNavConfig = (userAppType) => {
-    // Default config for Admin/Staff (A, D, B, F, G)
+
     let navItems = [
         { label: 'Home', icon: '🏠', path: '/' },
         { label: 'Records', icon: '🗂️', path: '/leadstabcontainer' },
         { label: 'Receipts', icon: '🧾', path: '/MoneyReceipts' },
         { label: 'Profile', icon: '🧑‍💼', path: '/AdminProfile' },
     ];
+
     let centralAction = {
         label: 'Booking',
         icon: '💒',
@@ -56,7 +56,6 @@ const getNavConfig = (userAppType) => {
 
     return { navItems, centralAction };
 };
-
 
 const BottomNavigationBar = ({ userAppType }) => {
     const navigate = useNavigate();

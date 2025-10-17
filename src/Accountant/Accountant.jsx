@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { collection, onSnapshot, doc, updateDoc, getDoc } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
 import { db } from "../firebaseConfig";
 import BackButton from "../components/BackButton";
 import styles from "../styles/accountant.module.css";
 import { useNavigate } from 'react-router-dom';
+import { getAuth } from "firebase/auth";
+import BottomNavigationBar from "../components/BottomNavigationBar";
 
 const AccountantDetails = () => {
     const navigate = useNavigate();
@@ -266,258 +267,261 @@ const AccountantDetails = () => {
     }, []);
 
     return (
-        <div className={styles.container}>
-            <BackButton />
-            <h2 className={styles.title} style={{ marginTop: '40px' }}>Account Records</h2>
+        <>
+            <div className={styles.container}>
+                <BackButton />
+                <h2 className={styles.title} style={{ marginTop: '40px' }}>Account Records</h2>
 
-            {(userAppType === 'A' || userAppType === 'F') && (
-                <>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '10px 0' }}>
-                        <button
-                            onClick={() => navigate('/AccountantForm')}
-                            style={{
-                                padding: '10px 20px',
-                                backgroundColor: '#4CAF50',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '5px',
-                                cursor: 'pointer',
+                {(userAppType === 'A' || userAppType === 'F') && (
+                    <>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '10px 0' }}>
+                            <button
+                                onClick={() => navigate('/AccountantForm')}
+                                style={{
+                                    padding: '10px 20px',
+                                    backgroundColor: '#4CAF50',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '5px',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Go To Cashflow
+                            </button>
+                        </div>
+                    </>
+                )}
+
+                <div className={styles.filterBar}>
+                    <label>
+                        From:{" "}
+                        <input
+                            type="date"
+                            value={fromDate}
+                            onChange={(e) => setFromDate(e.target.value)}
+                            placeholder="Select From"
+                        />
+                    </label>
+                    <label>
+                        To:{" "}
+                        <input
+                            type="date"
+                            value={toDate}
+                            onChange={(e) => setToDate(e.target.value)}
+                            placeholder="Select To"
+                        />
+                    </label>
+
+                    <label>
+                        Financial Year:{" "}
+                        <select
+                            value={fromDate && toDate ? `${fromDate}_${toDate}` : "all_all"}
+                            onChange={(e) => {
+                                const [start, end] = e.target.value.split("_");
+                                if (start === "all" && end === "all") {
+                                    setFromDate("");
+                                    setToDate("");
+                                } else {
+                                    setFromDate(start);
+                                    setToDate(end);
+                                }
                             }}
                         >
-                            Go To Cashflow
-                        </button>
-                    </div>
-                </>
-            )}
+                            <option value="all_all">All</option>
+                            {fyOptions.map((fy, i) => (
+                                <option key={i} value={`${fy.start}_${fy.end}`}>
+                                    {fy.label}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                </div>
 
-            <div className={styles.filterBar}>
-                <label>
-                    From:{" "}
-                    <input
-                        type="date"
-                        value={fromDate}
-                        onChange={(e) => setFromDate(e.target.value)}
-                        placeholder="Select From"
-                    />
-                </label>
-                <label>
-                    To:{" "}
-                    <input
-                        type="date"
-                        value={toDate}
-                        onChange={(e) => setToDate(e.target.value)}
-                        placeholder="Select To"
-                    />
-                </label>
+                <div style={{ marginBottom: "15px", overflowX: "auto" }}>
+                    <table style={{ borderCollapse: "collapse", width: "100%" }}>
+                        <thead>
+                            <tr>
+                                <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid #ccc" }}>Account</th>
+                                <th style={{ textAlign: "right", padding: "8px", borderBottom: "1px solid #ccc" }}>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {Object.keys(totals.userTotals || {}).map((user) => {
+                                if (user.includes("Cash")) return null; // Skip Cash
 
-                <label>
-                    Financial Year:{" "}
-                    <select
-                        value={fromDate && toDate ? `${fromDate}_${toDate}` : "all_all"}
-                        onChange={(e) => {
-                            const [start, end] = e.target.value.split("_");
-                            if (start === "all" && end === "all") {
-                                setFromDate("");
-                                setToDate("");
-                            } else {
-                                setFromDate(start);
-                                setToDate(end);
-                            }
-                        }}
-                    >
-                        <option value="all_all">All</option>
-                        {fyOptions.map((fy, i) => (
-                            <option key={i} value={`${fy.start}_${fy.end}`}>
-                                {fy.label}
-                            </option>
-                        ))}
-                    </select>
-                </label>
-            </div>
+                                let type = "Bank";
+                                if (user.includes("Locker")) type = "Locker";
 
-            <div style={{ marginBottom: "15px", overflowX: "auto" }}>
-                <table style={{ borderCollapse: "collapse", width: "100%" }}>
-                    <thead>
-                        <tr>
-                            <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid #ccc" }}>Account</th>
-                            <th style={{ textAlign: "right", padding: "8px", borderBottom: "1px solid #ccc" }}>Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {Object.keys(totals.userTotals || {}).map((user) => {
-                            if (user.includes("Cash")) return null; // Skip Cash
-
-                            let type = "Bank";
-                            if (user.includes("Locker")) type = "Locker";
-
-                            const color = type === "Locker" ? "#d35400" : "#2c3e50";
-
-                            return (
-                                <tr key={user}>
-                                    <td style={{ padding: "8px", color, textAlign: "left" }}>{user}</td>
-                                    <td style={{ padding: "8px", textAlign: "right", color }}>
-                                        ₹{totals.userTotals[user].toLocaleString()}
-                                    </td>
-                                </tr>
-                            );
-                        })}
-
-                        {(() => {
-                            let lockerTotal = 0;
-                            let bankTotal = 0;
-
-                            Object.keys(totals.userTotals || {}).forEach((user) => {
-                                if (user.includes("Locker")) {
-                                    lockerTotal += totals.userTotals[user];
-                                } else if (!user.includes("Cash")) {
-                                    bankTotal += totals.userTotals[user];
-                                }
-                            });
-
-                            const TotalDistributed = lockerTotal + bankTotal;
-
-                            return (
-                                <>
-                                    <tr style={{ fontWeight: "bold", background: "#f3f2f2ff" }}>
-                                        <td style={{ padding: "8px", textAlign: "left", color: "#d35400" }}>
-                                            Locker Total
-                                        </td>
-                                        <td style={{ padding: "8px", textAlign: "right", color: "#d35400" }}>
-                                            ₹{lockerTotal.toLocaleString()}
-                                        </td>
-                                    </tr>
-                                    <tr style={{ fontWeight: "bold", background: "#ecececff" }}>
-                                        <td style={{ padding: "8px", textAlign: "left", color: "#2c3e50" }}>
-                                            Bank Total
-                                        </td>
-                                        <td style={{ padding: "8px", textAlign: "right", color: "#2c3e50" }}>
-                                            ₹{bankTotal.toLocaleString()}
-                                        </td>
-                                    </tr>
-                                    <tr style={{ fontWeight: "bold", background: "#dcdcdcff" }}>
-                                        <td style={{ padding: "8px", textAlign: "left", fontSize: '15px' }}>Cash Total</td>
-                                        <td style={{ padding: "8px", textAlign: "right", fontSize: '15px' }}>
-                                            ₹{totalCash.toLocaleString()}
-                                        </td>
-                                    </tr>
-                                    <tr style={{ fontWeight: "bold", background: "#d0d0d0ff" }}>
-                                        <td style={{ padding: "8px", textAlign: "left", fontSize: '15px' }}>Cash Distributed</td>
-                                        <td style={{ padding: "8px", textAlign: "right", fontSize: '15px' }}>
-                                            ₹{TotalDistributed.toLocaleString()}
-                                        </td>
-                                    </tr>
-                                    <tr style={{ fontWeight: "bold", background: "#d0d0d0ff" }}>
-                                        <td style={{ padding: "8px", textAlign: "left", fontSize: '15px' }}>Cash In Hand</td>
-                                        <td style={{ padding: "8px", textAlign: "right", fontSize: '15px' }}>
-                                            ₹{totalCash.toLocaleString() - TotalDistributed.toLocaleString()}
-                                        </td>
-                                    </tr>
-                                </>
-                            );
-                        })()}
-
-                    </tbody>
-
-                </table>
-            </div>
-
-            <div style={{ overflowY: "auto", overflowX: "auto", maxHeight: "70vh" }}>
-                <table className={styles.table}>
-                    <thead>
-                        <tr>
-                            <th
-                                onClick={handleDateSort}
-                                style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap", }}
-                            >
-                                Created At {sortOrder === "asc" ? "" : ""}
-                            </th>
-                            <th>Name</th>
-                            <th>Credit</th>
-                            <th>Debit</th>
-                            <th>Amount</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {records.length > 0 ? (
-                            records.map((rec, idx) => {
-                                const isDenied = rec.approval === "denied";
-                                const canApprove = isDenied && rec.email === currentUserEmail;
+                                const color = type === "Locker" ? "#d35400" : "#2c3e50";
 
                                 return (
-                                    <tr
-                                        key={idx}
-                                        style={{
-                                            whiteSpace: "nowrap",
-                                            color: rec.type?.toLowerCase() === "credit" ? "green" : "red",
-                                        }}
-                                    >
-                                        {/* Date & Time */}
-                                        <td>
-                                            {rec.createdAt ? toISTDate(rec.createdAt).dateTime : '-'}
+                                    <tr key={user}>
+                                        <td style={{ padding: "8px", color, textAlign: "left" }}>{user}</td>
+                                        <td style={{ padding: "8px", textAlign: "right", color }}>
+                                            ₹{totals.userTotals[user].toLocaleString()}
                                         </td>
-
-                                        {/* Name & User Type */}
-                                        <td style={{ textAlign: "left" }}>
-                                            {rec.name} - ({rec.userType})
-                                        </td>
-
-                                        {/* Type Columns */}
-                                        <td>{rec.type === "Credit" ? rec.type : ""}</td>
-                                        <td>{rec.type === "Debit" ? rec.type : ""}</td>
-
-                                        {/* Amount & Approval */}
-                                        <td>
-                                            ₹{rec.amount || "-"}{" "}
-                                            {isDenied && !canApprove && (
-                                                <span
-                                                    style={{
-                                                        background: "red",
-                                                        color: "white",
-                                                        padding: "5px 7px",
-                                                        borderRadius: "7px",
-                                                        marginLeft: "10px",
-                                                        display: "inline-block",
-                                                    }}
-                                                >
-                                                    Not Accepted
-                                                </span>
-                                            )}
-                                            {canApprove && (
-                                                <button
-                                                    className={styles.approveBtn}
-                                                    onClick={() => handleApprove(rec)}
-                                                    style={{
-                                                        background: "green",
-                                                        color: "white",
-                                                        padding: "5px 10px",
-                                                        borderRadius: "5px",
-                                                        border: "none",
-                                                        marginLeft: "10px",
-                                                        cursor: "pointer",
-                                                    }}
-                                                >
-                                                    Accept
-                                                </button>
-                                            )}
-                                        </td>
-
-                                        {/* Description */}
-                                        <td>{rec.description || "-"}</td>
                                     </tr>
                                 );
-                            })
-                        ) : (
+                            })}
+
+                            {(() => {
+                                let lockerTotal = 0;
+                                let bankTotal = 0;
+
+                                Object.keys(totals.userTotals || {}).forEach((user) => {
+                                    if (user.includes("Locker")) {
+                                        lockerTotal += totals.userTotals[user];
+                                    } else if (!user.includes("Cash")) {
+                                        bankTotal += totals.userTotals[user];
+                                    }
+                                });
+
+                                const TotalDistributed = lockerTotal + bankTotal;
+
+                                return (
+                                    <>
+                                        <tr style={{ fontWeight: "bold", background: "#f3f2f2ff" }}>
+                                            <td style={{ padding: "8px", textAlign: "left", color: "#d35400" }}>
+                                                Locker Total
+                                            </td>
+                                            <td style={{ padding: "8px", textAlign: "right", color: "#d35400" }}>
+                                                ₹{lockerTotal.toLocaleString()}
+                                            </td>
+                                        </tr>
+                                        <tr style={{ fontWeight: "bold", background: "#ecececff" }}>
+                                            <td style={{ padding: "8px", textAlign: "left", color: "#2c3e50" }}>
+                                                Bank Total
+                                            </td>
+                                            <td style={{ padding: "8px", textAlign: "right", color: "#2c3e50" }}>
+                                                ₹{bankTotal.toLocaleString()}
+                                            </td>
+                                        </tr>
+                                        <tr style={{ fontWeight: "bold", background: "#dcdcdcff" }}>
+                                            <td style={{ padding: "8px", textAlign: "left", fontSize: '15px' }}>Cash Total</td>
+                                            <td style={{ padding: "8px", textAlign: "right", fontSize: '15px' }}>
+                                                ₹{totalCash.toLocaleString()}
+                                            </td>
+                                        </tr>
+                                        <tr style={{ fontWeight: "bold", background: "#d0d0d0ff" }}>
+                                            <td style={{ padding: "8px", textAlign: "left", fontSize: '15px' }}>Cash Distributed</td>
+                                            <td style={{ padding: "8px", textAlign: "right", fontSize: '15px' }}>
+                                                ₹{TotalDistributed.toLocaleString()}
+                                            </td>
+                                        </tr>
+                                        <tr style={{ fontWeight: "bold", background: "#d0d0d0ff" }}>
+                                            <td style={{ padding: "8px", textAlign: "left", fontSize: '15px' }}>Cash In Hand</td>
+                                            <td style={{ padding: "8px", textAlign: "right", fontSize: '15px' }}>
+                                                ₹{totalCash.toLocaleString() - TotalDistributed.toLocaleString()}
+                                            </td>
+                                        </tr>
+                                    </>
+                                );
+                            })()}
+
+                        </tbody>
+
+                    </table>
+                </div>
+
+                <div style={{ overflowY: "auto", overflowX: "auto", maxHeight: "70vh" }}>
+                    <table className={styles.table}>
+                        <thead>
                             <tr>
-                                <td colSpan="6" style={{ textAlign: "center", padding: "15px" }}>
-                                    No records found
-                                </td>
+                                <th
+                                    onClick={handleDateSort}
+                                    style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap", }}
+                                >
+                                    Created At {sortOrder === "asc" ? "" : ""}
+                                </th>
+                                <th>Name</th>
+                                <th>Credit</th>
+                                <th>Debit</th>
+                                <th>Amount</th>
+                                <th>Description</th>
                             </tr>
-                        )}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {records.length > 0 ? (
+                                records.map((rec, idx) => {
+                                    const isDenied = rec.approval === "denied";
+                                    const canApprove = isDenied && rec.email === currentUserEmail;
+
+                                    return (
+                                        <tr
+                                            key={idx}
+                                            style={{
+                                                whiteSpace: "nowrap",
+                                                color: rec.type?.toLowerCase() === "credit" ? "green" : "red",
+                                            }}
+                                        >
+                                            {/* Date & Time */}
+                                            <td>
+                                                {rec.createdAt ? toISTDate(rec.createdAt).dateTime : '-'}
+                                            </td>
+
+                                            {/* Name & User Type */}
+                                            <td style={{ textAlign: "left" }}>
+                                                {rec.name} - ({rec.userType})
+                                            </td>
+
+                                            {/* Type Columns */}
+                                            <td>{rec.type === "Credit" ? rec.type : ""}</td>
+                                            <td>{rec.type === "Debit" ? rec.type : ""}</td>
+
+                                            {/* Amount & Approval */}
+                                            <td>
+                                                ₹{rec.amount || "-"}{" "}
+                                                {isDenied && !canApprove && (
+                                                    <span
+                                                        style={{
+                                                            background: "red",
+                                                            color: "white",
+                                                            padding: "5px 7px",
+                                                            borderRadius: "7px",
+                                                            marginLeft: "10px",
+                                                            display: "inline-block",
+                                                        }}
+                                                    >
+                                                        Not Accepted
+                                                    </span>
+                                                )}
+                                                {canApprove && (
+                                                    <button
+                                                        className={styles.approveBtn}
+                                                        onClick={() => handleApprove(rec)}
+                                                        style={{
+                                                            background: "green",
+                                                            color: "white",
+                                                            padding: "5px 10px",
+                                                            borderRadius: "5px",
+                                                            border: "none",
+                                                            marginLeft: "10px",
+                                                            cursor: "pointer",
+                                                        }}
+                                                    >
+                                                        Accept
+                                                    </button>
+                                                )}
+                                            </td>
+
+                                            {/* Description */}
+                                            <td>{rec.description || "-"}</td>
+                                        </tr>
+                                    );
+                                })
+                            ) : (
+                                <tr>
+                                    <td colSpan="6" style={{ textAlign: "center", padding: "15px" }}>
+                                        No records found
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
+            <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
+        </>
     );
 
 };

@@ -1,6 +1,6 @@
 .booking-lead-container {
     margin: 30px;
-    margin-top: 80px;
+    margin-top: 100px;
     padding: 30px;
     border: 2px solid #3ce41e;
     background-color: #ffffff;
@@ -317,7 +317,7 @@
     .booking-lead-container {
         padding: 20px;
         margin: 3px;
-        margin-top: 50px;
+        margin-top: 90px;
     }
 
     .booking-lead-container h2 {
@@ -333,6 +333,9 @@
     .form-group input[type="text"],
     input[type="number"],
     input[type="date"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="time"],
     select {
         padding: 1px 10px !important;
     }
@@ -346,7 +349,7 @@
         font-size: 13px;
         display: flex;
         align-items: center;
-        color: #333;
+        color: #000000;
     }
 
     .DateOfFn {
@@ -416,10 +419,3 @@
         transform: translateX(0);
     }
 }
-
-
-
-
-
-
-

@@ -79,22 +79,42 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
     return (
         <>
             {/* Enquiry Date */}
-            <div style={{ position: "absolute", top: "60px", right: "30px", zIndex: 999 }}>
+            <div
+                style={{
+                    position: "absolute", top: "60px", right: "30px",
+                    zIndex: 999,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                }}
+            >
+                <label
+                    style={{
+                        fontWeight: 600,
+                        fontSize: "14px",
+                        color: "#333",
+                        whiteSpace: "nowrap",
+                        textTransform: 'uppercase'
+                    }}
+                >
+                    Booking on:
+                </label>
                 <input
                     type="date"
                     name="enquiryDate"
                     value={form.enquiryDate}
                     onChange={handleChange}
                     style={{
-                        padding: "6px 20px",
+                        padding: "6px 12px",
                         borderRadius: "4px",
                         fontSize: "14px",
-                        fontWeight: '600',
+                        fontWeight: 600,
                         color: 'red',
                         boxShadow: "1px 1px 2px rgba(111, 111, 111, 1)",
                     }}
                 />
             </div>
+
 
             {/* Customer Name */}
             <div className="form-group">
@@ -126,7 +146,7 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
 
             {/* Contact Numbers */}
             <div className="form-group">
-                <label>Contact Number 1</label>
+                <label>Mobile 1</label>
                 <input
                     type="tel"
                     name="mobile1"
@@ -138,7 +158,7 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
             </div>
 
             <div className="form-group">
-                <label>Contact Number 2</label>
+                <label>Mobile 2</label>
                 <input
                     type="tel"
                     name="mobile2"
@@ -241,7 +261,7 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
                         fontSize: '14px',
                         display: 'flex',
                         boxShadow: 'inset 2px 2px 5px rgba(255, 255, 255, 0.8), inset -2px -2px 5px #00000045',
-                        color: 'black'
+                        color: form.functionDate ? 'black' : 'white',
                     }}
                 >
                     {form.functionDate ? `📅 ${formatDateIST(form.functionDate)}` : "."}

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-
 import { getAuth } from 'firebase/auth';
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
@@ -11,6 +10,21 @@ const BackButton = ({ setActiveTab }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [userAppType, setUserAppType] = useState(null);
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+
+  const handleToggleDropdown = (menu, e) => {
+    if (openDropdown === menu) {
+      setOpenDropdown(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX
+      });
+      setOpenDropdown(menu);
+    }
+  };
 
   const routeToTab = {
     "/": "Dashboard",
@@ -28,14 +42,14 @@ const BackButton = ({ setActiveTab }) => {
     top: 0,
     left: 0,
     width: "100vw",
-    backgroundColor: "#d6d6d6ff",
+    backgroundColor: "#98ccf0ff",
     zIndex: 9999,
     padding: "3px 10px",
     display: "flex",
     alignItems: "center",
     gap: "8px",
     flexWrap: "wrap",
-    boxShadow: "inset -2px -2px 5px rgba(0, 0, 0, 0.53)",
+    boxShadow: "inset -2px -2px 5px #56abe7ff",
   };
 
   const fixedGroupStyle = {
@@ -48,7 +62,7 @@ const BackButton = ({ setActiveTab }) => {
   const scrollGroupStyle = {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
+    gap: "10px",
     overflowX: "auto",
     padding: "4px 0",
     whiteSpace: "nowrap",
@@ -58,8 +72,7 @@ const BackButton = ({ setActiveTab }) => {
   };
 
   const iconButtonStyle = {
-    background: "#f9f9f9",
-    border: "2px solid #d1d1d1",
+    background: "#ffffffff",
     borderRadius: "12px",
     color: "#000",
     cursor: "pointer",
@@ -70,49 +83,40 @@ const BackButton = ({ setActiveTab }) => {
     flex: "0 0 auto",
     whiteSpace: "nowrap",
     fontWeight: 600,
-    boxShadow: "inset -0 -4px 2.2px #18181885",
+    boxShadow: "inset -0 -4px 2.2px #2e6999b4",
     transition: "all 0.15s ease-in-out",
     fontSize: "0.9rem",
-  };
-
-  const iconButtonStyle1 = {
-    background: "transparent",
-    borderRadius: "12px",
-    color: "#000",
-    cursor: "pointer",
-    padding: "6px 5px",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flex: "0 0 auto",
-    whiteSpace: "nowrap",
-    fontWeight: 600,
-    transition: "all 0.15s ease-in-out",
+    position: "relative",
   };
 
   const activeButtonStyle = {
     ...iconButtonStyle,
-    background: "linear-gradient(180deg, #2e6999, #57a2d9)",
+    background: "linear-gradient(180deg, #2e6999, #87c1ebff)",
     color: "#fff",
-    border: "2px solid #ffffff",
   };
 
-  const handleMouseDown = (e) => {
-    e.currentTarget.style.transform = "translateY(2px)";
-    e.currentTarget.style.boxShadow = "0 2px #4b4b4b55";
-  };
-
-  const handleMouseUp = (e) => {
-    e.currentTarget.style.transform = "translateY(0)";
-    e.currentTarget.style.boxShadow = "0 4px #4b4b4b55";
+  const dropdownItemStyle = {
+    padding: "8px 14px",
+    cursor: "pointer",
+    fontWeight: 500,
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    whiteSpace: "nowrap",
   };
 
   const activateOrNavigate = (tabKey, fallbackPath) => {
-    if (typeof setActiveTab === "function") {
-      setActiveTab(tabKey);
-    }
+    if (typeof setActiveTab === "function") setActiveTab(tabKey);
     navigate(fallbackPath);
   };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest(".dropdown-container")) setOpenDropdown(null);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const fetchUserAppType = async () => {
@@ -136,101 +140,240 @@ const BackButton = ({ setActiveTab }) => {
 
   return (
     <div style={containerStyle}>
+
+      {/* Fixed Buttons */}
       <div style={fixedGroupStyle}>
-        <button
-          onClick={() => navigate("/")}
-          style={iconButtonStyle1}
-          title="Home"
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
-        >
+        <button onClick={() => navigate("/")} style={{ ...iconButtonStyle, background: "#f9f9f9", border: "none" }} title="Home">
           <ArrowLeft size={18} />
         </button>
-
-        <button
-          onClick={() => window.location.reload()}
-          style={iconButtonStyle1}
-          title="Refresh"
-        >
-          <RefreshCw size={22} />
+        <button onClick={() => window.location.reload()} style={{ ...iconButtonStyle, background: "#f9f9f9", border: "none" }} title="Refresh">
+          <RefreshCw size={18} />
         </button>
       </div>
 
-      <div ref={scrollRef} style={scrollGroupStyle} className="hide-scrollbar">
+      {/* Scrollable Menu */}
+      <div ref={scrollRef} style={scrollGroupStyle}>
+
+        {/* Dashboard */}
         <button
           onClick={() => activateOrNavigate("Dashboard", "/")}
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
           style={activeTab === "Dashboard" ? activeButtonStyle : iconButtonStyle}
         >
-          Dashboard
+          🏠 Dashboard
         </button>
 
-        {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
-          <>
+        {/* ENQUIRY DROPDOWN */}
+        {(userAppType === 'A' || userAppType === 'B' || userAppType === 'D' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
+          <div
+            className="dropdown-container"
+            style={{ position: "relative" }}
+            onClick={(e) => handleToggleDropdown("enquiry", e)}
+          >
             <button
-              onClick={() => activateOrNavigate("EnquiryDetails", "/EnquiryDetails")}
-              onMouseDown={handleMouseDown}
-              onMouseUp={handleMouseUp}
-              style={activeTab === "EnquiryDetails" ? activeButtonStyle : iconButtonStyle}
+              style={
+                activeTab === "enquiry"
+                  || location.pathname === "/EnquiryForm"
+                  || location.pathname === "/leadstabcontainer"
+                  ? activeButtonStyle
+                  : iconButtonStyle
+              }
             >
-              Enquiry
+              📨 Enquiry
             </button>
-          </>
+
+            {openDropdown === "enquiry" && (
+              <div
+                style={{
+                  position: "fixed",
+                  // top: dropdownPos.top,
+                  top: "45px",
+                  left: dropdownPos.left,
+                  background: "#fff",
+                  border: "1px solid #ccc",
+                  borderRadius: "10px",
+                  padding: "6px 0",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+                  minWidth: "180px",
+                  zIndex: 999999,
+                }}
+              >
+                <div style={dropdownItemStyle} onClick={() => navigate("/EnquiryForm")}>📨 Enquiry Form</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/leadstabcontainer")}>🗂️ Records</div>
+              </div>
+            )}
+          </div>
         )}
 
-        {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
-          <>
+        {/* LEADS DROPDOWN */}
+        {(userAppType === 'A' || userAppType === 'B' || userAppType === 'D' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
+          <div
+            className="dropdown-container"
+            style={{ position: "relative" }}
+            onClick={(e) => handleToggleDropdown("leads", e)}
+          >
             <button
-              onClick={() => activateOrNavigate("Leads", "/leads")}
-              onMouseDown={handleMouseDown}
-              onMouseUp={handleMouseUp}
-              style={activeTab === "Leads" ? activeButtonStyle : iconButtonStyle}
+              style={
+                activeTab === "leads"
+                  || location.pathname === "/bookingLead"
+                  || location.pathname === "/leadstabcontainer"
+                  ? activeButtonStyle
+                  : iconButtonStyle
+              }
             >
-              Leads
+              🚀 Lead
             </button>
-          </>
+
+            {openDropdown === "leads" && (
+              <div
+                style={{
+                  position: "fixed",
+                  // top: dropdownPos.top,
+                  top: "45px",
+                  left: dropdownPos.left,
+                  background: "#fff",
+                  border: "1px solid #ccc",
+                  borderRadius: "10px",
+                  padding: "6px 0",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+                  minWidth: "180px",
+                  zIndex: 999999,
+                }}
+              >
+                <div style={dropdownItemStyle} onClick={() => navigate("/bookingLead")}>🚀 Lead</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/leadstabcontainer")}>🗂️ Records</div>
+              </div>
+            )}
+          </div>
         )}
 
-        {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
-          <>
+        {/* BookingTable DROPDOWN */}
+        {(userAppType === 'A' || userAppType === 'B' || userAppType === 'D' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
+          <div
+            className="dropdown-container"
+            style={{ position: "relative" }}
+            onClick={(e) => handleToggleDropdown("Bookings", e)}
+          >
             <button
-              onClick={() => activateOrNavigate("Bookings", "/BookingTable")}
-              onMouseDown={handleMouseDown}
-              onMouseUp={handleMouseUp}
-              style={activeTab === "Bookings" ? activeButtonStyle : iconButtonStyle}
+              style={
+                activeTab === "Bookings"
+                  || location.pathname === "/Booking"
+                  || location.pathname === "/leadstabcontainer"
+                  ? activeButtonStyle
+                  : iconButtonStyle
+              }
             >
-              Bookings
+              💒 Booking
             </button>
-          </>
+
+            {openDropdown === "Bookings" && (
+              <div
+                style={{
+                  position: "fixed",
+                  // top: dropdownPos.top,
+                  top: "45px",
+                  left: dropdownPos.left,
+                  background: "#fff",
+                  border: "1px solid #ccc",
+                  borderRadius: "10px",
+                  padding: "6px 0",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+                  minWidth: "180px",
+                  zIndex: 999999,
+                }}
+              >
+                <div style={dropdownItemStyle} onClick={() => navigate("/Booking")}>💒 Bookings</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/leadstabcontainer")}>🗂️ Records</div>
+              </div>
+            )}
+          </div>
         )}
 
-        {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
-          <>
+        {/* RECEIPTS DROPDOWN */}
+        {(userAppType === 'A' || userAppType === 'B' || userAppType === 'D' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
+          <div
+            className="dropdown-container"
+            style={{ position: "relative" }}
+            onClick={(e) => handleToggleDropdown("receipts", e)}
+          >
             <button
-              onClick={() => activateOrNavigate("MoneyReceipts", "/MoneyReceipts")}
-              onMouseDown={handleMouseDown}
-              onMouseUp={handleMouseUp}
-              style={activeTab === "MoneyReceipts" ? activeButtonStyle : iconButtonStyle}
+              style={
+                activeTab === "MoneyReceipts"
+                  || location.pathname === "/MoneyReceipt"
+                  || location.pathname === "/Receipts"
+                  || location.pathname === "/MoneyReceipts"
+                  || location.pathname === "/ApprovalPage"
+                  ? activeButtonStyle
+                  : iconButtonStyle
+              }
             >
-              Receipts
+              🧾 Receipt
             </button>
-          </>
+
+            {openDropdown === "receipts" && (
+              <div
+                style={{
+                  position: "fixed",
+                  // top: dropdownPos.top,
+                  top: "45px",
+                  left: dropdownPos.left,
+                  background: "#fff",
+                  border: "1px solid #ccc",
+                  borderRadius: "10px",
+                  padding: "6px 0",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+                  minWidth: "180px",
+                  zIndex: 999999,
+                }}
+              >
+                <div style={dropdownItemStyle} onClick={() => navigate("/MoneyReceipt")}>🧾 Receipt</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/Receipts")}>🎟️ Voucher</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/MoneyReceipts")}>📚 Records</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/ApprovalPage")}>✅ Approve</div>
+              </div>
+            )}
+          </div>
         )}
 
-        {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
-          <>
+        {/* ACCOUNTANT DROPDOWN */}
+        {(userAppType === 'A' || userAppType === 'B' || userAppType === 'D' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
+          <div
+            className="dropdown-container"
+            style={{ position: "relative" }}
+            onClick={(e) => handleToggleDropdown("accounts", e)}
+          >
             <button
-              onClick={() => activateOrNavigate("Accountant", "/Accountant")}
-              onMouseDown={handleMouseDown}
-              onMouseUp={handleMouseUp}
-              style={activeTab === "Accountant" ? activeButtonStyle : iconButtonStyle}
-            >
-              Accounts
+              style={
+                activeTab === "Accountant" || location.pathname === "/AccountantForm"
+                  ? activeButtonStyle
+                  : iconButtonStyle
+              }            >
+              💸 Accounts
             </button>
-          </>
+
+            {openDropdown === "accounts" && (
+              <div
+                style={{
+                  position: "fixed",
+                  // top: dropdownPos.top,
+                  top: "45px",
+                  left: dropdownPos.left,
+                  background: "#fff",
+                  border: "1px solid #ccc",
+                  borderRadius: "10px",
+                  padding: "6px 0",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+                  minWidth: "180px",
+                  zIndex: 999999,
+                }}
+              >
+                <div style={dropdownItemStyle} onClick={() => navigate("/AccountantForm")}>💸 Cashflow</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/Accountant")}>📇 Accounts</div>
+              </div>
+            )}
+          </div>
         )}
 
+        <div style={{ marginRight: "80px" }}></div>
       </div>
     </div>
   );

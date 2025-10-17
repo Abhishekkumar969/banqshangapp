@@ -11,8 +11,9 @@ import { db } from '../firebaseConfig';
 import { collection, Timestamp, doc, setDoc, updateDoc, deleteField, getDoc } from 'firebase/firestore';
 import BackButton from '../components/BackButton';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getAuth } from "firebase/auth";
 import { query, where, getDocs } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+import BottomNavigationBar from "../components/BottomNavigationBar";
 
 const BookingLead = () => {
     const [form, setForm] = useState({
@@ -34,7 +35,6 @@ const BookingLead = () => {
         mobile2: '',
         dayNight: 'Night',
     });
-
     const [selectedMenus, setSelectedMenus] = useState({});
     const [selectedItems, setSelectedItems] = useState([]);
     const [advancePayments, setAdvancePayments] = useState([]);
@@ -63,6 +63,27 @@ const BookingLead = () => {
     const location = useLocation();
     const auth = getAuth();
     const currentUser = auth.currentUser;
+
+    const [userAppType, setUserAppType] = useState(null);
+    useEffect(() => {
+        const fetchUserAppType = async () => {
+            const auth = getAuth();
+            const user = auth.currentUser;
+            if (user) {
+                try {
+                    const userRef = doc(db, 'usersAccess', user.email);
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        const data = userSnap.data();
+                        setUserAppType(data.accessToApp);
+                    }
+                } catch (err) {
+                    console.error("Error fetching user app type:", err);
+                }
+            }
+        };
+        fetchUserAppType();
+    }, []);
 
     // Toast handler
     const triggerToast = () => {
@@ -262,85 +283,87 @@ const BookingLead = () => {
         }
     }, [location.state]);
 
-
     return (
-        <div className="booking-lead-container">
-            <BackButton />
+        <>
+            <div className="booking-lead-container">
+                <BackButton />
 
-            <h2>EVENT BOOKING ESTIMATE</h2>
-            <form className="form-section" onSubmit={handleSubmit}>
-                <LeadForm currentUserEmail={currentUser?.email} ref={leadFormRef} form={form} handleChange={handleChange} setForm={setForm} />
-                <BookingAmenities selectedItems={selectedItems} setSelectedItems={setSelectedItems} />
-                <CustomChargeItems
-                    ref={customItemsRef}
-                    customItems={customItems}
-                    setCustomItems={setCustomItems}
-                />
+                <h2>EVENT BOOKING ESTIMATE</h2>
+                <form className="form-section" onSubmit={handleSubmit}>
+                    <LeadForm currentUserEmail={currentUser?.email} ref={leadFormRef} form={form} handleChange={handleChange} setForm={setForm} />
+                    <BookingAmenities selectedItems={selectedItems} setSelectedItems={setSelectedItems} />
+                    <CustomChargeItems
+                        ref={customItemsRef}
+                        customItems={customItems}
+                        setCustomItems={setCustomItems}
+                    />
 
-                <CustomMenuCharges
-                    ref={customMenuRef}
-                    menuCharges={customMenuCharges}
-                    setMenuCharges={setCustomMenuCharges}
-                />
+                    <CustomMenuCharges
+                        ref={customMenuRef}
+                        menuCharges={customMenuCharges}
+                        setMenuCharges={setCustomMenuCharges}
+                    />
 
-                <FoodMenuSelection
-                    selectedMenus={selectedMenus}
-                    setSelectedMenus={setSelectedMenus}
-                    noOfPlates={form.noOfPlates}
-                    extraPlates={form.extraPlates}
-                    editingMode={editingMode}
-                />
+                    <FoodMenuSelection
+                        selectedMenus={selectedMenus}
+                        setSelectedMenus={setSelectedMenus}
+                        noOfPlates={form.noOfPlates}
+                        extraPlates={form.extraPlates}
+                        editingMode={editingMode}
+                    />
 
-                <MealSelection
-                    ref={mealRef}
-                    meals={meals}
-                    setMeals={setMeals}
-                    functionDate={form.functionDate}
-                    dayNight={form.dayNight || "Night"}
-                />
+                    <MealSelection
+                        ref={mealRef}
+                        meals={meals}
+                        setMeals={setMeals}
+                        functionDate={form.functionDate}
+                        dayNight={form.dayNight || "Night"}
+                    />
 
-                <LeadSummary
-                    ref={summaryRef}
-                    leadId={lead?.id}
-                    selectedMenus={selectedMenus}
-                    hallCharges={form.hallCharges}
+                    <LeadSummary
+                        ref={summaryRef}
+                        leadId={lead?.id}
+                        selectedMenus={selectedMenus}
+                        hallCharges={form.hallCharges}
 
-                    gstBase={gstBase}
-                    setGstBase={setGstBase}
+                        gstBase={gstBase}
+                        setGstBase={setGstBase}
 
-                    totalAmount={totalAmount}
+                        totalAmount={totalAmount}
 
-                    discount={discount}
-                    setDiscount={setDiscount}
+                        discount={discount}
+                        setDiscount={setDiscount}
 
-                    commission={commission}
-                    setCommission={setCommission}
+                        commission={commission}
+                        setCommission={setCommission}
 
-                    setTotalAmount={setTotalAmount}
+                        setTotalAmount={setTotalAmount}
 
-                    gstAmount={gstAmount}
-                    setGstAmount={setGstAmount}
+                        gstAmount={gstAmount}
+                        setGstAmount={setGstAmount}
 
-                    grandTotal={grandTotal}
-                    setGrandTotal={setGrandTotal}
+                        grandTotal={grandTotal}
+                        setGrandTotal={setGrandTotal}
 
-                    customItems={customItems}
-                    customMenuCharges={customMenuCharges}
-                    meals={meals}
-                />
-                <button type="submit" className="save-button" disabled={isSaving}>
-                    {lead?.id ? (isSaving ? "Updating..." : "Update") : (isSaving ? "Saving..." : "Save")}
-                </button>
-            </form>
+                        customItems={customItems}
+                        customMenuCharges={customMenuCharges}
+                        meals={meals}
+                    />
+                    <button type="submit" className="save-button" disabled={isSaving}>
+                        {lead?.id ? (isSaving ? "Updating..." : "Update") : (isSaving ? "Saving..." : "Save")}
+                    </button>
+                </form>
 
-            {/* ✅ Toast Notification */}
-            {showToast && (
-                <div className="custom-toast">
-                    Please fill all required fields.
-                    <div className="toast-progress"></div>
-                </div>
-            )}
-        </div>
+                {/* ✅ Toast Notification */}
+                {showToast && (
+                    <div className="custom-toast">
+                        Please fill all required fields.
+                        <div className="toast-progress"></div>
+                    </div>
+                )}
+            </div>
+            <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
+        </>
     );
 };
 

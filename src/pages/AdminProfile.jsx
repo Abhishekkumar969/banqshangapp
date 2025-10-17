@@ -157,7 +157,7 @@ const AdminProfile = () => {
 
             <div className={styles.emailContainer}>
               {adminProfile?.email && (
-                <p className={styles.emailLine}>
+                <p className={styles.emailLine} >
                   📧 <strong>Email:</strong> {adminProfile.email}
                 </p>
               )}
@@ -263,7 +263,7 @@ const AdminProfile = () => {
                           </div>
                         </div>
 
-                        <div style={{ marginLeft: "10px" }}>
+                        <div style={{ marginLeft: "10px", marginBottom: '10px' }}>
                           {field === "termsAndConditions" ? (
                             <div
                               style={{
@@ -319,14 +319,15 @@ const AdminProfile = () => {
                   }}
                   style={{
                     fontSize: "1.2rem",
-                    background: "transparent",
+                    background: "#2e6999",
+                    padding: "2px 15px",
                     border: "none",
                     cursor: "pointer",
-                    // transform: venueMenuOpen ? "rotate(90deg)" : "none",
-                    transition: "transform 0.2s ease",
+                    transform: venueMenuOpen ? "rotate(180deg)" : "none",
+                    transition: "transform 0.3s ease",
                   }}
                 >
-                  {venueMenuOpen ? "▲" : ">"}
+                  {venueMenuOpen ? "x" : ">"}
                 </button>
               </div>
 
@@ -344,7 +345,7 @@ const AdminProfile = () => {
                     key={ft}
                     style={{
                       padding: "4px 8px",
-                      backgroundColor: "#e0f7fa",
+                      backgroundColor: "#4ebecdff",
                       borderRadius: "6px",
                       fontSize: "0.85rem",
                     }}
@@ -415,7 +416,10 @@ const AdminProfile = () => {
                   {hasVenueChanges && (
                     <button
                       type="button"
-                      style={{ marginTop: "15px" }}
+                      style={{
+                        fontSize: "1.1rem", background: "#2e6999",
+                        padding: "2px 15px", borderRadius: '12px', marginTop: '15px'
+                      }}
                       onClick={async () => {
                         if (!adminProfile) return;
                         const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
@@ -462,14 +466,15 @@ const AdminProfile = () => {
                   }}
                   style={{
                     fontSize: "1.2rem",
-                    background: "transparent",
+                    background: "#2e6999",
+                    padding: "2px 15px",
                     border: "none",
                     cursor: "pointer",
-                    transform: functionMenuOpen ? "rotate(90deg)" : "none",
-                    transition: "transform 0.2s ease",
+                    transform: functionMenuOpen ? "rotate(180deg)" : "none",
+                    transition: "transform 0.3s ease",
                   }}
                 >
-                  {functionMenuOpen ? "▲" : ">"}
+                  {functionMenuOpen ? "x" : ">"}
                 </button>
               </div>
 
@@ -556,7 +561,10 @@ const AdminProfile = () => {
                   {hasFunctionChanges && (
                     <button
                       type="button"
-                      style={{ marginTop: "15px" }}
+                      style={{
+                        fontSize: "1.1rem", background: "#2e6999",
+                        padding: "2px 15px", borderRadius: '12px', marginTop: '15px'
+                      }}
                       onClick={async () => {
                         if (!adminProfile) return;
                         const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
@@ -580,7 +588,6 @@ const AdminProfile = () => {
                 marginBottom: "20px",
                 paddingBottom: "15px",
                 borderBottom: "1px dashed #cbd5e1",
-                borderTop: "1px dashed #cbd5e1",
               }}
             >
               <div
@@ -605,14 +612,15 @@ const AdminProfile = () => {
                   }}
                   style={{
                     fontSize: "1.2rem",
-                    background: "transparent",
+                    background: "#2e6999",
+                    padding: "2px 15px",
                     border: "none",
                     cursor: "pointer",
-                    transform: amenitiesMenuOpen ? "rotate(90deg)" : "none",
-                    transition: "transform 0.2s ease",
+                    transform: amenitiesMenuOpen ? "rotate(180deg)" : "none",
+                    transition: "transform 0.3s ease",
                   }}
                 >
-                  {amenitiesMenuOpen ? "▲" : ">"}
+                  {amenitiesMenuOpen ? "x" : ">"}
                 </button>
               </div>
 
@@ -705,7 +713,10 @@ const AdminProfile = () => {
                   {hasAmenitiesChanges && (
                     <button
                       type="button"
-                      style={{ marginTop: "15px" }}
+                      style={{
+                        fontSize: "1.1rem", background: "#2e6999",
+                        padding: "2px 15px", borderRadius: '12px', marginTop: '15px'
+                      }}
                       onClick={async () => {
                         if (!adminProfile) return;
                         const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
@@ -722,7 +733,6 @@ const AdminProfile = () => {
               )}
             </div>
 
-
             {/* ---------- Add-Ons Charges ---------- */}
             <div
               className={styles.fieldRow}
@@ -730,7 +740,6 @@ const AdminProfile = () => {
                 marginBottom: "20px",
                 paddingBottom: "15px",
                 borderBottom: "1px dashed #cbd5e1",
-                borderTop: "1px dashed #cbd5e1",
               }}
             >
               <div
@@ -756,14 +765,15 @@ const AdminProfile = () => {
                   }}
                   style={{
                     fontSize: "1.2rem",
-                    background: "transparent",
+                    background: "#2e6999",
+                    padding: "2px 15px",
                     border: "none",
                     cursor: "pointer",
-                    transform: addonsMenuOpen ? "rotate(90deg)" : "none",
-                    transition: "transform 0.2s ease",
+                    transform: addonsMenuOpen ? "rotate(180deg)" : "none",
+                    transition: "transform 0.3s ease",
                   }}
                 >
-                  {addonsMenuOpen ? "▲" : ">"}
+                  {addonsMenuOpen ? "x" : ">"}
                 </button>
               </div>
 
@@ -849,8 +859,11 @@ const AdminProfile = () => {
 
                   {hasAddonsChanges && (
                     <button
-                      type="button"
-                      style={{ marginTop: "15px" }}
+                      style={{
+                        fontSize: "1.1rem", background: "#2e6999",
+                        padding: "2px 15px", borderRadius: '12px', marginTop: '15px'
+                      }}
+
                       onClick={async () => {
                         if (!adminProfile) return;
                         const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
@@ -874,7 +887,6 @@ const AdminProfile = () => {
                 marginBottom: "20px",
                 paddingBottom: "15px",
                 borderBottom: "1px dashed #cbd5e1",
-                borderTop: "1px dashed #cbd5e1",
               }}
             >
               <div
@@ -901,14 +913,15 @@ const AdminProfile = () => {
                   }}
                   style={{
                     fontSize: "1.2rem",
-                    background: "transparent",
+                    background: "#2e6999",
+                    padding: "2px 15px",
                     border: "none",
                     cursor: "pointer",
-                    transform: menuItemsMenuOpen ? "rotate(90deg)" : "none",
-                    transition: "transform 0.2s ease",
+                    transform: menuItemsMenuOpen ? "rotate(180deg)" : "none",
+                    transition: "transform 0.3s ease",
                   }}
                 >
-                  {menuItemsMenuOpen ? "▲" : ">"}
+                  {menuItemsMenuOpen ? "x" : ">"}
                 </button>
               </div>
 
@@ -991,7 +1004,10 @@ const AdminProfile = () => {
                   {hasMenuItemsChanges && (
                     <button
                       type="button"
-                      style={{ marginTop: "15px" }}
+                      style={{
+                        fontSize: "1.1rem", background: "#2e6999",
+                        padding: "2px 15px", borderRadius: '12px', marginTop: '15px'
+                      }}
                       onClick={async () => {
                         if (!adminProfile) return;
                         const adminProfileRef = doc(db, "usersAccess", adminProfile.id);

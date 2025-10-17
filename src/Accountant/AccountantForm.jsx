@@ -4,6 +4,8 @@ import { db } from "../firebaseConfig";
 import BackButton from "../components/BackButton";
 import styles from "../styles/accountant.module.css";
 import { useNavigate } from "react-router-dom";
+import { getAuth } from "firebase/auth";
+import BottomNavigationBar from "../components/BottomNavigationBar";
 
 const AccountantCashReceipts = () => {
     const [totalCash, setTotalCash] = useState(0);
@@ -20,6 +22,28 @@ const AccountantCashReceipts = () => {
     const [totalLockerBalance, setTotalLockerBalance] = useState(0);
     const [modalUserType, setModalUserType] = useState("");
     const navigate = useNavigate();
+    const [userAppType, setUserAppType] = useState(null);
+
+    useEffect(() => {
+        const fetchUserAppType = async () => {
+            const auth = getAuth();
+            const user = auth.currentUser;
+            if (user) {
+                try {
+                    const userRef = doc(db, 'usersAccess', user.email);
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        const data = userSnap.data();
+                        setUserAppType(data.accessToApp);
+                    }
+                } catch (err) {
+                    console.error("Error fetching user app type:", err);
+                }
+            }
+        };
+        fetchUserAppType();
+    }, []);
+
 
     useEffect(() => {
         const receiptsUnsub = onSnapshot(collection(db, "moneyReceipts"), async (snap) => {
@@ -192,116 +216,119 @@ const AccountantCashReceipts = () => {
     };
 
     return (
-        <div className={styles.container}>
-            <BackButton />
-            <div className={styles.header} style={{ marginTop: '40px' }}>
-                <h2 className={styles.title}>Cashflow</h2>
-            </div>
+        <>
+            <div className={styles.container}>
+                <BackButton />
+                <div className={styles.header} style={{ marginTop: '40px' }}>
+                    <h2 className={styles.title}>Cashflow</h2>
+                </div>
 
-            <div className={styles.cashInHand}>
-                <span>💰 Total Cash Bal A/C: <span> ₹{totalCash.toLocaleString("en-IN")}</span></span>
-                <span>🏦 Total Locker Bal: <span> ₹{totalLockerBalance.toLocaleString("en-IN")}</span></span>
-                <span>💵 Cash in Hand: <span> ₹{cashInHand.toLocaleString("en-IN")}</span></span>
-            </div>
+                <div className={styles.cashInHand}>
+                    <span>💰 Total Cash Bal A/C: <span> ₹{totalCash.toLocaleString("en-IN")}</span></span>
+                    <span>🏦 Total Locker Bal: <span> ₹{totalLockerBalance.toLocaleString("en-IN")}</span></span>
+                    <span>💵 Cash in Hand: <span> ₹{cashInHand.toLocaleString("en-IN")}</span></span>
+                </div>
 
-            <div className={styles.tableWrapper}>
-                <table className={styles.table}>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Amount</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {distribution.map((item, index) => (
-                            <tr key={index} style={{ whiteSpace: 'nowrap' }}>
-                                <td style={{ display: "flex", alignItems: "center", gap: "8px", height: "100%" }}>
-                                    <span
-                                        style={{
-                                            display: "inline-block",
-                                            width: "12px",
-                                            height: "12px",
-                                            borderRadius: "50%",
-                                            backgroundColor: item.hasDenied ? "red" : "transparent",
-                                            flexShrink: 0,
-                                        }}
-                                        title={item.hasDenied ? "Pending approval" : "All approved"}
-                                    ></span>
-                                    <span style={{ lineHeight: "2" }}>{item.name} - ({item.type})</span>
-                                </td>
-
-                                <td>₹{item.amount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</td>
-                                <td>
-                                    <button
-                                        className={styles.creditBtn}
-                                        onClick={() => {
-                                            setModalName(item.name);
-                                            setModalEmail(item.email);
-                                            setModalType("Credit");
-                                            setModalUserType(item.type);
-                                            setShowModal(true);
-                                        }}
-                                    >
-                                        Credit
-                                    </button>
-                                    <button
-                                        className={styles.debitBtn}
-                                        onClick={() => {
-                                            setModalName(item.name);
-                                            setModalEmail(item.email);
-                                            setModalType("Debit");
-                                            setModalUserType(item.type);
-                                            setShowModal(true);
-                                        }}
-                                    >
-                                        Debit
-                                    </button>
-                                </td>
+                <div className={styles.tableWrapper}>
+                    <table className={styles.table}>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Amount</th>
+                                <th>Actions</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            {distribution.map((item, index) => (
+                                <tr key={index} style={{ whiteSpace: 'nowrap' }}>
+                                    <td style={{ display: "flex", alignItems: "center", gap: "8px", height: "100%" }}>
+                                        <span
+                                            style={{
+                                                display: "inline-block",
+                                                width: "12px",
+                                                height: "12px",
+                                                borderRadius: "50%",
+                                                backgroundColor: item.hasDenied ? "red" : "transparent",
+                                                flexShrink: 0,
+                                            }}
+                                            title={item.hasDenied ? "Pending approval" : "All approved"}
+                                        ></span>
+                                        <span style={{ lineHeight: "2" }}>{item.name} - ({item.type})</span>
+                                    </td>
 
-            {showModal && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modal}>
-                        <h3>{modalType} for {modalName}</h3>
-                        {isProcessing && (
-                            <div className={styles.progressWrapper}>
-                                <div className={styles.progressBar} style={{ width: `${progress}%` }} />
+                                    <td>₹{item.amount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</td>
+                                    <td>
+                                        <button
+                                            className={styles.creditBtn}
+                                            onClick={() => {
+                                                setModalName(item.name);
+                                                setModalEmail(item.email);
+                                                setModalType("Credit");
+                                                setModalUserType(item.type);
+                                                setShowModal(true);
+                                            }}
+                                        >
+                                            Credit
+                                        </button>
+                                        <button
+                                            className={styles.debitBtn}
+                                            onClick={() => {
+                                                setModalName(item.name);
+                                                setModalEmail(item.email);
+                                                setModalType("Debit");
+                                                setModalUserType(item.type);
+                                                setShowModal(true);
+                                            }}
+                                        >
+                                            Debit
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                {showModal && (
+                    <div className={styles.modalOverlay}>
+                        <div className={styles.modal}>
+                            <h3>{modalType} for {modalName}</h3>
+                            {isProcessing && (
+                                <div className={styles.progressWrapper}>
+                                    <div className={styles.progressBar} style={{ width: `${progress}%` }} />
+                                </div>
+                            )}
+
+                            <textarea
+                                placeholder="Enter description"
+                                value={modalDescription}
+                                onChange={(e) => setModalDescription(e.target.value)}
+                                className={styles.textArea}
+                            />
+
+                            <input
+                                type="text"
+                                inputMode="decimal"
+                                placeholder="Enter amount"
+                                value={modalAmount}
+                                onChange={(e) => {
+                                    let val = e.target.value.replace(/[^0-9.]/g, "");
+                                    if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
+                                    setModalAmount(val);
+                                }}
+                            />
+
+
+                            <div className={styles.modalActions}>
+                                <button className={styles.saveBtn} onClick={handleTransaction}>Save</button>
+                                <button className={styles.cancelBtn} onClick={() => setShowModal(false)}>Cancel</button>
                             </div>
-                        )}
-
-                        <textarea
-                            placeholder="Enter description"
-                            value={modalDescription}
-                            onChange={(e) => setModalDescription(e.target.value)}
-                            className={styles.textArea}
-                        />
-
-                        <input
-                            type="text"
-                            inputMode="decimal"
-                            placeholder="Enter amount"
-                            value={modalAmount}
-                            onChange={(e) => {
-                                let val = e.target.value.replace(/[^0-9.]/g, "");
-                                if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
-                                setModalAmount(val);
-                            }}
-                        />
-
-
-                        <div className={styles.modalActions}>
-                            <button className={styles.saveBtn} onClick={handleTransaction}>Save</button>
-                            <button className={styles.cancelBtn} onClick={() => setShowModal(false)}>Cancel</button>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )}
+            </div>
+            <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
+        </>
     );
 };
 

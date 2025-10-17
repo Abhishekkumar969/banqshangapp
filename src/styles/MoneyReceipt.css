@@ -225,6 +225,9 @@ select:focus {
     input[type="text"],
     input[type="number"],
     input[type="date"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="time"],
     select {
         width: 100%;
         font-size: 15px;

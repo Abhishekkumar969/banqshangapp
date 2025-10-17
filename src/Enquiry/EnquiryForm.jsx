@@ -2,12 +2,37 @@ import React, { useState, useEffect } from "react";
 import "../styles/Booking.css";
 import CalendarInput from "../pages/CalendarInput";
 import { db } from "../firebaseConfig";
-import { doc, setDoc, serverTimestamp, collection, deleteField } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, collection, deleteField, getDoc } from "firebase/firestore";
 import BackButton from "../components/BackButton";
 import FunctionTypeSelector from "./FunctionTypeSelector";
 import { useLocation } from "react-router-dom";
 
+import { useNavigate } from 'react-router-dom';
+import { getAuth } from "firebase/auth";
+import BottomNavigationBar from "../components/BottomNavigationBar";
+
 const EnquiryPage = () => {
+    const navigate = useNavigate();
+    const [userAppType, setUserAppType] = useState(null);
+    useEffect(() => {
+        const fetchUserAppType = async () => {
+            const auth = getAuth();
+            const user = auth.currentUser;
+            if (user) {
+                try {
+                    const userRef = doc(db, 'usersAccess', user.email);
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        const data = userSnap.data();
+                        setUserAppType(data.accessToApp);
+                    }
+                } catch (err) {
+                    console.error("Error fetching user app type:", err);
+                }
+            }
+        };
+        fetchUserAppType();
+    }, []);
 
     const formatDateIST = (date) => {
         if (!date) return "-";
@@ -43,7 +68,6 @@ const EnquiryPage = () => {
         return `${day}-${month}-${year}`; // DD-MM-YYYY
     };
 
-    // ✅ Get today's date in IST for input[type="date"]
     const getTodayIST = () => {
         const now = new Date();
         const istOffset = 5 * 60 + 30; // minutes
@@ -183,191 +207,197 @@ const EnquiryPage = () => {
         }
     };
 
-
-
     return (
-        <div style={{ color: "black" }}>
-            <BackButton />
+        <>
+            <div style={{ color: "black" }}>
+                <BackButton />
 
-            <form style={{ marginTop: "70px" }} onSubmit={handleSubmit}>
-                <div
-                    style={{
-                        position: "absolute",
-                        top: "60px",
-                        right: "30px",
-                        zIndex: 999,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "flex-end",
-                        backgroundColor: "rgba(255, 255, 255, 0)",
-                    }}
-                >
-                    <input
-                        type="date"
-                        name="enquiryDate"
-                        value={formData.enquiryDate}
-                        onChange={handleChange}
+                <form style={{ marginTop: "70px" }} onSubmit={handleSubmit}>
+                    <div
                         style={{
-                            padding: "6px 20px",
-                            borderRadius: "4px",
-                            fontSize: "14px",
-                            fontWeight: '600',
-                            color: 'red',
-                            boxShadow: "1px 1px 2px rgba(111, 111, 111, 1)",
+                            position: "absolute", top: "60px", right: "30px",
+                            zIndex: 999,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
                         }}
-                    />
-                </div>
-            </form>
-
-            <div className="booking-lead-container">
-                <h2>{enquiry ? "Edit Enquiry" : "New Enquiry"}</h2>
-                <form style={{ marginTop: "0px" }} onSubmit={handleSubmit}>
-
-                    {/* Name */}
-                    <div className="form-group">
-                        <label>Name:</label>
-                        <input type="text" name="name" value={formData.name} onChange={handleChange} />
-                    </div>
-
-                    {/* Mobile 1 */}
-                    <div className={`form-group ${errors.mobile1 ? "section-error" : ""}`}>
-                        <label>Mobile 1*:</label>
-                        <input type="text" name="mobile1" value={formData.mobile1} onChange={handleChange} />
-                        {errors.mobile1 && <span className="error">{errors.mobile1}</span>}
-                    </div>
-
-                    {/* Mobile 2 */}
-                    <div className="form-group">
-                        <label>Mobile 2:</label>
-                        <input type="text" name="mobile2" value={formData.mobile2} onChange={handleChange} />
-                    </div>
-
-                    {/* Email */}
-                    <div className="form-group">
-                        <label>Email ID:</label>
-                        <input type="email" name="email" value={formData.email} onChange={handleChange} />
-                    </div>
-
-                    {/* Pax */}
-                    <div className={`form-group ${errors.pax ? "section-error" : ""}`}>
-                        <label>Pax*:</label>
-                        <input
-                            type="text"
-                            name="pax"
-                            value={formData.pax}
-                            onChange={(e) => {
-                                const onlyNums = e.target.value.replace(/[^0-9]/g, ""); // सिर्फ digits allow
-                                handleChange({ target: { name: "pax", value: onlyNums } });
-                            }}
-                            inputMode="numeric"
-                            placeholder=""
-                        />
-                        {errors.pax && <span className="error">{errors.pax}</span>}
-                    </div>
-
-
-                    {/* Function Type */}
-                    <div className="form-group">
-                        <label>Function Type*:</label>
-                        <FunctionTypeSelector
-                            selectedType={formData.functionType}
-                            onSelect={(type) =>
-                                setFormData((prev) => ({
-                                    ...prev,
-                                    functionType: type,
-                                    // dayNight: typesWithDayNight.includes(type) ? prev.dayNight : "",
-                                }))
-                            }
-                        />
-                        {errors.functionType && <span className="error">{errors.functionType}</span>}
-                    </div>
-
-                    {/* Day/Night */}
-                    <div className="form-group">
-                        <label>Day / Night</label>
-                        <select name="dayNight" value={formData.dayNight || ""} onChange={handleChange}>
-                            <option value="Night">Night</option>
-                            <option value="Day">Day</option>
-                            <option value="Both">Both</option>
-                        </select>
-                    </div>
-                    {/* )} */}
-
-                    {/* Function Date */}
-                    <div className={`form-group ${errors.functionDate ? "section-error" : ""}`}>
-                        <label>Function Date*:</label>
-                        <button
-                            type="button"
-                            onClick={() => setShowCalendar(true)}
+                    >
+                        <label
                             style={{
-                                width: "100%",
-                                borderRadius: "5px",
-                                backgroundColor: "transparent",
-                                border: "1px solid #93939393",
-                                fontSize: '14px',
-                                display: 'flex',
-                                boxShadow: 'inset 2px 2px 5px rgba(255, 255, 255, 0.8), inset -2px -2px 5px #00000045',
-                                color: 'black'
+                                fontWeight: 600,
+                                fontSize: "14px",
+                                color: "#333",
+                                whiteSpace: "nowrap",
+                                textTransform: 'uppercase'
                             }}
                         >
-                            {formData.functionDate
-                                ? `📅 ${formatDate(formData.functionDate)}`
-                                : "."}
-                        </button>
-
-                        <CalendarInput
-                            isOpen={showCalendar}
-                            onClose={() => setShowCalendar(false)}
-                            onDateSelect={(selectedDate) => {
-                                // yaha selectedDate ek string hai: "yyyy-mm-dd"
-                                setFormData((prev) => ({ ...prev, functionDate: selectedDate }));
-                                setShowCalendar(false);
-                            }}
-                            selectedDate={formData.functionDate} // string pass karo
-                        />
-
-                        {errors.functionDate && <span className="error">{errors.functionDate}</span>}
-                    </div>
-
-
-
-                    {/* Share Media */}
-                    <div className="form-group">
-                        <label>
-                            <input
-                                type="checkbox"
-                                name="shareMedia"
-                                checked={formData.shareMedia.shareMedia} // ✅ fixed
-                                onChange={(e) =>
-                                    setFormData((prev) => ({
-                                        ...prev,
-                                        shareMedia: {
-                                            shareMedia: e.target.checked,
-                                            at: e.target.checked ? formatDateIST(new Date()) : null, // ✅ use formatted IST
-                                        },
-                                    }))
-                                }
-                            />
-                            Share Media
+                            Booking on:
                         </label>
-                    </div>
-
-                    {/* Submit */}
-                    <div className="footer-buttons">
-                        <button type="submit" className="save-button">
-                            {enquiry ? "Update Enquiry" : "Submit Enquiry"}
-                        </button>
+                        <input
+                            type="date"
+                            name="enquiryDate"
+                            value={formData.enquiryDate}
+                            onChange={handleChange}
+                            style={{
+                                padding: "6px 20px",
+                                borderRadius: "4px",
+                                fontSize: "14px",
+                                fontWeight: '600',
+                                color: 'red',
+                                boxShadow: "1px 1px 2px rgba(111, 111, 111, 1)",
+                            }}
+                        />
                     </div>
                 </form>
 
-                {toast && (
-                    <div className="custom-toast">
-                        {toast}
-                        <div className="toast-progress"></div>
-                    </div>
-                )}
+                <div className="booking-lead-container">
+                    <h2>{enquiry ? "Edit Enquiry" : "New Enquiry"}</h2>
+                    <form style={{ marginTop: "0px" }} onSubmit={handleSubmit}>
+
+                        {/* Name */}
+                        <div className="form-group">
+                            <label>Name:</label>
+                            <input type="text" name="name" value={formData.name} onChange={handleChange} />
+                        </div>
+
+                        {/* Mobile 1 */}
+                        <div className={`form-group ${errors.mobile1 ? "section-error" : ""}`}>
+                            <label>Mobile 1*:</label>
+                            <input type="text" name="mobile1" value={formData.mobile1} onChange={handleChange} />
+                            {errors.mobile1 && <span className="error">{errors.mobile1}</span>}
+                        </div>
+
+                        {/* Mobile 2 */}
+                        <div className="form-group">
+                            <label>Mobile 2:</label>
+                            <input type="text" name="mobile2" value={formData.mobile2} onChange={handleChange} />
+                        </div>
+
+                        {/* Email */}
+                        <div className="form-group">
+                            <label>Email ID:</label>
+                            <input type="email" name="email" value={formData.email} onChange={handleChange} />
+                        </div>
+
+                        {/* Pax */}
+                        <div className={`form-group ${errors.pax ? "section-error" : ""}`}>
+                            <label>Pax*:</label>
+                            <input
+                                type="text"
+                                name="pax"
+                                value={formData.pax}
+                                onChange={(e) => {
+                                    const onlyNums = e.target.value.replace(/[^0-9]/g, ""); // सिर्फ digits allow
+                                    handleChange({ target: { name: "pax", value: onlyNums } });
+                                }}
+                                inputMode="numeric"
+                                placeholder=""
+                            />
+                            {errors.pax && <span className="error">{errors.pax}</span>}
+                        </div>
+
+                        {/* Function Type */}
+                        <div className="form-group">
+                            <label>Function Type*:</label>
+                            <FunctionTypeSelector
+                                selectedType={formData.functionType}
+                                onSelect={(type) =>
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        functionType: type,
+                                        // dayNight: typesWithDayNight.includes(type) ? prev.dayNight : "",
+                                    }))
+                                }
+                            />
+                            {errors.functionType && <span className="error">{errors.functionType}</span>}
+                        </div>
+
+                        {/* Day/Night */}
+                        <div className="form-group">
+                            <label>Day / Night</label>
+                            <select name="dayNight" value={formData.dayNight || ""} onChange={handleChange}>
+                                <option value="Night">Night</option>
+                                <option value="Day">Day</option>
+                                <option value="Both">Both</option>
+                            </select>
+                        </div>
+
+                        {/* Function Date */}
+                        <div className={`form-group ${errors.functionDate ? "section-error" : ""}`}>
+                            <label>Function Date*:</label>
+                            <button
+                                type="button"
+                                onClick={() => setShowCalendar(true)}
+                                style={{
+                                    width: "100%",
+                                    borderRadius: "5px",
+                                    backgroundColor: "transparent",
+                                    border: "1px solid #93939393",
+                                    fontSize: '14px',
+                                    display: 'flex',
+                                    boxShadow: 'inset 2px 2px 5px rgba(255, 255, 255, 0.8), inset -2px -2px 5px #00000045',
+                                    color: formData.functionDate ? 'black' : 'white',
+                                }}
+                            >
+                                {formData.functionDate
+                                    ? `📅 ${formatDate(formData.functionDate)}`
+                                    : "."}
+                            </button>
+
+                            <CalendarInput
+                                isOpen={showCalendar}
+                                onClose={() => setShowCalendar(false)}
+                                onDateSelect={(selectedDate) => {
+                                    // yaha selectedDate ek string hai: "yyyy-mm-dd"
+                                    setFormData((prev) => ({ ...prev, functionDate: selectedDate }));
+                                    setShowCalendar(false);
+                                }}
+                                selectedDate={formData.functionDate} // string pass karo
+                            />
+
+                            {errors.functionDate && <span className="error">{errors.functionDate}</span>}
+                        </div>
+
+                        {/* Share Media */}
+                        <div className="form-group">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    name="shareMedia"
+                                    checked={formData.shareMedia.shareMedia} // ✅ fixed
+                                    onChange={(e) =>
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            shareMedia: {
+                                                shareMedia: e.target.checked,
+                                                at: e.target.checked ? formatDateIST(new Date()) : null, // ✅ use formatted IST
+                                            },
+                                        }))
+                                    }
+                                />
+                                Share Media
+                            </label>
+                        </div>
+
+                        {/* Submit */}
+                        <div className="footer-buttons">
+                            <button type="submit" className="save-button">
+                                {enquiry ? "Update Enquiry" : "Submit Enquiry"}
+                            </button>
+                        </div>
+                    </form>
+
+                    <div style={{ paddingBottom: '60px' }}></div>
+                    {toast && (
+                        <div className="custom-toast">
+                            {toast}
+                            <div className="toast-progress"></div>
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>
+            <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
+        </>
     );
 };
 
