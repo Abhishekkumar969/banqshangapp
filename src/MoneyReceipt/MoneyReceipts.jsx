@@ -3,10 +3,12 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc, getDocs } from 
 import { db } from '../firebaseConfig';
 import '../styles/MoneyReceipts.css';
 import { useLocation } from 'react-router-dom';
-import BackButton from "../components/BackButton";
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { getAuth } from "firebase/auth";
+import BackButton from "../components/BackButton";
+import BottomNavigationBar from "../components/BottomNavigationBar";
 
 const MoneyReceipts = () => {
   const navigate = useNavigate();
@@ -28,6 +30,27 @@ const MoneyReceipts = () => {
   const [newDate, setNewDate] = useState("");
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [creditDebitFilter, setCreditDebitFilter] = useState('All');
+  const [userAppType, setUserAppType] = useState(null);
+
+  useEffect(() => {
+    const fetchUserAppType = async () => {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          const userRef = doc(db, 'usersAccess', user.email);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            setUserAppType(data.accessToApp);
+          }
+        } catch (err) {
+          console.error("Error fetching user app type:", err);
+        }
+      }
+    };
+    fetchUserAppType();
+  }, []);
 
   useEffect(() => {
     const q = collection(db, "moneyReceipts");
@@ -1167,783 +1190,789 @@ const MoneyReceipts = () => {
   };
 
   return (
-    <div className="receipts-container">
-      <div style={{ marginBottom: '0px' }}> <BackButton />  </div>
+    <>
+      <div className="receipts-container">
+        <div style={{ marginBottom: '0px' }}> <BackButton />  </div>
 
-      <div style={{ marginBottom: '10px' }}>
-        <h2 className="title">All Receipts</h2>
-      </div>
+        <div style={{ marginBottom: '10px' }}>
+          <h2 className="title">All Receipts</h2>
+        </div>
 
-      <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'right', alignItems: 'center', gap: '10px' }}>
-        <input type="text"
-          placeholder="🔍 Search by Sl No., Type, name, mobile, event or date"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="search-input"
-        />
+        <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'right', alignItems: 'center', gap: '10px' }}>
+          <input type="text"
+            placeholder="🔍 Search by Sl No., Type, name, mobile, event or date"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="search-input"
+          />
 
-        <button
-          onClick={() => setShowFilters(prev => !prev)}
+          <button
+            onClick={() => setShowFilters(prev => !prev)}
+            style={{
+              padding: '0px',
+              backgroundColor: 'transparent',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '5px',
+              fontSize: '30px',
+              cursor: 'pointer'
+            }}
+          >
+            {showFilters ? '🔼' : '🔽'}
+          </button>
+        </div>
+
+        <div
           style={{
-            padding: '0px',
-            backgroundColor: 'transparent',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '5px',
-            fontSize: '30px',
-            cursor: 'pointer'
+            margin: "10px 0",
+            padding: "10px",
+            border: "1px solid #ccc",
+            borderRadius: "6px",
+            background: "#f5f5f5",
+            overflowX: "auto",
+            whiteSpace: "nowrap",
           }}
         >
-          {showFilters ? '🔼' : '🔽'}
-        </button>
-      </div>
+          {(() => {
+            // Group by eventType + particularNature (case-insensitive, trimmed)
+            const grouped = {};
+            const displayNames = {}; // to preserve first-seen display name
 
-      <div
-        style={{
-          margin: "10px 0",
-          padding: "10px",
-          border: "1px solid #ccc",
-          borderRadius: "6px",
-          background: "#f5f5f5",
-          overflowX: "auto",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {(() => {
-          // Group by eventType + particularNature (case-insensitive, trimmed)
-          const grouped = {};
-          const displayNames = {}; // to preserve first-seen display name
+            filteredReceipts.forEach(r => {
+              if (
+                r.particularNature?.toLowerCase().includes(search.toLowerCase()) ||
+                r.eventType?.toLowerCase().includes(search.toLowerCase())
+              ) {
+                const key =
+                  (r.eventType?.trim().toLowerCase() || "No Event") +
+                  "|" +
+                  (r.particularNature?.trim().toLowerCase() || "No Particular");
 
-          filteredReceipts.forEach(r => {
-            if (
-              r.particularNature?.toLowerCase().includes(search.toLowerCase()) ||
-              r.eventType?.toLowerCase().includes(search.toLowerCase())
-            ) {
-              const key =
-                (r.eventType?.trim().toLowerCase() || "No Event") +
-                "|" +
-                (r.particularNature?.trim().toLowerCase() || "No Particular");
+                if (!grouped[key]) {
+                  grouped[key] = { credit: 0, debit: 0 };
+                  displayNames[key] = {
+                    eventType: r.eventType?.trim() || "",
+                    particularNature: r.particularNature?.trim() || "",
+                  };
+                }
 
-              if (!grouped[key]) {
-                grouped[key] = { credit: 0, debit: 0 };
-                displayNames[key] = {
-                  eventType: r.eventType?.trim() || "",
-                  particularNature: r.particularNature?.trim() || "",
-                };
+                if (r.paymentFor === "Credit") {
+                  grouped[key].credit += Number(r.amount || 0);
+                } else if (r.paymentFor === "Debit") {
+                  grouped[key].debit += Number(r.amount || 0);
+                }
               }
+            });
 
-              if (r.paymentFor === "Credit") {
-                grouped[key].credit += Number(r.amount || 0);
-              } else if (r.paymentFor === "Debit") {
-                grouped[key].debit += Number(r.amount || 0);
-              }
-            }
-          });
-
-          return Object.keys(grouped).length > 0 ? (
-            Object.entries(grouped).map(([key, totals]) => (
-              <div
-                key={key}
-                style={{
-                  display: "inline-block",
-                  minWidth: "240px",
-                  padding: "12px",
-                  marginRight: "12px",
-                  borderRadius: "8px",
-                  background: "#fff",
-                  boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
-                  textAlign: "center",
-                }}
-              >
-                <h4 style={{ marginBottom: "4px", color: "#2e6999" }}>
-                  {displayNames[key].eventType
-                    ? displayNames[key].eventType
-                    : displayNames[key].particularNature}
-                </h4>
-
-                {/* ✅ Only show if > 0 */}
-                {totals.credit > 0 && (
-                  <p style={{ margin: "4px 0", color: "green", fontWeight: "600" }}>
-                    Credit: ₹{totals.credit.toLocaleString("en-IN")}
-                  </p>
-                )}
-                {totals.debit > 0 && (
-                  <p style={{ margin: "4px 0", color: "red", fontWeight: "600" }}>
-                    Debit: ₹{totals.debit.toLocaleString("en-IN")}
-                  </p>
-                )}
-              </div>
-            ))
-          ) : (
-            <p style={{ padding: "8px", color: "#888" }}>
-              No Particular Nature or Event Type matched.
-            </p>
-          );
-        })()}
-      </div>
-
-      {showFilters && (
-        <>
-          <div style={{ marginTop: '20px' }}>
-            <p style={{ fontWeight: '600', marginBottom: '10px' }}>📆 Filter by Date Range</p>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              flexWrap: 'wrap'
-            }}>
-
-              <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-
-                <button
-                  onClick={handleExportReceipts}
+            return Object.keys(grouped).length > 0 ? (
+              Object.entries(grouped).map(([key, totals]) => (
+                <div
+                  key={key}
                   style={{
-                    padding: "8px 14px",
-                    background: "#1eb619ff",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "5px",
-                    cursor: "pointer",
+                    display: "inline-block",
+                    minWidth: "240px",
+                    padding: "12px",
+                    marginRight: "12px",
+                    borderRadius: "8px",
+                    background: "#fff",
+                    boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+                    textAlign: "center",
                   }}
                 >
-                  Export
-                </button>
-              </div>
+                  <h4 style={{ marginBottom: "4px", color: "#2e6999" }}>
+                    {displayNames[key].eventType
+                      ? displayNames[key].eventType
+                      : displayNames[key].particularNature}
+                  </h4>
 
-              <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+                  {/* ✅ Only show if > 0 */}
+                  {totals.credit > 0 && (
+                    <p style={{ margin: "4px 0", color: "green", fontWeight: "600" }}>
+                      Credit: ₹{totals.credit.toLocaleString("en-IN")}
+                    </p>
+                  )}
+                  {totals.debit > 0 && (
+                    <p style={{ margin: "4px 0", color: "red", fontWeight: "600" }}>
+                      Debit: ₹{totals.debit.toLocaleString("en-IN")}
+                    </p>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p style={{ padding: "8px", color: "#888" }}>
+                No Particular Nature or Event Type matched.
+              </p>
+            );
+          })()}
+        </div>
 
-                <label style={{ padding: "8px 14px", background: "#1eb619ff", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer" }}>
-                  Import
+        {showFilters && (
+          <>
+            <div style={{ marginTop: '20px' }}>
+              <p style={{ fontWeight: '600', marginBottom: '10px' }}>📆 Filter by Date Range</p>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                flexWrap: 'wrap'
+              }}>
+
+                <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+
+                  <button
+                    onClick={handleExportReceipts}
+                    style={{
+                      padding: "8px 14px",
+                      background: "#1eb619ff",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "5px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Export
+                  </button>
+                </div>
+
+                <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+
+                  <label style={{ padding: "8px 14px", background: "#1eb619ff", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer" }}>
+                    Import
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      onChange={handleImportReceipts}
+                      style={{ display: "none" }}
+                    />
+                  </label>
+                </div>
+
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '14px' }}>From</label>
                   <input
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={handleImportReceipts}
-                    style={{ display: "none" }}
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: '4px',
+                      border: '1px solid #ccc',
+                      fontSize: '14px'
+                    }}
                   />
-                </label>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '14px' }}>To</label>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: '4px',
+                      border: '1px solid #ccc',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '14px' }}>Financial Year</label>
+                  <select
+                    value={selectedFY}
+                    onChange={(e) => setSelectedFY(e.target.value)}
+                    style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '14px' }}
+                  >
+                    <option value="">All</option>
+                    {financialYears.map(fy => (
+                      <option key={fy} value={fy}>{fy}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {(dateFrom || dateTo) && (
+                  <button
+                    onClick={() => {
+                      setDateFrom('');
+                      setDateTo('');
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      background: '#e74c3c',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
 
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <label style={{ fontSize: '14px' }}>From</label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  style={{
-                    padding: '6px 10px',
-                    borderRadius: '4px',
-                    border: '1px solid #ccc',
-                    fontSize: '14px'
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <label style={{ fontSize: '14px' }}>To</label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  style={{
-                    padding: '6px 10px',
-                    borderRadius: '4px',
-                    border: '1px solid #ccc',
-                    fontSize: '14px'
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <label style={{ fontSize: '14px' }}>Financial Year</label>
-                <select
-                  value={selectedFY}
-                  onChange={(e) => setSelectedFY(e.target.value)}
-                  style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '14px' }}
-                >
-                  <option value="">All</option>
-                  {financialYears.map(fy => (
-                    <option key={fy} value={fy}>{fy}</option>
-                  ))}
-                </select>
-              </div>
-
-              {(dateFrom || dateTo) && (
-                <button
-                  onClick={() => {
-                    setDateFrom('');
-                    setDateTo('');
-                  }}
-                  style={{
-                    padding: '6px 12px',
-                    background: '#e74c3c',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Clear
-                </button>
-              )}
             </div>
 
-          </div>
-
-          <div style={{
-            margin: '20px 0',
-            padding: '20px',
-            border: '1px solid #ddd',
-            borderRadius: '8px',
-            backgroundColor: '#f9f9f9',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-          }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '40px' }}>
-              <div>
-                <p style={{ fontWeight: '600', marginBottom: '10px' }}>Receipt Type</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                  <button
-                    onClick={() => setTypeFilter('All')}
-                    style={{
-                      background: typeFilter === 'All' ? '#2e6999' : '#b3b3b3',
-                      color: '#fff',
-                      padding: '8px 12px',
-                      border: 'none',
-                      borderRadius: '4px'
-                    }}>
-                    All
-                  </button>
-
-                  <button
-                    onClick={() => setTypeFilter('BankCash')}
-                    style={{
-                      background: typeFilter === 'BankCash' ? '#2e6999' : '#b3b3b3',
-                      color: '#fff',
-                      padding: '8px 12px',
-                      border: 'none',
-                      borderRadius: '4px'
-                    }}>
-                    MR Bank + Cash
-                  </button>
-
-                  <button
-                    onClick={() => setTypeFilter('Bank')}
-                    style={{
-                      background: typeFilter === 'Bank' ? '#2e6999' : '#b3b3b3',
-                      color: '#fff',
-                      padding: '8px 12px',
-                      border: 'none',
-                      borderRadius: '4px'
-                    }}>
-                    MR Bank
-                  </button>
-                  <button
-                    onClick={() => setTypeFilter('Cash')}
-                    style={{
-                      background: typeFilter === 'Cash' ? '#2e6999' : '#b3b3b3',
-                      color: '#fff',
-                      padding: '8px 12px',
-                      border: 'none',
-                      borderRadius: '4px'
-                    }}>
-                    MR Cash
-                  </button>
-                  <button
-                    onClick={() => setTypeFilter('Refund')}
-                    style={{
-                      background: typeFilter === 'Refund' ? '#2e6999' : '#b3b3b3',
-                      color: '#fff',
-                      padding: '8px 12px',
-                      border: 'none',
-                      borderRadius: '4px'
-                    }}>
-                    MR Refund
-                  </button>
-                  <button
-                    onClick={() => setTypeFilter('Voucher')}
-                    style={{
-                      background: typeFilter === 'Voucher' ? '#2e6999' : '#b3b3b3',
-                      color: '#fff',
-                      padding: '8px 12px',
-                      border: 'none',
-                      borderRadius: '4px'
-                    }}>
-                    Voucher
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <p style={{ fontWeight: '600', marginBottom: '10px' }}>➕➖ Credit / Debit</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                  <button
-                    onClick={() => setCreditDebitFilter('All')}
-                    style={{
-                      background: creditDebitFilter === 'All' ? '#2e6999' : '#b3b3b3',
-                      color: '#fff',
-                      padding: '8px 12px',
-                      border: 'none',
-                      borderRadius: '4px'
-                    }}
-                  >
-                    All
-                  </button>
-                  <button
-                    onClick={() => setCreditDebitFilter('Credit')}
-                    style={{
-                      background: creditDebitFilter === 'Credit' ? '#2e6999' : '#b3b3b3',
-                      color: '#fff',
-                      padding: '8px 12px',
-                      border: 'none',
-                      borderRadius: '4px'
-                    }}
-                  >
-                    Credit
-                  </button>
-                  <button
-                    onClick={() => setCreditDebitFilter('Debit')}
-                    style={{
-                      background: creditDebitFilter === 'Debit' ? '#2e6999' : '#b3b3b3',
-                      color: '#fff',
-                      padding: '8px 12px',
-                      border: 'none',
-                      borderRadius: '4px'
-                    }}
-                  >
-                    Debit
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <p style={{ fontWeight: '600', marginBottom: '10px' }}>💳 Payment Modes</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                  {['All', 'BOI', 'SBI', 'Cash', 'Card', 'Cheque'].map(mode => (
+            <div style={{
+              margin: '20px 0',
+              padding: '20px',
+              border: '1px solid #ddd',
+              borderRadius: '8px',
+              backgroundColor: '#f9f9f9',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+            }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '40px' }}>
+                <div>
+                  <p style={{ fontWeight: '600', marginBottom: '10px' }}>Receipt Type</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                     <button
-                      key={mode}
-                      onClick={() => setModeFilter(mode)}
+                      onClick={() => setTypeFilter('All')}
                       style={{
-                        background: modeFilter === mode ? '#2e6999' : '#b3b3b3',
+                        background: typeFilter === 'All' ? '#2e6999' : '#b3b3b3',
                         color: '#fff',
                         padding: '8px 12px',
                         border: 'none',
                         borderRadius: '4px'
                       }}>
-                      {mode}
+                      All
                     </button>
-                  ))}
+
+                    <button
+                      onClick={() => setTypeFilter('BankCash')}
+                      style={{
+                        background: typeFilter === 'BankCash' ? '#2e6999' : '#b3b3b3',
+                        color: '#fff',
+                        padding: '8px 12px',
+                        border: 'none',
+                        borderRadius: '4px'
+                      }}>
+                      MR Bank + Cash
+                    </button>
+
+                    <button
+                      onClick={() => setTypeFilter('Bank')}
+                      style={{
+                        background: typeFilter === 'Bank' ? '#2e6999' : '#b3b3b3',
+                        color: '#fff',
+                        padding: '8px 12px',
+                        border: 'none',
+                        borderRadius: '4px'
+                      }}>
+                      MR Bank
+                    </button>
+                    <button
+                      onClick={() => setTypeFilter('Cash')}
+                      style={{
+                        background: typeFilter === 'Cash' ? '#2e6999' : '#b3b3b3',
+                        color: '#fff',
+                        padding: '8px 12px',
+                        border: 'none',
+                        borderRadius: '4px'
+                      }}>
+                      MR Cash
+                    </button>
+                    <button
+                      onClick={() => setTypeFilter('Refund')}
+                      style={{
+                        background: typeFilter === 'Refund' ? '#2e6999' : '#b3b3b3',
+                        color: '#fff',
+                        padding: '8px 12px',
+                        border: 'none',
+                        borderRadius: '4px'
+                      }}>
+                      MR Refund
+                    </button>
+                    <button
+                      onClick={() => setTypeFilter('Voucher')}
+                      style={{
+                        background: typeFilter === 'Voucher' ? '#2e6999' : '#b3b3b3',
+                        color: '#fff',
+                        padding: '8px 12px',
+                        border: 'none',
+                        borderRadius: '4px'
+                      }}>
+                      Voucher
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', maxWidth: '1600px' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ padding: '8px', border: '1px solid #ccc', textAlign: 'Center', whiteSpace: 'nowrap' }}>FY-YEAR</th>
-                      <th style={{ padding: '8px', border: '1px solid #ccc', textAlign: 'Center', whiteSpace: 'nowrap' }}>MONTH</th>
-                      <th style={{ padding: '8px', border: '1px solid #ccc', textAlign: 'Center', whiteSpace: 'nowrap' }}>CREDIT</th>
-                      <th style={{ padding: '8px', border: '1px solid #ccc', textAlign: 'Center', whiteSpace: 'nowrap' }}>DEBIT</th>
-                      <th style={{ padding: '8px', border: '1px solid #ccc', textAlign: 'Center', whiteSpace: 'nowrap' }}>BALANCE</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {finalTableData.map((row, idx) => (
-                      <tr key={idx}>
-                        <td style={{ padding: '8px', border: '1px solid #00014fff', whiteSpace: 'nowrap' }}>{row.fy}</td>
-                        <td style={{ padding: '8px', border: '1px solid #00014fff', whiteSpace: 'nowrap' }}>{row.month}</td>
-                        <td style={{ padding: '8px', border: '1px solid #00014fff', whiteSpace: 'nowrap', textAlign: 'left', color: 'green' }}>
-                          {row.credit.toLocaleString('en-IN')}
-                        </td>
-                        <td style={{ padding: '8px', border: '1px solid #00014fff', textAlign: 'left', whiteSpace: 'nowrap', color: 'red' }}>
-                          {row.debit.toLocaleString('en-IN')}
-                        </td>
-                        <td style={{ padding: '8px', border: '1px solid #00014fff', textAlign: 'left', whiteSpace: 'nowrap' }}>
-                          {row.balance.toLocaleString('en-IN')}
-                        </td>
-                      </tr>
+                <div>
+                  <p style={{ fontWeight: '600', marginBottom: '10px' }}>➕➖ Credit / Debit</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                    <button
+                      onClick={() => setCreditDebitFilter('All')}
+                      style={{
+                        background: creditDebitFilter === 'All' ? '#2e6999' : '#b3b3b3',
+                        color: '#fff',
+                        padding: '8px 12px',
+                        border: 'none',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => setCreditDebitFilter('Credit')}
+                      style={{
+                        background: creditDebitFilter === 'Credit' ? '#2e6999' : '#b3b3b3',
+                        color: '#fff',
+                        padding: '8px 12px',
+                        border: 'none',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      Credit
+                    </button>
+                    <button
+                      onClick={() => setCreditDebitFilter('Debit')}
+                      style={{
+                        background: creditDebitFilter === 'Debit' ? '#2e6999' : '#b3b3b3',
+                        color: '#fff',
+                        padding: '8px 12px',
+                        border: 'none',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      Debit
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <p style={{ fontWeight: '600', marginBottom: '10px' }}>💳 Payment Modes</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                    {['All', 'BOI', 'SBI', 'Cash', 'Card', 'Cheque'].map(mode => (
+                      <button
+                        key={mode}
+                        onClick={() => setModeFilter(mode)}
+                        style={{
+                          background: modeFilter === mode ? '#2e6999' : '#b3b3b3',
+                          color: '#fff',
+                          padding: '8px 12px',
+                          border: 'none',
+                          borderRadius: '4px'
+                        }}>
+                        {mode}
+                      </button>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                </div>
+
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', maxWidth: '1600px' }}>
+                    <thead>
+                      <tr>
+                        <th style={{ padding: '8px', border: '1px solid #ccc', textAlign: 'Center', whiteSpace: 'nowrap' }}>FY-YEAR</th>
+                        <th style={{ padding: '8px', border: '1px solid #ccc', textAlign: 'Center', whiteSpace: 'nowrap' }}>MONTH</th>
+                        <th style={{ padding: '8px', border: '1px solid #ccc', textAlign: 'Center', whiteSpace: 'nowrap' }}>CREDIT</th>
+                        <th style={{ padding: '8px', border: '1px solid #ccc', textAlign: 'Center', whiteSpace: 'nowrap' }}>DEBIT</th>
+                        <th style={{ padding: '8px', border: '1px solid #ccc', textAlign: 'Center', whiteSpace: 'nowrap' }}>BALANCE</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {finalTableData.map((row, idx) => (
+                        <tr key={idx}>
+                          <td style={{ padding: '8px', border: '1px solid #00014fff', whiteSpace: 'nowrap' }}>{row.fy}</td>
+                          <td style={{ padding: '8px', border: '1px solid #00014fff', whiteSpace: 'nowrap' }}>{row.month}</td>
+                          <td style={{ padding: '8px', border: '1px solid #00014fff', whiteSpace: 'nowrap', textAlign: 'left', color: 'green' }}>
+                            {row.credit.toLocaleString('en-IN')}
+                          </td>
+                          <td style={{ padding: '8px', border: '1px solid #00014fff', textAlign: 'left', whiteSpace: 'nowrap', color: 'red' }}>
+                            {row.debit.toLocaleString('en-IN')}
+                          </td>
+                          <td style={{ padding: '8px', border: '1px solid #00014fff', textAlign: 'left', whiteSpace: 'nowrap' }}>
+                            {row.balance.toLocaleString('en-IN')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
               </div>
-
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
 
-      <div
-        style={{
-          marginBottom: '10px',
-          display: 'flex',
-          justifyContent: 'right',
-          alignItems: 'center',
-          gap: '10px'
-        }}
-      >
-        <button
-          onClick={() => navigate('/MoneyReceipt')}
-          style={{
-            padding: '10px',
-            backgroundColor: '#4CAF50',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-          }}
-        >
-          Money Receipt
-        </button>
-
-        <button
-          onClick={() => navigate('/Receipts')}
-          style={{
-            padding: '10px',
-            backgroundColor: '#4CAF50',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-          }}
-        >
-          Voucher
-        </button>
-
-
-      </div>
-
-      <div className="summary-bar">
-        <span>Credit: <span > ₹{totalCredit.toLocaleString("en-IN")} </span> </span>
-        <span>Debit: <span > ₹{totalDebit.toLocaleString("en-IN")} </span> </span>
-        <span>Balance: <span > ₹{balance.toLocaleString("en-IN")} </span> </span>
-      </div>
-
-      <div className="tables-container">
-
-        {/* Table 1 */}
-        <div className="table-wrapper left" style={{ width: 'fit-content' }}>
-          <table className="receipts-table">
-            <thead>
-              <tr>
-                <th
-                  style={{
-                    cursor: "pointer",
-                    padding: '0px'
-                  }}
-
-                  onClick={() => {
-                    if (sortKey === "receiptDate") {
-                      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                    } else {
-                      setSortKey("receiptDate");
-                      setSortOrder("desc");
-                    }
-                  }}>
-                  Receipt Date
-                  <button
-                    style={{
-                      margin: "-1px",
-                      cursor: "pointer",
-                      border: "none",
-                      background: "transparent",
-                      padding: '0px'
-                    }}
-                  >
-                    {sortKey === "receiptDate" ? (sortOrder === "asc" ? "" : "") : ""}
-                  </button>
-                </th>
-                <th>Name</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(() => {
-                // Sort/filter receipts if needed
-                const sortedReceipts = [...filteredReceipts];
-                let balance = 0;
-                const runningBalances = [];
-
-                // Calculate running balances
-                for (let i = sortedReceipts.length - 1; i >= 0; i--) {
-                  const r = sortedReceipts[i];
-                  const amount = parseFloat(r.amount || 0);
-                  const isCredit = r.paymentFor === "Credit";
-                  const isDebit = r.paymentFor === "Debit";
-
-                  if (isCredit) balance += amount;
-                  else if (isDebit) balance -= amount;
-
-                  runningBalances[i] = balance;
-                }
-
-                return sortedReceipts.map((r, index) => {
-                  const isCredit = r.paymentFor === "Credit";
-                  const isDebit = r.paymentFor === "Debit";
-
-                  return (
-                    <tr
-                      key={r.id + "_" + index}
-                      style={{
-                        color:
-                          r.approval === "Rejected"
-                            ? "black"
-                            : isCredit
-                              ? "green"
-                              : isDebit
-                                ? "red"
-                                : "black",
-                        fontWeight: '700',
-
-                      }}
-                    >
-
-                      <td style={{ padding: '14px 0px' }}>{r.receiptDate ? formatDate(r.receiptDate) : ''}</td>
-                      <td>{r.customerName || r.partyName}</td>
-
-                    </tr>
-                  );
-                });
-              })()}
-
-              {filteredReceipts.length === 0 && (
-                <tr>
-                  <td colSpan="10" style={{ textAlign: "center", padding: "20px", color: "#999" }}>
-                    No receipts found.
-                  </td>
-                </tr>
-              )}
-
-            </tbody>
-          </table>
-        </div>
-
-        {/* Table 2 */}
-        <div className="table-wrapper right">
-          <table className="receipts-table">
-            <thead>
-              <tr>
-                <th>SL.</th>
-                <th>SL. No</th>
-                <th>Particular Nature</th>
-                <th>Description</th>
-                <th>MR/VR</th>
-                <th>Credit</th>
-                <th>Debit</th>
-                <th>Name</th>
-                <th>Mobile</th>
-                <th>Amount</th>
-                <th>Balance</th>
-                <th>Print</th>
-                <th>Edit</th>
-                <th>Generated By</th>
-                <th>Approval</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(() => {
-                // Sort/filter receipts if needed
-                const sortedReceipts = [...filteredReceipts];
-                let balance = 0;
-                const runningBalances = [];
-
-                // Calculate running balances
-                for (let i = sortedReceipts.length - 1; i >= 0; i--) {
-                  const r = sortedReceipts[i];
-                  const amount = parseFloat(r.amount || 0);
-                  const isCredit = r.paymentFor === "Credit";
-                  const isDebit = r.paymentFor === "Debit";
-
-                  if (isCredit) balance += amount;
-                  else if (isDebit) balance -= amount;
-
-                  runningBalances[i] = balance;
-                }
-
-                return sortedReceipts.map((r, index) => {
-                  const isCredit = r.paymentFor === "Credit";
-                  const isDebit = r.paymentFor === "Debit";
-
-                  return (
-                    <tr
-                      key={r.id + "_" + index}
-                      style={{
-                        color:
-                          r.approval === "Rejected"
-                            ? "black"
-                            : isCredit
-                              ? "green"
-                              : isDebit
-                                ? "red"
-                                : "black",
-                        fontWeight: '700'
-                      }}
-                    >
-                      <td style={{ fontWeight: "bold", color: 'black' }}>
-                        {filteredReceipts.length - index}.
-                      </td>
-                      <td style={{ fontWeight: "bold" }}>#{r.slNo}</td>
-                      <td>{r.eventType || r.particularNature}</td>
-                      <td>{r.description}</td>
-                      <td>
-                        {r.type === "Money Receipt"
-                          ? "MR"
-                          : r.type === "Cash"
-                            ? "MR"
-                            : r.type === "Voucher"
-                              ? "Voucher"
-                              : r.type}  {r.mode} {r.cashTo}
-                      </td>
-                      <td>{r.paymentFor === "Credit" ? r.paymentFor : ""}</td>
-                      <td>{r.paymentFor === "Debit" ? r.paymentFor : ""}</td>
-                      <td>{r.customerName || r.partyName}</td>
-                      <td>{r.mobile}</td>
-                      <td>₹{Number(r.amount).toLocaleString("en-IN")}</td>
-                      {/* **Balance column added immediately after approval info** */}
-                      <td style={{ color: isCredit ? "green" : isDebit ? "red" : "#000" }}>
-                        ₹{Number(runningBalances[index].toFixed(2)).toLocaleString("en-IN")}
-                      </td>
-                      {/* Payment type columns */}
-
-
-                      {/* Print button */}
-                      <td>
-                        {r.slNo?.toString().startsWith("C") ? (
-                          <button
-                            onClick={() => {
-                              if (r.approval !== "Accepted") {
-                                alert("❌ Printing not allowed — approval is not granted.");
-                                return;
-                              }
-                              handlePrintCash(r);
-                            }}
-                            style={{
-                              background: r.approval === "Accepted" ? "#b52e2e" : "#888",
-                              color: "#fff",
-                              padding: "5px 10px",
-                              border: "none",
-                              borderRadius: "4px",
-                              cursor: r.approval === "Accepted" ? "pointer" : "not-allowed",
-                            }}
-                            disabled={r.approval !== "Accepted"}
-                          >
-                            Print
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              if (r.approval !== "Accepted") {
-                                alert("❌ Printing not allowed — approval is not granted.");
-                                return;
-                              }
-                              r.eventDate ? handlePrint(r) : handlePrintOther(r);
-                            }}
-                            style={{
-                              background: r.approval === "Accepted" ? "#b52e2e" : "#888",
-                              color: "#fff",
-                              padding: "5px 10px",
-                              border: "none",
-                              borderRadius: "4px",
-                              cursor: r.approval === "Accepted" ? "pointer" : "not-allowed",
-                            }}
-                            disabled={r.approval !== "Accepted"}
-                          >
-                            Print
-                          </button>
-                        )}
-                      </td>
-
-                      <td>
-                        <button onClick={() => openPopup(r)}>Edit</button>
-                      </td>
-
-                      <td>{r.receiver || r.myName || r.receiverName || r.sender}</td>
-
-
-                      <td>
-                        Approval: {r.approval || "Non"}, By: {r.approvedBy || "Default"}
-                      </td>
-
-                    </tr>
-                  );
-                });
-              })()}
-
-              {filteredReceipts.length === 0 && (
-                <tr>
-                  <td colSpan="10" style={{ textAlign: "center", padding: "20px", color: "#999" }}>
-                    No receipts found.
-                  </td>
-                </tr>
-              )}
-
-            </tbody>
-          </table>
-        </div>
-
-      </div>
-
-      {showPopup && (
         <div
-          className="popup-overlay"
           style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            backgroundColor: "rgba(0,0,0,0.5)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 1000,
+            marginBottom: '10px',
+            display: 'flex',
+            justifyContent: 'right',
+            alignItems: 'center',
+            gap: '10px'
           }}
         >
-          <div
-            className="popup-content"
+          <button
+            onClick={() => navigate('/MoneyReceipt')}
             style={{
-              backgroundColor: "#fff",
-              padding: "20px",
-              borderRadius: "8px",
-              width: "320px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
+              padding: '10px',
+              backgroundColor: '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
             }}
           >
-            <h3 style={{ margin: 0 }}>Edit Receipt</h3>
+            Money Receipt
+          </button>
 
-            <input
-              type="text"
-              inputMode="decimal"
-              placeholder="Amount"
-              value={newAmount}
-              onChange={(e) => {
-                let val = e.target.value.replace(/[^0-9.]/g, "");
-                if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
-                setNewAmount(val);
+          <button
+            onClick={() => navigate('/Receipts')}
+            style={{
+              padding: '10px',
+              backgroundColor: '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+            }}
+          >
+            Voucher
+          </button>
+
+
+        </div>
+
+        <div className="summary-bar">
+          <span>Credit: <span > ₹{totalCredit.toLocaleString("en-IN")} </span> </span>
+          <span>Debit: <span > ₹{totalDebit.toLocaleString("en-IN")} </span> </span>
+          <span>Balance: <span > ₹{balance.toLocaleString("en-IN")} </span> </span>
+        </div>
+
+        <div className="tables-container">
+
+          {/* Table 1 */}
+          <div className="table-wrapper left" style={{ width: 'fit-content' }}>
+            <table className="receipts-table">
+              <thead>
+                <tr>
+                  <th
+                    style={{
+                      cursor: "pointer",
+                      padding: '0px'
+                    }}
+
+                    onClick={() => {
+                      if (sortKey === "receiptDate") {
+                        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                      } else {
+                        setSortKey("receiptDate");
+                        setSortOrder("desc");
+                      }
+                    }}>
+                    Receipt Date
+                    <button
+                      style={{
+                        margin: "-1px",
+                        cursor: "pointer",
+                        border: "none",
+                        background: "transparent",
+                        padding: '0px'
+                      }}
+                    >
+                      {sortKey === "receiptDate" ? (sortOrder === "asc" ? "" : "") : ""}
+                    </button>
+                  </th>
+                  <th>Name</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  // Sort/filter receipts if needed
+                  const sortedReceipts = [...filteredReceipts];
+                  let balance = 0;
+                  const runningBalances = [];
+
+                  // Calculate running balances
+                  for (let i = sortedReceipts.length - 1; i >= 0; i--) {
+                    const r = sortedReceipts[i];
+                    const amount = parseFloat(r.amount || 0);
+                    const isCredit = r.paymentFor === "Credit";
+                    const isDebit = r.paymentFor === "Debit";
+
+                    if (isCredit) balance += amount;
+                    else if (isDebit) balance -= amount;
+
+                    runningBalances[i] = balance;
+                  }
+
+                  return sortedReceipts.map((r, index) => {
+                    const isCredit = r.paymentFor === "Credit";
+                    const isDebit = r.paymentFor === "Debit";
+
+                    return (
+                      <tr
+                        key={r.id + "_" + index}
+                        style={{
+                          color:
+                            r.approval === "Rejected"
+                              ? "black"
+                              : isCredit
+                                ? "green"
+                                : isDebit
+                                  ? "red"
+                                  : "black",
+                          fontWeight: '700',
+
+                        }}
+                      >
+
+                        <td style={{ padding: '14px 0px' }}>{r.receiptDate ? formatDate(r.receiptDate) : ''}</td>
+                        <td>{r.customerName || r.partyName}</td>
+
+                      </tr>
+                    );
+                  });
+                })()}
+
+                {filteredReceipts.length === 0 && (
+                  <tr>
+                    <td colSpan="10" style={{ textAlign: "center", padding: "20px", color: "#999" }}>
+                      No receipts found.
+                    </td>
+                  </tr>
+                )}
+
+              </tbody>
+            </table>
+          </div>
+
+          {/* Table 2 */}
+          <div className="table-wrapper right">
+            <table className="receipts-table">
+              <thead>
+                <tr>
+                  <th>SL.</th>
+                  <th>SL. No</th>
+                  <th>Particular Nature</th>
+                  <th>Description</th>
+                  <th>MR/VR</th>
+                  <th>Credit</th>
+                  <th>Debit</th>
+                  <th>Name</th>
+                  <th>Mobile</th>
+                  <th>Amount</th>
+                  <th>Balance</th>
+                  <th>Print</th>
+                  <th>Edit</th>
+                  <th>Generated By</th>
+                  <th>Approval</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  // Sort/filter receipts if needed
+                  const sortedReceipts = [...filteredReceipts];
+                  let balance = 0;
+                  const runningBalances = [];
+
+                  // Calculate running balances
+                  for (let i = sortedReceipts.length - 1; i >= 0; i--) {
+                    const r = sortedReceipts[i];
+                    const amount = parseFloat(r.amount || 0);
+                    const isCredit = r.paymentFor === "Credit";
+                    const isDebit = r.paymentFor === "Debit";
+
+                    if (isCredit) balance += amount;
+                    else if (isDebit) balance -= amount;
+
+                    runningBalances[i] = balance;
+                  }
+
+                  return sortedReceipts.map((r, index) => {
+                    const isCredit = r.paymentFor === "Credit";
+                    const isDebit = r.paymentFor === "Debit";
+
+                    return (
+                      <tr
+                        key={r.id + "_" + index}
+                        style={{
+                          color:
+                            r.approval === "Rejected"
+                              ? "black"
+                              : isCredit
+                                ? "green"
+                                : isDebit
+                                  ? "red"
+                                  : "black",
+                          fontWeight: '700'
+                        }}
+                      >
+                        <td style={{ fontWeight: "bold", color: 'black' }}>
+                          {filteredReceipts.length - index}.
+                        </td>
+                        <td style={{ fontWeight: "bold" }}>#{r.slNo}</td>
+                        <td>{r.eventType || r.particularNature}</td>
+                        <td>{r.description}</td>
+                        <td>
+                          {r.type === "Money Receipt"
+                            ? "MR"
+                            : r.type === "Cash"
+                              ? "MR"
+                              : r.type === "Voucher"
+                                ? "Voucher"
+                                : r.type}  {r.mode} {r.cashTo}
+                        </td>
+                        <td>{r.paymentFor === "Credit" ? r.paymentFor : ""}</td>
+                        <td>{r.paymentFor === "Debit" ? r.paymentFor : ""}</td>
+                        <td>{r.customerName || r.partyName}</td>
+                        <td>{r.mobile}</td>
+                        <td>₹{Number(r.amount).toLocaleString("en-IN")}</td>
+                        {/* **Balance column added immediately after approval info** */}
+                        <td style={{ color: isCredit ? "green" : isDebit ? "red" : "#000" }}>
+                          ₹{Number(runningBalances[index].toFixed(2)).toLocaleString("en-IN")}
+                        </td>
+                        {/* Payment type columns */}
+
+
+                        {/* Print button */}
+                        <td>
+                          {r.slNo?.toString().startsWith("C") ? (
+                            <button
+                              onClick={() => {
+                                if (r.approval !== "Accepted") {
+                                  alert("❌ Printing not allowed — approval is not granted.");
+                                  return;
+                                }
+                                handlePrintCash(r);
+                              }}
+                              style={{
+                                background: r.approval === "Accepted" ? "#b52e2e" : "#888",
+                                color: "#fff",
+                                padding: "5px 10px",
+                                border: "none",
+                                borderRadius: "4px",
+                                cursor: r.approval === "Accepted" ? "pointer" : "not-allowed",
+                              }}
+                              disabled={r.approval !== "Accepted"}
+                            >
+                              Print
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                if (r.approval !== "Accepted") {
+                                  alert("❌ Printing not allowed — approval is not granted.");
+                                  return;
+                                }
+                                r.eventDate ? handlePrint(r) : handlePrintOther(r);
+                              }}
+                              style={{
+                                background: r.approval === "Accepted" ? "#b52e2e" : "#888",
+                                color: "#fff",
+                                padding: "5px 10px",
+                                border: "none",
+                                borderRadius: "4px",
+                                cursor: r.approval === "Accepted" ? "pointer" : "not-allowed",
+                              }}
+                              disabled={r.approval !== "Accepted"}
+                            >
+                              Print
+                            </button>
+                          )}
+                        </td>
+
+                        <td>
+                          <button onClick={() => openPopup(r)}>Edit</button>
+                        </td>
+
+                        <td>{r.receiver || r.myName || r.receiverName || r.sender}</td>
+
+
+                        <td>
+                          Approval: {r.approval || "Non"}, By: {r.approvedBy || "Default"}
+                        </td>
+
+                      </tr>
+                    );
+                  });
+                })()}
+
+                {filteredReceipts.length === 0 && (
+                  <tr>
+                    <td colSpan="10" style={{ textAlign: "center", padding: "20px", color: "#999" }}>
+                      No receipts found.
+                    </td>
+                  </tr>
+                )}
+
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+        {showPopup && (
+          <div
+            className="popup-overlay"
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              backgroundColor: "rgba(0,0,0,0.5)",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              zIndex: 1000,
+            }}
+          >
+            <div
+              className="popup-content"
+              style={{
+                backgroundColor: "#fff",
+                padding: "20px",
+                borderRadius: "8px",
+                width: "320px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
               }}
-            />
+            >
+              <h3 style={{ margin: 0 }}>Edit Receipt</h3>
 
-            <input
-              type="text"
-              placeholder="Description"
-              value={newDescription}
-              onChange={(e) => setNewDescription(e.target.value)}
-            />
-            <input
-              type="date"
-              value={newDate}
-              onChange={(e) => setNewDate(e.target.value)}
-            />
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="Amount"
+                value={newAmount}
+                onChange={(e) => {
+                  let val = e.target.value.replace(/[^0-9.]/g, "");
+                  if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
+                  setNewAmount(val);
+                }}
+              />
 
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-              <button onClick={handleSave} style={{ padding: "6px 12px" }}>Save</button>
-              <button onClick={() => setShowPopup(false)} style={{ padding: "6px 12px" }}>Cancel</button>
+              <input
+                type="text"
+                placeholder="Description"
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+              />
+              <input
+                type="date"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+              />
+
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                <button onClick={handleSave} style={{ padding: "6px 12px" }}>Save</button>
+                <button onClick={() => setShowPopup(false)} style={{ padding: "6px 12px" }}>Cancel</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-    </div >
+      </div>
+
+      <div style={{ marginBottom: "50px" }}></div>
+      <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
+
+    </>
   );
 };
 

@@ -143,904 +143,310 @@ const AdminProfile = () => {
     }
   };
 
-  return (
-
+   return (
     <>
       <div className={styles.container}>
-        <div style={{ marginBottom: '30px' }}> <BackButton />  </div>
+        <div className={styles.backButtonWrapper}>
+          <BackButton />
+        </div>
 
         {adminProfile ? (
           <>
             <h2 className={styles.heading}>
-              Hi {adminProfile?.name ? adminProfile.name : adminProfile?.firmName ? adminProfile.firmName : "Decoration"} 👋
+              Hi{" "}
+              {adminProfile?.name
+                ? adminProfile.name
+                : adminProfile?.firmName
+                ? adminProfile.firmName
+                : "Decoration"}{" "}
+              👋
             </h2>
 
-            <div className={styles.emailContainer}>
-              {adminProfile?.email && (
-                <p className={styles.emailLine} >
-                  📧 <strong>Email:</strong> {adminProfile.email}
-                </p>
-              )}
-            </div>
+            {adminProfile?.email && (
+              <p className={styles.emailLine}>
+                📧 <strong>Email:</strong> {adminProfile.email}
+              </p>
+            )}
 
-            <div
-              style={{
-                fontWeight: '300',
-                padding: "0",
-                borderRadius: "6px",
-                fontSize: "0.85rem",
-              }}
-              className={styles.adminProfileInfo}>
-              {["firmName", "address", "contactNo", "termsAndConditions"].map((field) => (
-                <div key={field} className={styles.fieldRow}>
-                  {editField === field ? (
-                    <>
-                      <div>
+            <div className={styles.adminProfileInfo}>
+              {["firmName", "address", "contactNo", "termsAndConditions"].map(
+                (field) => (
+                  <div key={field} className={styles.fieldRow}>
+                    {editField === field ? (
+                      <>
                         <div>
-                          <strong style={{ whiteSpace: "nowrap", fontWeight: '700', fontSize: "1rem", }}>
+                          <strong className={styles.fieldLabel}>
                             {field === "contactNo"
                               ? "Phone Number"
                               : field === "firmName"
-                                ? "Firm Name"
-                                : field === "email"
-                                  ? "Email"
-                                  : field === "termsAndConditions"
-                                    ? "Terms & Conditions"
-                                    : field.charAt(0).toUpperCase() + field.slice(1)}
+                              ? "Firm Name"
+                              : field === "termsAndConditions"
+                              ? "Terms & Conditions"
+                              : field.charAt(0).toUpperCase() +
+                                field.slice(1)}
                             :
                           </strong>
                         </div>
 
-                      </div>
-
-                      <div className={styles.itemButtons}>
-                        {field === "termsAndConditions" ? (
+                        <div className={styles.itemButtons}>
                           <textarea
-                            rows={10}
-                            style={{ width: '100%', marginTop: '10px', padding: '10px', borderRadius: '10px', border: '1px solid gray' }}
+                            rows={
+                              field === "termsAndConditions" ? "10" : "5"
+                            }
+                            className={styles.textarea}
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
-                            className={styles.editTextarea}
-                            placeholder="Enter terms and conditions (one per line)..."
+                            placeholder={
+                              field === "termsAndConditions"
+                                ? "Enter terms and conditions (one per line)..."
+                                : ""
+                            }
                           />
-                        ) : (
-                          <textarea
-                            type="text"
-                            rows={5}
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            className={styles.editInput}
-                          />
-                        )}
-                      </div>
+                        </div>
 
-                      <div style={{ display: 'flex', justifyContent: 'flex-end' }} >
-                        <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end', gap: "10px" }}>
-                          <button type="button"
+                        <div className={styles.buttonGroup}>
+                          <button
+                            type="button"
                             onClick={() => handleUpdateField(field)}
                             className={styles.saveButton}
                           >
                             Save
                           </button>
-                          <button type="button"
+                          <button
+                            type="button"
                             onClick={() => setEditField(null)}
                             className={styles.cancelButton}
                           >
                             Cancel
                           </button>
                         </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <strong style={{ whiteSpace: "nowrap", fontWeight: '600', fontSize: "0.8rem", }}>
-                              {field === "contactNo"
-                                ? "Phone Number"
-                                : field === "firmName"
-                                  ? "Firm Name"
-                                  : field === "email"
-                                    ? "Email"
-                                    : field === "termsAndConditions"
-                                      ? "Terms & Conditions"
-                                      : field.charAt(0).toUpperCase() + field.slice(1)}
-                              :
-                            </strong>
-                          </div>
-
-                          <div className={styles.itemButtons} style={{}}>
-                            <button type="button"
-                              onClick={() => {
-                                setEditField(field);
-                                setEditValue(adminProfile[field] || "");
-                              }}
-                              className={styles.editButton}
-                            >
-                              {`>`}
-                            </button>
-                          </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className={styles.fieldHeader}>
+                          <strong className={styles.fieldLabel}>
+                            {field === "contactNo"
+                              ? "Phone Number"
+                              : field === "firmName"
+                              ? "Firm Name"
+                              : field === "termsAndConditions"
+                              ? "Terms & Conditions"
+                              : field.charAt(0).toUpperCase() +
+                                field.slice(1)}
+                            :
+                          </strong>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditField(field);
+                              setEditValue(adminProfile[field] || "");
+                            }}
+                            className={styles.editButton}
+                          >
+                            {`>`}
+                          </button>
                         </div>
 
-                        <div style={{ marginLeft: "10px", marginBottom: '10px' }}>
+                        <div className={styles.fieldValue}>
                           {field === "termsAndConditions" ? (
-                            <div
-                              style={{
-                                color: "#666565",
-                                whiteSpace: "pre-line",
-                                fontWeight: "400",
-                                fontSize: "0.9rem",
-                              }}
-                            >
+                            <div className={styles.termsText}>
                               {adminProfile[field] || "Not Filled"}
                             </div>
                           ) : (
-                            <strong style={{ color: "#666565", textTransform: "capitalize" }}>
+                            <strong className={styles.valueText}>
                               {adminProfile[field] || "Not Filled"}
                             </strong>
                           )}
                         </div>
-                      </div>
-
-
-                    </>
-                  )}
-                </div>
-              ))}
+                      </>
+                    )}
+                  </div>
+                )
+              )}
             </div>
 
-            {/* ---------- Venue Types ---------- */}
-            <div className={styles.fieldRow} style={{
-              marginBottom: "20px",
-              paddingBottom: "15px",
-              borderBottom: "1px dashed #cbd5e1",
-              borderTop: "1px dashed #cbd5e1",
-            }}>
-
-
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <label htmlFor="venueType" className={styles.subHeading}>
-                  Venue Types:
-                </label>
-
-                <button
-                  type="button"
-                  className={styles.editButton}
-                  onClick={() => {
-                    setVenueMenuOpen((prev) => !prev);
-                    setFunctionMenuOpen(false);
-                  }}
-                  style={{
-                    fontSize: "1.2rem",
-                    background: "#2e6999",
-                    padding: "2px 15px",
-                    border: "none",
-                    cursor: "pointer",
-                    transform: venueMenuOpen ? "rotate(180deg)" : "none",
-                    transition: "transform 0.3s ease",
-                  }}
-                >
-                  {venueMenuOpen ? "x" : ">"}
-                </button>
-              </div>
-
-              {/* Display saved venue types */}
-              <div
-                style={{
-                  marginTop: "10px",
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "8px",
-                }}
-              >
-                {adminProfile?.venueTypes?.map((ft) => (
-                  <span
-                    key={ft}
-                    style={{
-                      padding: "4px 8px",
-                      backgroundColor: "#4ebecdff",
-                      borderRadius: "6px",
-                      fontSize: "0.85rem",
-                    }}
+            {/* ---------- Reusable Section ---------- */}
+            {[
+              {
+                title: "Venue Types",
+                open: venueMenuOpen,
+                setOpen: setVenueMenuOpen,
+                values: venueTypes,
+                setValues: setVenueTypes,
+                profileKey: "venueTypes",
+                defaultOptions: defaultVenueOptions,
+                hasChanges: hasVenueChanges,
+                setHasChanges: setHasVenueChanges,
+                color: "#4ebecdff",
+              },
+              {
+                title: "Function Types",
+                open: functionMenuOpen,
+                setOpen: setFunctionMenuOpen,
+                values: functionTypes,
+                setValues: setFunctionTypes,
+                profileKey: "functionTypes",
+                defaultOptions: defaultFunctionOptions,
+                hasChanges: hasFunctionChanges,
+                setHasChanges: setHasFunctionChanges,
+                color: "#e0f7fa",
+              },
+              {
+                title: "Complimentary Booking Amenities",
+                open: amenitiesMenuOpen,
+                setOpen: setAmenitiesMenuOpen,
+                values: amenities,
+                setValues: setAmenities,
+                profileKey: "amenities",
+                defaultOptions: defaultAmenityOptions,
+                hasChanges: hasAmenitiesChanges,
+                setHasChanges: setHasAmenitiesChanges,
+                color: "#f1f8e9",
+              },
+              {
+                title: "Add-Ons Charges",
+                open: addonsMenuOpen,
+                setOpen: setAddonsMenuOpen,
+                values: addons,
+                setValues: setAddons,
+                profileKey: "addons",
+                defaultOptions: defaultAddonsOptions,
+                hasChanges: hasAddonsChanges,
+                setHasChanges: setHasAddonsChanges,
+                color: "#e8f5e9",
+              },
+              {
+                title: "Menu Item Charges",
+                open: menuItemsMenuOpen,
+                setOpen: setMenuItemsMenuOpen,
+                values: menuItems,
+                setValues: setMenuItems,
+                profileKey: "menuItems",
+                defaultOptions: defaultMenuItemOptions,
+                hasChanges: hasMenuItemsChanges,
+                setHasChanges: setHasMenuItemsChanges,
+                color: "#fff3e0",
+              },
+            ].map((section, idx) => (
+              <div key={idx} className={styles.fieldRow}>
+                <div className={styles.sectionHeader}>
+                  <label className={styles.subHeading}>{section.title}:</label>
+                  <button
+                    type="button"
+                    className={`${styles.toggleButton} ${
+                      section.open ? styles.activeToggle : ""
+                    }`}
+                    onClick={() => section.setOpen((p) => !p)}
                   >
-                    {ft}
-                  </span>
-                ))}
-              </div>
-
-              {/* ✅ Dropdown appears only when arrow is clicked */}
-              {venueMenuOpen && (
-                <div style={{ marginTop: "15px" }}>
-                  <CreatableSelect
-                    isMulti
-                    components={{
-                      ...animatedComponents,
-                      ClearIndicator: () => null,
-                    }}
-                    options={[
-                      ...defaultVenueOptions.map((ft) => ({
-                        value: ft,
-                        label: ft,
-                      })),
-                      ...venueTypes
-                        .filter((ft) => !defaultVenueOptions.includes(ft))
-                        .map((ft) => ({ value: ft, label: ft })),
-                    ]}
-                    className={styles.selectBox}
-                    placeholder="Select or add venue types..."
-                    onChange={(selected) => {
-                      const selectedValues = selected
-                        ? selected.map((s) => s.value)
-                        : [];
-                      setVenueTypes(selectedValues);
-                      setHasVenueChanges(
-                        JSON.stringify(selectedValues) !==
-                        JSON.stringify(adminProfile?.venueTypes || [])
-                      );
-                    }}
-                    onCreateOption={(inputValue) => {
-                      const newType = inputValue.trim();
-                      if (
-                        !newType ||
-                        venueTypes.includes(newType) ||
-                        defaultVenueOptions.includes(newType)
-                      )
-                        return;
-                      setVenueTypes([...venueTypes, newType]);
-                      setHasVenueChanges(true);
-                    }}
-                    value={venueTypes.map((ft) => ({
-                      value: ft,
-                      label: ft,
-                    }))}
-                    isSearchable
-                    closeMenuOnSelect={false}
-                    styles={{
-                      control: (base) => ({
-                        ...base,
-                        borderRadius: "10px",
-                        borderColor: "#ccc",
-                        padding: "3px",
-                      }),
-                    }}
-                    formatCreateLabel={(inputValue) => `${inputValue} ➕`}
-                  />
-
-                  {hasVenueChanges && (
-                    <button
-                      type="button"
-                      style={{
-                        fontSize: "1.1rem", background: "#2e6999",
-                        padding: "2px 15px", borderRadius: '12px', marginTop: '15px'
-                      }}
-                      onClick={async () => {
-                        if (!adminProfile) return;
-                        const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
-                        await updateDoc(adminProfileRef, { venueTypes });
-                        setHasVenueChanges(false);
-                        setVenueMenuOpen(false);
-                      }}
-                      className={styles.button}
-                    >
-                      Save Update
-                    </button>
-                  )}
+                    {section.open ? "x" : ">"}
+                  </button>
                 </div>
-              )}
-            </div>
 
-            {/* ---------- Function Types ---------- */}
-            <div
-              className={styles.fieldRow}
-              style={{
-                marginBottom: "20px",
-                paddingBottom: "15px",
-                borderBottom: "1px dashed #cbd5e1",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <label htmlFor="functionType" className={styles.subHeading}>
-                  Function Types:
-                </label>
-
-                {/* Toggle button */}
-                <button
-                  type="button"
-                  className={styles.editButton}
-                  onClick={() => {
-                    setFunctionMenuOpen((prev) => !prev);
-                    setVenueMenuOpen(false); // close venue dropdown if open
-                  }}
-                  style={{
-                    fontSize: "1.2rem",
-                    background: "#2e6999",
-                    padding: "2px 15px",
-                    border: "none",
-                    cursor: "pointer",
-                    transform: functionMenuOpen ? "rotate(180deg)" : "none",
-                    transition: "transform 0.3s ease",
-                  }}
-                >
-                  {functionMenuOpen ? "x" : ">"}
-                </button>
-              </div>
-
-              {/* Display saved function types */}
-              <div
-                style={{
-                  marginTop: "10px",
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "8px",
-                }}
-              >
-                {adminProfile?.functionTypes?.map((ft) => (
-                  <span
-                    key={ft}
-                    style={{
-                      padding: "4px 8px",
-                      backgroundColor: "#e0f7fa",
-                      borderRadius: "6px",
-                      fontSize: "0.85rem",
-                    }}
-                  >
-                    {ft}
-                  </span>
-                ))}
-              </div>
-
-              {/* ✅ Dropdown only appears when arrow clicked */}
-              {functionMenuOpen && (
-                <div style={{ marginTop: "15px" }}>
-                  <CreatableSelect
-                    isMulti
-                    components={{
-                      ...animatedComponents,
-                      ClearIndicator: () => null,
-                    }}
-                    options={[
-                      ...defaultFunctionOptions.map((ft) => ({
-                        value: ft,
-                        label: ft,
-                      })),
-                      ...functionTypes
-                        .filter((ft) => !defaultFunctionOptions.includes(ft))
-                        .map((ft) => ({ value: ft, label: ft })),
-                    ]}
-                    className={styles.selectBox}
-                    placeholder="Select or add function types..."
-                    onChange={(selected) => {
-                      const selectedValues = selected ? selected.map((s) => s.value) : [];
-                      setFunctionTypes(selectedValues);
-                      setHasFunctionChanges(
-                        JSON.stringify(selectedValues) !==
-                        JSON.stringify(adminProfile?.functionTypes || [])
-                      );
-                    }}
-                    onCreateOption={(inputValue) => {
-                      const newType = inputValue.trim();
-                      if (
-                        !newType ||
-                        functionTypes.includes(newType) ||
-                        defaultFunctionOptions.includes(newType)
-                      )
-                        return;
-                      setFunctionTypes([...functionTypes, newType]);
-                      setHasFunctionChanges(true);
-                    }}
-                    value={functionTypes.map((ft) => ({
-                      value: ft,
-                      label: ft,
-                    }))}
-                    isSearchable
-                    closeMenuOnSelect={false}
-                    styles={{
-                      control: (base) => ({
-                        ...base,
-                        borderRadius: "10px",
-                        borderColor: "#ccc",
-                        padding: "3px",
-                      }),
-                    }}
-                    formatCreateLabel={(inputValue) => `${inputValue} ➕`}
-                  />
-
-                  {hasFunctionChanges && (
-                    <button
-                      type="button"
-                      style={{
-                        fontSize: "1.1rem", background: "#2e6999",
-                        padding: "2px 15px", borderRadius: '12px', marginTop: '15px'
-                      }}
-                      onClick={async () => {
-                        if (!adminProfile) return;
-                        const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
-                        await updateDoc(adminProfileRef, { functionTypes });
-                        setHasFunctionChanges(false);
-                        setFunctionMenuOpen(false); // ✅ auto-close after save
-                      }}
-                      className={styles.button}
-                    >
-                      Save Update
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* ---------- Complimentary Booking Amenities ---------- */}
-            <div
-              className={styles.fieldRow}
-              style={{
-                marginBottom: "20px",
-                paddingBottom: "15px",
-                borderBottom: "1px dashed #cbd5e1",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <label htmlFor="amenities" className={styles.subHeading}>
-                  Complimentary Booking Amenities:
-                </label>
-
-                {/* Toggle button */}
-                <button
-                  type="button"
-                  className={styles.editButton}
-                  onClick={() => {
-                    setAmenitiesMenuOpen((prev) => !prev);
-                    setFunctionMenuOpen(false);
-                    setVenueMenuOpen(false);
-                  }}
-                  style={{
-                    fontSize: "1.2rem",
-                    background: "#2e6999",
-                    padding: "2px 15px",
-                    border: "none",
-                    cursor: "pointer",
-                    transform: amenitiesMenuOpen ? "rotate(180deg)" : "none",
-                    transition: "transform 0.3s ease",
-                  }}
-                >
-                  {amenitiesMenuOpen ? "x" : ">"}
-                </button>
-              </div>
-
-              {/* ✅ Display saved amenities */}
-              <div
-                style={{
-                  marginTop: "10px",
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "8px",
-                }}
-              >
-                {adminProfile?.amenities?.length > 0 ? (
-                  adminProfile.amenities.map((am) => (
-                    <span
-                      key={am}
-                      style={{
-                        padding: "4px 8px",
-                        backgroundColor: "#f1f8e9",
-                        borderRadius: "6px",
-                        fontSize: "0.85rem",
-                      }}
-                    >
-                      {am}
+                <div className={styles.tagList}>
+                  {adminProfile?.[section.profileKey]?.length > 0 ? (
+                    adminProfile[section.profileKey].map((val) => (
+                      <span
+                        key={val}
+                        className={styles.badge}
+                        style={{ backgroundColor: section.color }}
+                      >
+                        {val}
+                      </span>
+                    ))
+                  ) : (
+                    <span className={styles.emptyText}>
+                      No items saved yet.
                     </span>
-                  ))
-                ) : (
-                  <span style={{ color: "#888", fontSize: "0.85rem" }}>
-                    No amenities saved yet.
-                  </span>
+                  )}
+                </div>
+
+                {section.open && (
+                  <div className={styles.dropdownSection}>
+                    <CreatableSelect
+                      isMulti
+                      components={{ ...animatedComponents, ClearIndicator: () => null }}
+                      options={[
+                        ...section.defaultOptions.map((opt) => ({
+                          value: opt,
+                          label: opt,
+                        })),
+                        ...(section.values
+                          ?.filter((v) => !section.defaultOptions.includes(v))
+                          ?.map((v) => ({ value: v, label: v })) || []),
+                      ]}
+                      className={styles.selectBox}
+                      placeholder={`Select or add ${section.title.toLowerCase()}...`}
+                      onChange={(selected) => {
+                        const vals = selected ? selected.map((s) => s.value) : [];
+                        section.setValues(vals);
+                        section.setHasChanges(
+                          JSON.stringify(vals) !==
+                            JSON.stringify(adminProfile?.[section.profileKey] || [])
+                        );
+                      }}
+                      onCreateOption={(inputValue) => {
+                        const val = inputValue.trim();
+                        if (
+                          !val ||
+                          section.values.includes(val) ||
+                          section.defaultOptions.includes(val)
+                        )
+                          return;
+                        section.setValues([...section.values, val]);
+                        section.setHasChanges(true);
+                      }}
+                      value={section.values.map((v) => ({
+                        value: v,
+                        label: v,
+                      }))}
+                      isSearchable
+                      closeMenuOnSelect={false}
+                      styles={{
+                        control: (base) => ({
+                          ...base,
+                          borderRadius: "10px",
+                          borderColor: "#ccc",
+                          padding: "3px",
+                        }),
+                      }}
+                      formatCreateLabel={(val) => `${val} ➕`}
+                    />
+
+                    {section.hasChanges && (
+                      <button
+                        type="button"
+                        className={styles.saveButtonPrimary}
+                        onClick={async () => {
+                          if (!adminProfile) return;
+                          const ref = doc(db, "usersAccess", adminProfile.id);
+                          await updateDoc(ref, { [section.profileKey]: section.values });
+                          section.setHasChanges(false);
+                          section.setOpen(false);
+                        }}
+                      >
+                        Save Update
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
-
-              {/* ✅ Dropdown only visible when toggled open */}
-              {amenitiesMenuOpen && (
-                <div style={{ marginTop: "15px" }}>
-                  <CreatableSelect
-                    isMulti
-                    components={{
-                      ...animatedComponents,
-                      ClearIndicator: () => null,
-                    }}
-                    options={[
-                      ...defaultAmenityOptions.map((am) => ({
-                        value: am,
-                        label: am,
-                      })),
-                      ...(amenities?.filter(
-                        (am) => !defaultAmenityOptions.includes(am)
-                      ) || []).map((am) => ({ value: am, label: am })),
-                    ]}
-                    className={styles.selectBox}
-                    placeholder="Select or add amenities..."
-                    onChange={(selected) => {
-                      const selectedValues = selected ? selected.map((s) => s.value) : [];
-                      setAmenities(selectedValues);
-                      setHasAmenitiesChanges(
-                        JSON.stringify(selectedValues) !==
-                        JSON.stringify(adminProfile?.amenities || [])
-                      );
-                    }}
-                    onCreateOption={(inputValue) => {
-                      const newAmenity = inputValue.trim();
-                      if (
-                        !newAmenity ||
-                        amenities.includes(newAmenity) ||
-                        defaultAmenityOptions.includes(newAmenity)
-                      )
-                        return;
-                      setAmenities([...amenities, newAmenity]);
-                      setHasAmenitiesChanges(true);
-                    }}
-                    value={amenities.map((am) => ({
-                      value: am,
-                      label: am,
-                    }))}
-                    isSearchable
-                    closeMenuOnSelect={false}
-                    styles={{
-                      control: (base) => ({
-                        ...base,
-                        borderRadius: "10px",
-                        borderColor: "#ccc",
-                        padding: "3px",
-                      }),
-                    }}
-                    formatCreateLabel={(inputValue) => `${inputValue} ➕`}
-                  />
-
-                  {hasAmenitiesChanges && (
-                    <button
-                      type="button"
-                      style={{
-                        fontSize: "1.1rem", background: "#2e6999",
-                        padding: "2px 15px", borderRadius: '12px', marginTop: '15px'
-                      }}
-                      onClick={async () => {
-                        if (!adminProfile) return;
-                        const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
-                        await updateDoc(adminProfileRef, { amenities });
-                        setHasAmenitiesChanges(false);
-                        setAmenitiesMenuOpen(false); // ✅ auto-close after save
-                      }}
-                      className={styles.button}
-                    >
-                      Save Update
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* ---------- Add-Ons Charges ---------- */}
-            <div
-              className={styles.fieldRow}
-              style={{
-                marginBottom: "20px",
-                paddingBottom: "15px",
-                borderBottom: "1px dashed #cbd5e1",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <label htmlFor="addons" className={styles.subHeading}>
-                  Add-Ons Charges:
-                </label>
-
-                {/* Toggle button */}
-                <button
-                  type="button"
-                  className={styles.editButton}
-                  onClick={() => {
-                    setAddonsMenuOpen((prev) => !prev);
-                    setFunctionMenuOpen(false);
-                    setVenueMenuOpen(false);
-                    setAmenitiesMenuOpen(false);
-                  }}
-                  style={{
-                    fontSize: "1.2rem",
-                    background: "#2e6999",
-                    padding: "2px 15px",
-                    border: "none",
-                    cursor: "pointer",
-                    transform: addonsMenuOpen ? "rotate(180deg)" : "none",
-                    transition: "transform 0.3s ease",
-                  }}
-                >
-                  {addonsMenuOpen ? "x" : ">"}
-                </button>
-              </div>
-
-              {/* ✅ Display saved Add-Ons */}
-              <div
-                style={{
-                  marginTop: "10px",
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "8px",
-                }}
-              >
-                {adminProfile?.addons?.length > 0 ? (
-                  adminProfile.addons.map((ad) => (
-                    <span
-                      key={ad}
-                      style={{
-                        padding: "4px 8px",
-                        backgroundColor: "#e8f5e9",
-                        borderRadius: "6px",
-                        fontSize: "0.85rem",
-                      }}
-                    >
-                      {ad}
-                    </span>
-                  ))
-                ) : (
-                  <span style={{ color: "#888", fontSize: "0.85rem" }}>
-                    No add-ons saved yet.
-                  </span>
-                )}
-              </div>
-
-              {/* ✅ Dropdown only visible when toggled open */}
-              {addonsMenuOpen && (
-                <div style={{ marginTop: "15px" }}>
-                  <CreatableSelect
-                    isMulti
-                    components={{
-                      ...animatedComponents,
-                      ClearIndicator: () => null,
-                    }}
-                    options={[
-                      ...defaultAddonsOptions.map((a) => ({ value: a, label: a })),
-                      ...(addons?.filter((a) => !defaultAddonsOptions.includes(a)) || []).map(
-                        (a) => ({ value: a, label: a })
-                      ),
-                    ]}
-                    className={styles.selectBox}
-                    placeholder="Select or add Add-Ons..."
-                    onChange={(selected) => {
-                      const selectedValues = selected ? selected.map((s) => s.value) : [];
-                      setAddons(selectedValues);
-                      setHasAddonsChanges(
-                        JSON.stringify(selectedValues) !==
-                        JSON.stringify(adminProfile?.addons || [])
-                      );
-                    }}
-                    onCreateOption={(inputValue) => {
-                      const newAddon = inputValue.trim();
-                      if (
-                        !newAddon ||
-                        addons.includes(newAddon) ||
-                        defaultAddonsOptions.includes(newAddon)
-                      )
-                        return;
-                      setAddons([...addons, newAddon]);
-                      setHasAddonsChanges(true);
-                    }}
-                    value={addons.map((a) => ({ value: a, label: a }))}
-                    isSearchable
-                    closeMenuOnSelect={false}
-                    styles={{
-                      control: (base) => ({
-                        ...base,
-                        borderRadius: "10px",
-                        borderColor: "#ccc",
-                        padding: "3px",
-                      }),
-                    }}
-                    formatCreateLabel={(inputValue) => `${inputValue} ➕`}
-                  />
-
-                  {hasAddonsChanges && (
-                    <button
-                      style={{
-                        fontSize: "1.1rem", background: "#2e6999",
-                        padding: "2px 15px", borderRadius: '12px', marginTop: '15px'
-                      }}
-
-                      onClick={async () => {
-                        if (!adminProfile) return;
-                        const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
-                        await updateDoc(adminProfileRef, { addons });
-                        setHasAddonsChanges(false);
-                        setAddonsMenuOpen(false); // ✅ auto-close after save
-                      }}
-                      className={styles.button}
-                    >
-                      Save Update
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* ---------- Menu Item Charges ---------- */}
-            <div
-              className={styles.fieldRow}
-              style={{
-                marginBottom: "20px",
-                paddingBottom: "15px",
-                borderBottom: "1px dashed #cbd5e1",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <label htmlFor="menuItems" className={styles.subHeading}>
-                  Menu Item Charges:
-                </label>
-
-                {/* Toggle button */}
-                <button
-                  type="button"
-                  className={styles.editButton}
-                  onClick={() => {
-                    setMenuItemsMenuOpen((prev) => !prev);
-                    setFunctionMenuOpen(false);
-                    setVenueMenuOpen(false);
-                    setAmenitiesMenuOpen(false);
-                    setAddonsMenuOpen(false);
-                  }}
-                  style={{
-                    fontSize: "1.2rem",
-                    background: "#2e6999",
-                    padding: "2px 15px",
-                    border: "none",
-                    cursor: "pointer",
-                    transform: menuItemsMenuOpen ? "rotate(180deg)" : "none",
-                    transition: "transform 0.3s ease",
-                  }}
-                >
-                  {menuItemsMenuOpen ? "x" : ">"}
-                </button>
-              </div>
-
-              {/* ✅ Display saved menu items */}
-              <div
-                style={{
-                  marginTop: "10px",
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "8px",
-                }}
-              >
-                {adminProfile?.menuItems?.length > 0 ? (
-                  adminProfile.menuItems.map((item) => (
-                    <span
-                      key={item}
-                      style={{
-                        padding: "4px 8px",
-                        backgroundColor: "#fff3e0",
-                        borderRadius: "6px",
-                        fontSize: "0.85rem",
-                      }}
-                    >
-                      {item}
-                    </span>
-                  ))
-                ) : (
-                  <span style={{ color: "#888", fontSize: "0.85rem" }}>
-                    No menu items saved yet.
-                  </span>
-                )}
-              </div>
-
-              {/* ✅ Dropdown only visible when toggled open */}
-              {menuItemsMenuOpen && (
-                <div style={{ marginTop: "15px" }}>
-                  <CreatableSelect
-                    isMulti
-                    components={{
-                      ...animatedComponents,
-                      ClearIndicator: () => null,
-                    }}
-                    options={[
-                      ...defaultMenuItemOptions.map((m) => ({ value: m, label: m })),
-                      ...(menuItems?.filter((m) => !defaultMenuItemOptions.includes(m)) || []).map(
-                        (m) => ({ value: m, label: m })
-                      ),
-                    ]}
-                    className={styles.selectBox}
-                    placeholder="Select or add menu items..."
-                    onChange={(selected) => {
-                      const selectedValues = selected ? selected.map((s) => s.value) : [];
-                      setMenuItems(selectedValues);
-                      setHasMenuItemsChanges(
-                        JSON.stringify(selectedValues) !==
-                        JSON.stringify(adminProfile?.menuItems || [])
-                      );
-                    }}
-                    onCreateOption={(inputValue) => {
-                      const newItem = inputValue.trim();
-                      if (!newItem || menuItems.includes(newItem) || defaultMenuItemOptions.includes(newItem))
-                        return;
-                      setMenuItems([...menuItems, newItem]);
-                      setHasMenuItemsChanges(true);
-                    }}
-                    value={menuItems.map((m) => ({ value: m, label: m }))}
-                    isSearchable
-                    closeMenuOnSelect={false}
-                    styles={{
-                      control: (base) => ({
-                        ...base,
-                        borderRadius: "10px",
-                        borderColor: "#ccc",
-                        padding: "3px",
-                      }),
-                    }}
-                    formatCreateLabel={(inputValue) => `${inputValue} ➕`}
-                  />
-
-                  {hasMenuItemsChanges && (
-                    <button
-                      type="button"
-                      style={{
-                        fontSize: "1.1rem", background: "#2e6999",
-                        padding: "2px 15px", borderRadius: '12px', marginTop: '15px'
-                      }}
-                      onClick={async () => {
-                        if (!adminProfile) return;
-                        const adminProfileRef = doc(db, "usersAccess", adminProfile.id);
-                        await updateDoc(adminProfileRef, { menuItems });
-                        setHasMenuItemsChanges(false);
-                        setMenuItemsMenuOpen(false); // ✅ auto-close after save
-                      }}
-                      className={styles.button}
-                    >
-                      Save Update
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
+            ))}
           </>
         ) : (
-          <div className={styles.container}>
+          <div className={styles.loadingContainer}>
             {loading ? (
-              <div className={styles.spinnerContainer}>
-                <div className={styles.spinner}></div>
-              </div>
-            ) : !adminProfile ? (
-              <p className={styles.message}>Pls Login With Admin/ Partner Profile profile...</p>
+              <div className={styles.spinner}></div>
             ) : (
-              <div>
-                <h2>Welcome, {adminProfile.name}</h2>
-              </div>
+              <p className={styles.message}>
+                Please log in with an Admin/Partner profile...
+              </p>
             )}
-          </div>)}
-        <div style={{ marginBottom: "150px" }}></div>
+          </div>
+        )}
+
+        <div className={styles.bottomSpacing}></div>
       </div>
+
       <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
     </>
   );

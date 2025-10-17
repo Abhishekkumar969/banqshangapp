@@ -4,6 +4,7 @@ import { runTransaction, doc, setDoc, getDoc, updateDoc, arrayUnion } from 'fire
 import BackButton from '../components/BackButton';
 import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
+import BottomNavigationBar from "../components/BottomNavigationBar";
 
 const Receipts = () => {
   const [type, setType] = useState('Debit');
@@ -21,6 +22,27 @@ const Receipts = () => {
   const [customParticularNature, setCustomParticularNature] = useState('');
   const [assignedUsers, setAssignedUsers] = useState([]);
   const [cashTo, setCashTo] = useState('');
+  const [userAppType, setUserAppType] = useState(null);
+
+  useEffect(() => {
+    const fetchUserAppType = async () => {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          const userRef = doc(db, 'usersAccess', user.email);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            setUserAppType(data.accessToApp);
+          }
+        } catch (err) {
+          console.error("Error fetching user app type:", err);
+        }
+      }
+    };
+    fetchUserAppType();
+  }, []);
 
   // --- IST helper functions ---
   const getISTDate = (date = new Date()) => {
@@ -205,113 +227,120 @@ const Receipts = () => {
     }
   };
   return (
-    <div>
-      <div style={{ marginBottom: '30px' }}> <BackButton /> </div>
-      <div className="receipt-container">
-        <h2 className="title">Voucher</h2>
-        {slNo && <p><strong>Sl No:</strong> V{slNo}</p>}
+    <>
 
-        <div className="input-row">
-          <label>Receipt Type</label>
-          <select value={type} onChange={e => setType(e.target.value)}>
-            <option value="Debit">Debit</option>
-            <option value="Credit">Credit</option>
-          </select>
-        </div>
+      <div>
+        <div style={{ marginBottom: '30px' }}> <BackButton /> </div>
+        <div className="receipt-container">
+          <h2 className="title">Voucher</h2>
+          {slNo && <p><strong>Sl No:</strong> V{slNo}</p>}
 
-        <div className="input-row">
-          <label>{type === 'Credit' ? 'Receive From' : 'Pay To'}</label>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <select value={prefix} onChange={e => setPrefix(e.target.value)} style={{ width: '100px' }}>
-              <option value="Mr.">Mr.</option>
-              <option value="Miss">Miss</option>
-              <option value="Mrs.">Mrs.</option>
-              <option value="Dr.">Dr.</option>
-              <option value="Md.">Md.</option>
-            </select>
-            <input type="text" value={partyName} onChange={e => setPartyName(e.target.value.replace(/\b\w/g, c => c.toUpperCase()))} placeholder={type === 'Credit' ? 'From getting money' : 'Giving money to'} />
-          </div>
-        </div>
-
-        <div className="input-row">
-          <label>Mobile No.</label>
-          <input type="text" inputMode="numeric" pattern="[0-9]*" placeholder="Enter Mobile No." value={mobile} onChange={e => setMobile(e.target.value.replace(/\D/g, ""))} />
-        </div>
-
-        <div className="input-row">
-          <label>Payment Mode</label>
-          <select value={mode} onChange={e => setMode(e.target.value)}>
-            <option value="Cash">Cash</option>
-            <option value="BOI">BOI</option>
-            <option value="SBI">SBI</option>
-            <option value="Card">Card</option>
-            <option value="Cheque">Cheque</option>
-          </select>
-        </div>
-
-        {mode === 'Cash' && (
           <div className="input-row">
-            <label>{type === "Debit" ? "Cash From" : "Cash To"}</label>
-            <select value={cashTo} onChange={e => setCashTo(e.target.value)}>
-              <option value="">-- Select --</option>
-              <option value="Cash-Cash">Cash</option>
-              {assignedUsers.map(u => <option key={`${u.email}-${u.type}`} value={`${u.name}-${u.type}`}>{u.name} - ({u.type})</option>)}
+            <label>Receipt Type</label>
+            <select value={type} onChange={e => setType(e.target.value)}>
+              <option value="Debit">Debit</option>
+              <option value="Credit">Credit</option>
             </select>
           </div>
-        )}
 
-        <div className="input-row">
-          <label>Amount</label>
-          <input type="text" inputMode="decimal" placeholder="Enter amount" value={amount} onChange={e => {
-            let val = e.target.value.replace(/[^0-9.]/g, "");
-            if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
-            setAmount(val);
-          }} />
-        </div>
+          <div className="input-row">
+            <label>{type === 'Credit' ? 'Receive From' : 'Pay To'}</label>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <select value={prefix} onChange={e => setPrefix(e.target.value)} style={{ width: '100px' }}>
+                <option value="Mr.">Mr.</option>
+                <option value="Miss">Miss</option>
+                <option value="Mrs.">Mrs.</option>
+                <option value="Dr.">Dr.</option>
+                <option value="Md.">Md.</option>
+              </select>
+              <input type="text" value={partyName} onChange={e => setPartyName(e.target.value.replace(/\b\w/g, c => c.toUpperCase()))} placeholder={type === 'Credit' ? 'From getting money' : 'Giving money to'} />
+            </div>
+          </div>
 
-        <div className="input-row" style={{ display: 'none' }}>
-          <input type="text" value={myName || "Fetching name..."} />
-        </div>
+          <div className="input-row">
+            <label>Mobile No.</label>
+            <input type="text" inputMode="numeric" pattern="[0-9]*" placeholder="Enter Mobile No." value={mobile} onChange={e => setMobile(e.target.value.replace(/\D/g, ""))} />
+          </div>
 
-        <div className="input-row">
-          <label>Particular Nature</label>
-          <select value={particularNature} onChange={e => setParticularNature(e.target.value)}>
-            <option value="">-- Select Particular Nature --</option>
-            {type === 'Credit' ? <>
-              <option value="Banquet Booking">Banquet Booking</option>
-              <option value="Vendor Party">Vendor Party</option>
-              <option value="Other">Other (Specify Below)</option>
-            </> : <>
-              <option value="Khana Khazana">Khana Khazana</option>
-              <option value="Ravi Catering">Ravi Catering</option>
-              <option value="Fuel Expense">Fuel Expense</option>
-              <option value="Labour Charges">Labour Charges</option>
-              <option value="Repair & Maintenance">Repair & Maintenance</option>
-              <option value="Party Expense">Party Expense</option>
-              <option value="Office Expense">Office Expense</option>
-              <option value="Other">Other (Specify Below)</option>
-            </>}
-          </select>
-          {particularNature === 'Other' && <input type="text" placeholder="Enter custom description" value={customParticularNature} onChange={e => setCustomParticularNature(e.target.value)} style={{ marginTop: '8px' }} />}
-        </div>
+          <div className="input-row">
+            <label>Payment Mode</label>
+            <select value={mode} onChange={e => setMode(e.target.value)}>
+              <option value="Cash">Cash</option>
+              <option value="BOI">BOI</option>
+              <option value="SBI">SBI</option>
+              <option value="Card">Card</option>
+              <option value="Cheque">Cheque</option>
+            </select>
+          </div>
 
-        <div className="input-row">
-          <label>Description</label>
-          <input type="text" placeholder='Enter description' value={description} onChange={e => setDescription(e.target.value)} />
-        </div>
+          {mode === 'Cash' && (
+            <div className="input-row">
+              <label>{type === "Debit" ? "Cash From" : "Cash To"}</label>
+              <select value={cashTo} onChange={e => setCashTo(e.target.value)}>
+                <option value="">-- Select --</option>
+                <option value="Cash-Cash">Cash</option>
+                {assignedUsers.map(u => <option key={`${u.email}-${u.type}`} value={`${u.name}-${u.type}`}>{u.name} - ({u.type})</option>)}
+              </select>
+            </div>
+          )}
 
-        <div className="input-row">
-          <label>Date</label>
-          <input type="date" value={manualDate} onChange={e => setManualDate(e.target.value)} />
-        </div>
+          <div className="input-row">
+            <label>Amount</label>
+            <input type="text" inputMode="decimal" placeholder="Enter amount" value={amount} onChange={e => {
+              let val = e.target.value.replace(/[^0-9.]/g, "");
+              if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
+              setAmount(val);
+            }} />
+          </div>
 
-        <div className="submit-row">
-          <button onClick={handleSubmit} disabled={isSaving}>
-            {isSaving ? '⏳ Saving...' : `💾 Save ${type} Receipt`}
-          </button>
+          <div className="input-row" style={{ display: 'none' }}>
+            <input type="text" value={myName || "Fetching name..."} />
+          </div>
+
+          <div className="input-row">
+            <label>Particular Nature</label>
+            <select value={particularNature} onChange={e => setParticularNature(e.target.value)}>
+              <option value="">-- Select Particular Nature --</option>
+              {type === 'Credit' ? <>
+                <option value="Banquet Booking">Banquet Booking</option>
+                <option value="Vendor Party">Vendor Party</option>
+                <option value="Other">Other (Specify Below)</option>
+              </> : <>
+                <option value="Khana Khazana">Khana Khazana</option>
+                <option value="Ravi Catering">Ravi Catering</option>
+                <option value="Fuel Expense">Fuel Expense</option>
+                <option value="Labour Charges">Labour Charges</option>
+                <option value="Repair & Maintenance">Repair & Maintenance</option>
+                <option value="Party Expense">Party Expense</option>
+                <option value="Office Expense">Office Expense</option>
+                <option value="Other">Other (Specify Below)</option>
+              </>}
+            </select>
+            {particularNature === 'Other' && <input type="text" placeholder="Enter custom description" value={customParticularNature} onChange={e => setCustomParticularNature(e.target.value)} style={{ marginTop: '8px' }} />}
+          </div>
+
+          <div className="input-row">
+            <label>Description</label>
+            <input type="text" placeholder='Enter description' value={description} onChange={e => setDescription(e.target.value)} />
+          </div>
+
+          <div className="input-row">
+            <label>Date</label>
+            <input type="date" value={manualDate} onChange={e => setManualDate(e.target.value)} />
+          </div>
+
+          <div className="submit-row">
+            <button onClick={handleSubmit} disabled={isSaving}>
+              {isSaving ? '⏳ Saving...' : `💾 Save ${type} Receipt`}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      <div style={{ marginBottom: "50px" }}></div>
+      <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
+
+    </>
   );
 };
 

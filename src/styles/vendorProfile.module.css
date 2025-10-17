@@ -1,175 +1,308 @@
-/* === MAIN CONTAINER === */
+/* ---------- Container & Base ---------- */
 .container {
-  /* max-width: 950px; */
-  padding: 35px 30px;
+  padding: 40px 25px;
   font-family: 'Poppins', sans-serif;
   background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(18px);
-  border-radius: 30px;
-  border: 1px solid rgba(135, 193, 235, 0.3);
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
-  transition: all 0.4s ease;
+  backdrop-filter: blur(20px);
+  border-radius: 25px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  color: #1f2937;
+  transition: all 0.3s ease;
 }
 
-/* === HEADING === */
-.heading {
-  font-size: 2.8rem;
-  font-weight: 900;
-  margin-bottom: 35px;
-  text-align: center;
-  color: #2e6999;
-  text-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
-}
-
-/* === FIELD CARD === */
-.fieldRow {
+.backButtonWrapper {
   margin-bottom: 30px;
-  padding: 28px 25px;
-  border-radius: 25px;
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(15px);
-  border: 1px solid rgba(135, 193, 235, 0.35);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
-  transition: all 0.4s ease;
-  position: relative;
-  overflow: hidden;
 }
 
-
-
-/* === INPUTS & TEXTAREAS === */
-.editInput,
-.editTextarea {
-  width: 100%;
-  padding: 16px 20px;
-  font-size: 1rem;
-  border-radius: 20px;
-  border: 1px solid #87c1eb;
-  background: rgba(255, 255, 255, 0.05);
-  color: #000;
-  transition: all 0.35s ease;
-}
-
-.editInput:focus,
-.editTextarea:focus {
-  border-color: #2e6999;
-  box-shadow: 0 0 15px rgba(46, 105, 153, 0.35);
-  outline: none;
-  transform: scale(1.02);
-}
-
-/* === BUTTONS === */
-.editButton,
-.saveButton,
-.cancelButton {
-  font-size: 1rem;
-  padding: 10px 25px;
-  border-radius: 25px;
+.heading {
+  font-size: 1.8rem;
   font-weight: 600;
-  border: none;
+  color: #0f172a;
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+
+.emailLine {
+  font-size: 0.95rem;
+  color: #334155;
+  margin-bottom: 15px;
+}
+
+/* ---------- Profile Info Card ---------- */
+.adminProfileInfo {
+  background: rgba(255, 255, 255, 0.12);
+  padding: 20px;
+  border-radius: 20px;
+  margin-bottom: 25px;
+  transition: all 0.3s ease;
+}
+
+/* ---------- Field Row ---------- */
+.fieldRow {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px dashed #cbd5e1;
+  transition: all 0.3s ease;
+}
+
+.fieldHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fieldLabel {
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.fieldValue {
+  margin-left: 10px;
+  margin-bottom: 10px;
+}
+
+.valueText {
+  color: #555;
+  text-transform: capitalize;
+}
+
+.termsText {
+  color: #555;
+  white-space: pre-line;
+  font-size: 0.9rem;
+}
+
+/* ---------- Buttons ---------- */
+.editButton,
+.toggleButton,
+.saveButton,
+.cancelButton,
+.saveButtonPrimary {
   cursor: pointer;
-  transition: all 0.35s ease;
+  border-radius: 10px;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
 
 .editButton {
-  background: #2e6999;
-  color: white;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  font-size: 0.95rem;
 }
 
 .editButton:hover {
-  background: #1f4973;
-  transform: scale(1.05);
+  background: #1e40af;
+}
+
+.textarea {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  resize: none;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.buttonGroup {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .saveButton {
-  background: #87c1eb;
-  color: black;
+  background: #2563eb;
+  color: #fff;
+  padding: 8px 20px;
 }
 
 .saveButton:hover {
-  background: #5fa1d1;
-  transform: scale(1.05);
+  background: #1e40af;
 }
 
 .cancelButton {
-  background: white;
-  color: #2e6999;
-  border: 1px solid #2e6999;
+  background: #e2e8f0;
+  color: #111827;
+  padding: 8px 20px;
 }
 
 .cancelButton:hover {
+  background: #cbd5e1;
+}
+
+.saveButtonPrimary {
+  font-size: 1.1rem;
   background: #2e6999;
-  color: white;
-  transform: scale(1.05);
-}
-
-/* === BADGES === */
-.fieldRow span {
+  color: #fff;
   padding: 8px 22px;
-  border-radius: 30px;
-  font-size: 0.9rem;
+  border-radius: 12px;
+  margin-top: 15px;
+  border: none;
+}
+
+.saveButtonPrimary:hover {
+  background: #17496f;
+}
+
+/* ---------- Section Headers ---------- */
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.subHeading {
   font-weight: 600;
-  display: inline-block;
-  margin: 6px 5px 0 0;
-  background: linear-gradient(135deg, #3a83bf, #70b1df);
-  color: rgb(255, 255, 255);
-  transition: all 0.35s ease;
+  font-size: 1rem;
+  color: #1e293b;
 }
 
-.fieldRow span:hover {
-  transform: scale(1.1);
-  box-shadow: 0 4px 20px rgba(46, 105, 153, 0.35);
+/* ---------- Toggle Buttons ---------- */
+.toggleButton {
+  font-size: 1.2rem;
+  background: #2e6999;
+  color: #fff;
+  padding: 4px 16px;
+  border: none;
+  border-radius: 10px;
 }
 
-/* === RESPONSIVE === */
-/* Tablet */
+.toggleButton:hover {
+  background: #17496f;
+}
+
+.activeToggle {
+  transform: rotate(180deg);
+}
+
+/* ---------- Tags & Badges ---------- */
+.tagList {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.badge {
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  background: #cde3f8;
+  color: #1e3a8a;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.emptyText {
+  color: #888;
+  font-size: 0.85rem;
+}
+
+/* ---------- Dropdown Sections ---------- */
+.dropdownSection {
+  margin-top: 15px;
+}
+
+.selectBox {
+  width: 100%;
+  border-radius: 12px !important;
+}
+
+/* ---------- Loading Spinner ---------- */
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  flex-direction: column;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #cbd5e1;
+  border-top-color: #2e6999;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.message {
+  font-size: 0.95rem;
+  color: #555;
+  text-align: center;
+  margin-top: 15px;
+}
+
+.bottomSpacing {
+  margin-bottom: 150px;
+}
+
+/* ---------- Responsive ---------- */
 @media (max-width: 768px) {
-  .container {
-    padding: 38px 20px;
-  }
-
-  .heading {
-    font-size: 2.2rem;
-  }
-
-  .editInput,
-  .editTextarea {
-    font-size: 0.95rem;
-    padding: 14px 16px;
-  }
-}
-
-/* Mobile */
-@media (max-width: 480px) {
   .container {
     padding: 30px 15px;
   }
 
   .heading {
-    font-size: 1.8rem;
-    margin-bottom: 25px;
+    font-size: 1.5rem;
   }
 
-  .fieldRow {
-    padding: 18px 15px;
-  }
-
-  .editInput,
-  .editTextarea {
-    font-size: 0.9rem;
-    padding: 12px 10px;
+  .subHeading {
+    font-size: 0.95rem;
   }
 
   .editButton,
+  .toggleButton,
   .saveButton,
-  .cancelButton {
-    padding: 4px 18px;
-    font-size: 1.1rem;
-    margin-bottom: 10px;
+  .cancelButton,
+  .saveButtonPrimary {
+    font-size: 0.9rem;
+    padding: 6px 14px;
   }
 
-  .fieldRow span {
+  .badge {
     font-size: 0.8rem;
-    padding: 5px 12px;
+    padding: 4px 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 40px 15px;
+  }
+
+  .heading {
+    font-size: 1.3rem;
+  }
+
+  .fieldLabel {
+    font-size: 0.85rem;
+  }
+
+  .toggleButton,
+  .editButton {
+    padding: 4px 10px;
+    font-size: 0.85rem;
+  }
+
+  .badge {
+    font-size: 0.75rem;
+    padding: 3px 6px;
   }
 }

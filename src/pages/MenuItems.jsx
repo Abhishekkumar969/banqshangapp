@@ -1,6 +1,10 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { db } from "../firebaseConfig";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { useNavigate } from 'react-router-dom';
+import { getAuth } from "firebase/auth";
+import BackButton from "../components/BackButton";
+import BottomNavigationBar from "../components/BottomNavigationBar";
 
 const styles = {
     container: {
@@ -98,6 +102,28 @@ const MenuItems = () => {
     const [cardInputs, setCardInputs] = useState({});
     const [editingPrice, setEditingPrice] = useState({});
     const [priceInputs, setPriceInputs] = useState({});
+    const navigate = useNavigate();
+    const [userAppType, setUserAppType] = useState(null);
+
+    useEffect(() => {
+        const fetchUserAppType = async () => {
+            const auth = getAuth();
+            const user = auth.currentUser;
+            if (user) {
+                try {
+                    const userRef = doc(db, 'usersAccess', user.email);
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        const data = userSnap.data();
+                        setUserAppType(data.accessToApp);
+                    }
+                } catch (err) {
+                    console.error("Error fetching user app type:", err);
+                }
+            }
+        };
+        fetchUserAppType();
+    }, []);
 
     /* 🔹 Fetch items */
     const fetchItems = useCallback(async () => {
@@ -237,422 +263,367 @@ const MenuItems = () => {
     };
 
     return (
-        <div style={styles.container}>
-            <h2 style={styles.heading}>🍽 Manage Menu Items</h2>
+        <>
+            <div style={styles.container}>
+                <div style={{ marginBottom: '30px' }}> <BackButton />  </div>
+                <h2 style={styles.heading}>🍽 Manage Menu Items</h2>
 
-            {/* 🔹 Add category form */}
-            <form onSubmit={addCategory} style={styles.form}>
-                <select
-                    value={menuType}
-                    onChange={(e) => setMenuType(e.target.value)}
-                    style={styles.select}
-                >
-                    <option value="Breakfast">Breakfast</option>
-                    <option value="Lunch">Lunch</option>
-                    <option value="Dinner">Dinner</option>
-                </select>
+                {/* 🔹 Add category form */}
+                <form onSubmit={addCategory} style={styles.form}>
+                    <select
+                        value={menuType}
+                        onChange={(e) => setMenuType(e.target.value)}
+                        style={styles.select}
+                    >
+                        <option value="Breakfast">Breakfast</option>
+                        <option value="Lunch">Lunch</option>
+                        <option value="Dinner">Dinner</option>
+                    </select>
 
-                <input
-                    type="text"
-                    placeholder="Add Category"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    style={styles.input}
-                />
+                    <input
+                        type="text"
+                        placeholder="Add Category"
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        style={styles.input}
+                    />
 
-                <input
-                    type="text"
-                    placeholder="Category Price"
-                    value={categoryPrice || ""}
-                    onChange={(e) => {
-                        const val = e.target.value;
-                        if (/^\d*$/.test(val)) {
-                            setCategoryPrice(val);
-                        }
-                    }}
-                    style={{ ...styles.input, width: "180px" }}
-                />
+                    <input
+                        type="text"
+                        placeholder="Category Price"
+                        value={categoryPrice || ""}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            if (/^\d*$/.test(val)) {
+                                setCategoryPrice(val);
+                            }
+                        }}
+                        style={{ ...styles.input, width: "180px" }}
+                    />
 
 
-                <button type="submit" style={styles.button}>
-                    Add
-                </button>
-            </form>
+                    <button type="submit" style={styles.button}>
+                        Add
+                    </button>
+                </form>
 
-            {/* 🔹 Show Categories */}
-            {Object.keys(groupedItems).length > 0 ? (
-                <div style={styles.cardContainer1}>
-                    <div style={styles.cardContainer}>
-                        {Object.entries(groupedItems)
-                            .sort(([a], [b]) => a.localeCompare(b))
-                            .map(([cat, catObj]) => {
-                                const isCatExpanded = expandedCategories[cat] || false;
-                                const newCatItemName = cardInputs[`cat__${cat}`] || "";
+                {/* 🔹 Show Categories */}
+                {Object.keys(groupedItems).length > 0 ? (
+                    <div style={styles.cardContainer1}>
+                        <div style={styles.cardContainer}>
+                            {Object.entries(groupedItems)
+                                .sort(([a], [b]) => a.localeCompare(b))
+                                .map(([cat, catObj]) => {
+                                    const isCatExpanded = expandedCategories[cat] || false;
+                                    const newCatItemName = cardInputs[`cat__${cat}`] || "";
 
-                                return (
-                                    <div
-                                        key={`${menuType}_${cat}`}
-                                        style={{ ...styles.card, display: "flex", flexDirection: "column" }}
-                                    >
-                                        {/* 🔹 Category Header */}
+                                    return (
                                         <div
-                                            style={{
-                                                ...styles.cardHeader,
-                                                display: "flex",
-                                                alignItems: "center",
-                                                color: "#ff6a00ff",
-                                                fontWeight: "1000",
-                                                flexDirection: "column",
-                                            }}
+                                            key={`${menuType}_${cat}`}
+                                            style={{ ...styles.card, display: "flex", flexDirection: "column" }}
                                         >
-                                            <div style={{ padding: "2px 10px", width: "100%" }}>
-                                                <div
-                                                    style={{
-                                                        display: "flex",
-                                                        justifyContent: "space-between",
-                                                        padding: "5px 10px",
-                                                        backgroundColor: "rgba(255, 118, 72, 0.19)",
-                                                        borderRadius: "7px",
-                                                        boxShadow: "2px 2px 2px #feb7a0ff ",
-                                                        marginBottom: "10px",
-                                                    }}
-                                                    onClick={() =>
-                                                        setExpandedCategories((prev) => ({
-                                                            ...prev,
-                                                            [cat]: !prev[cat],
-                                                        }))
-                                                    }
-                                                >
-                                                    {editingPrice[cat] ? (
-                                                        <input
-                                                            type="text"
-                                                            value={priceInputs[`${cat}_name`] ?? cat}
-                                                            onChange={(e) =>
-                                                                setPriceInputs((prev) => ({
-                                                                    ...prev,
-                                                                    [`${cat}_name`]: e.target.value,
-                                                                }))
-                                                            }
-                                                            style={{
-                                                                flex: 1,
-                                                                borderRadius: "6px",
-                                                                border: "1px solid #ccc",
-                                                                padding: "2px 10px",
-                                                                marginRight: "10px",
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <span>{cat.toUpperCase()}</span>
-                                                    )}
-                                                    <span>{isCatExpanded ? "▲" : "▼"}</span>
-                                                </div>
-
-                                                {/* 🔹 Price Section */}
-                                                <div
-                                                    style={{
-                                                        display: "flex",
-                                                        justifyContent: "flex-end",
-                                                        padding: "2px 10px",
-                                                    }}
-                                                >
-                                                    <span
+                                            {/* 🔹 Category Header */}
+                                            <div
+                                                style={{
+                                                    ...styles.cardHeader,
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    color: "#ff6a00ff",
+                                                    fontWeight: "1000",
+                                                    flexDirection: "column",
+                                                }}
+                                            >
+                                                <div style={{ padding: "2px 10px", width: "100%" }}>
+                                                    <div
                                                         style={{
-                                                            fontWeight: "500",
-                                                            color: "black",
-                                                            marginRight: "10px",
+                                                            display: "flex",
+                                                            justifyContent: "space-between",
+                                                            padding: "5px 10px",
+                                                            backgroundColor: "rgba(255, 118, 72, 0.19)",
+                                                            borderRadius: "7px",
+                                                            boxShadow: "2px 2px 2px #feb7a0ff ",
+                                                            marginBottom: "10px",
                                                         }}
+                                                        onClick={() =>
+                                                            setExpandedCategories((prev) => ({
+                                                                ...prev,
+                                                                [cat]: !prev[cat],
+                                                            }))
+                                                        }
                                                     >
-                                                        Price:
-                                                    </span>
-
-                                                    {editingPrice[cat] ? (
-                                                        <>
+                                                        {editingPrice[cat] ? (
                                                             <input
                                                                 type="text"
-                                                                value={priceInputs[cat] ?? catObj.price ?? ""}
-                                                                onChange={(e) => {
-                                                                    const val = e.target.value;
-                                                                    if (/^\d*$/.test(val)) {
-                                                                        setPriceInputs((prev) => ({
-                                                                            ...prev,
-                                                                            [cat]: val,
-                                                                        }));
-                                                                    }
-                                                                }}
+                                                                value={priceInputs[`${cat}_name`] ?? cat}
+                                                                onChange={(e) =>
+                                                                    setPriceInputs((prev) => ({
+                                                                        ...prev,
+                                                                        [`${cat}_name`]: e.target.value,
+                                                                    }))
+                                                                }
                                                                 style={{
-                                                                    width: "80px",
+                                                                    flex: 1,
                                                                     borderRadius: "6px",
                                                                     border: "1px solid #ccc",
                                                                     padding: "2px 10px",
+                                                                    marginRight: "10px",
                                                                 }}
                                                             />
-                                                            <button
-                                                                onClick={async () => {
-                                                                    const newName = priceInputs[`${cat}_name`] || cat;
-                                                                    const newPrice = Number(priceInputs[cat] || 0);
-                                                                    const docRef = doc(db, "menu", menuType);
+                                                        ) : (
+                                                            <span>{cat.toUpperCase()}</span>
+                                                        )}
+                                                        <span>{isCatExpanded ? "▲" : "▼"}</span>
+                                                    </div>
 
-                                                                    // ✅ Rename category if name changed
-                                                                    if (newName !== cat) {
-                                                                        const menuSnap = await getDoc(docRef);
-                                                                        if (menuSnap.exists()) {
-                                                                            const data = menuSnap.data();
-                                                                            const categories = data.categories || {};
-
-                                                                            const updatedCategories = { ...categories };
-                                                                            updatedCategories[newName.toLowerCase()] = {
-                                                                                ...categories[cat.toLowerCase()],
-                                                                                price: newPrice,
-                                                                            };
-                                                                            delete updatedCategories[cat.toLowerCase()];
-
-                                                                            await updateDoc(docRef, { categories: updatedCategories });
-                                                                        }
-                                                                    } else {
-                                                                        // ✅ Only update price
-                                                                        await updateDoc(docRef, {
-                                                                            [`categories.${cat.toLowerCase()}.price`]: newPrice,
-                                                                        });
-                                                                    }
-
-                                                                    setEditingPrice((prev) => ({
-                                                                        ...prev,
-                                                                        [cat]: false,
-                                                                    }));
-                                                                    fetchItems();
-                                                                }}
-                                                                style={{
-                                                                    padding: "4px 8px",
-                                                                    marginLeft: "10px",
-                                                                    borderRadius: "6px",
-                                                                    background: "#2ecc71",
-                                                                    color: "#fff",
-                                                                }}
-                                                            >
-                                                                Save
-                                                            </button>
-                                                            <button
-                                                                onClick={() =>
-                                                                    setEditingPrice((prev) => ({
-                                                                        ...prev,
-                                                                        [cat]: false,
-                                                                    }))
-                                                                }
-                                                                style={{
-                                                                    padding: "4px 8px",
-                                                                    marginLeft: "5px",
-                                                                    borderRadius: "6px",
-                                                                    background: "#cc2e2e",
-                                                                    color: "#fff",
-                                                                }}
-                                                            >
-                                                                Cancel
-                                                            </button>
-                                                            <button
-                                                                onClick={async () => {
-                                                                    if (window.confirm(`Delete category "${cat}" ?`)) {
-                                                                        const docRef = doc(db, "menu", menuType);
-                                                                        const menuSnap = await getDoc(docRef);
-                                                                        if (menuSnap.exists()) {
-                                                                            const data = menuSnap.data();
-                                                                            const categories = data.categories || {};
-
-                                                                            const updatedCategories = { ...categories };
-                                                                            delete updatedCategories[cat.toLowerCase()];
-
-                                                                            await updateDoc(docRef, { categories: updatedCategories });
-                                                                            fetchItems();
-                                                                        }
-                                                                    }
-                                                                }}
-                                                                style={{
-                                                                    padding: "4px 8px",
-                                                                    marginLeft: "5px",
-                                                                    borderRadius: "6px",
-                                                                    background: "#e74c3c",
-                                                                    color: "#fff",
-                                                                }}
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <span>{catObj.price || 0}</span>
-                                                            <button
-                                                                onClick={() =>
-                                                                    setEditingPrice((prev) => ({
-                                                                        ...prev,
-                                                                        [cat]: true,
-                                                                    }))
-                                                                }
-                                                                style={{
-                                                                    padding: "2px 6px",
-                                                                    marginLeft: "10px",
-                                                                    borderRadius: "6px",
-                                                                    background: "#f39c12",
-                                                                    color: "#fff",
-                                                                    fontSize: "0.8rem",
-                                                                }}
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* 🔹 Expand Category */}
-                                        {isCatExpanded && (
-                                            <div
-                                                style={{
-                                                    paddingLeft: "12px",
-                                                    marginTop: "5px",
-                                                    borderTop: "1px solid red",
-                                                    display: "flex",
-                                                    flexDirection: "column",
-                                                    gap: "8px",
-                                                    overflow: "hidden",
-                                                    transition: "all 0.25s ease",
-                                                }}
-                                            >
-                                                {/* 🔹 Add new category item */}
-                                                <div style={{ display: "flex", gap: "6px", marginTop: '10px' }}>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="New category item"
-                                                        value={newCatItemName}
-                                                        onChange={(e) =>
-                                                            setCardInputs((prev) => ({
-                                                                ...prev,
-                                                                [`cat__${cat}`]: e.target.value,
-                                                            }))
-                                                        }
-                                                        style={{ flex: 1, minWidth: "120px", ...styles.input }}
-                                                    />
-                                                    <button
-                                                        onClick={() => {
-                                                            if (!newCatItemName?.trim()) return;
-                                                            addCategoryItem(cat, newCatItemName);
-                                                            setCardInputs((prev) => ({
-                                                                ...prev,
-                                                                [`cat__${cat}`]: "",
-                                                            }));
+                                                    {/* 🔹 Price Section */}
+                                                    <div
+                                                        style={{
+                                                            display: "flex",
+                                                            justifyContent: "flex-end",
+                                                            padding: "2px 10px",
                                                         }}
-                                                        style={styles.button}
                                                     >
-                                                        Add
-                                                    </button>
-                                                </div>
+                                                        <span
+                                                            style={{
+                                                                fontWeight: "500",
+                                                                color: "black",
+                                                                marginRight: "10px",
+                                                            }}
+                                                        >
+                                                            Price:
+                                                        </span>
 
-                                                {/* 🔹 Show category items */}
-                                                {Object.entries(catObj)
-                                                    .filter(([key]) => key !== "price")
-                                                    .map(([catItem, itemsList]) => {
-                                                        const key = `${cat}__${catItem}`;
-                                                        const isCatItemExpanded = expandedCategoryItems[key] || false;
-                                                        const newItemName = cardInputs[key] || "";
+                                                        {editingPrice[cat] ? (
+                                                            <>
+                                                                <input
+                                                                    type="text"
+                                                                    value={priceInputs[cat] ?? catObj.price ?? ""}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value;
+                                                                        if (/^\d*$/.test(val)) {
+                                                                            setPriceInputs((prev) => ({
+                                                                                ...prev,
+                                                                                [cat]: val,
+                                                                            }));
+                                                                        }
+                                                                    }}
+                                                                    style={{
+                                                                        width: "80px",
+                                                                        borderRadius: "6px",
+                                                                        border: "1px solid #ccc",
+                                                                        padding: "2px 10px",
+                                                                    }}
+                                                                />
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        const newName = priceInputs[`${cat}_name`] || cat;
+                                                                        const newPrice = Number(priceInputs[cat] || 0);
+                                                                        const docRef = doc(db, "menu", menuType);
 
-                                                        // 🔹 Subcategory editing state
-                                                        const isEditingSubcat = editingPrice[`subcat_${key}`] || false;
-                                                        const subcatEditValue =
-                                                            priceInputs[`subcat_${key}`] ?? catItem;
+                                                                        // ✅ Rename category if name changed
+                                                                        if (newName !== cat) {
+                                                                            const menuSnap = await getDoc(docRef);
+                                                                            if (menuSnap.exists()) {
+                                                                                const data = menuSnap.data();
+                                                                                const categories = data.categories || {};
 
-                                                        return (
-                                                            <div
-                                                                key={key}
-                                                                style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-                                                            >
-                                                                {/* 🔹 Subcategory Header */}
-                                                                <div
-                                                                    style={{ ...styles.cardHeader, cursor: "pointer" }}
-                                                                    onClick={() =>
-                                                                        setExpandedCategoryItems((prev) => ({
+                                                                                const updatedCategories = { ...categories };
+                                                                                updatedCategories[newName.toLowerCase()] = {
+                                                                                    ...categories[cat.toLowerCase()],
+                                                                                    price: newPrice,
+                                                                                };
+                                                                                delete updatedCategories[cat.toLowerCase()];
+
+                                                                                await updateDoc(docRef, { categories: updatedCategories });
+                                                                            }
+                                                                        } else {
+                                                                            // ✅ Only update price
+                                                                            await updateDoc(docRef, {
+                                                                                [`categories.${cat.toLowerCase()}.price`]: newPrice,
+                                                                            });
+                                                                        }
+
+                                                                        setEditingPrice((prev) => ({
                                                                             ...prev,
-                                                                            [key]: !prev[key],
+                                                                            [cat]: false,
+                                                                        }));
+                                                                        fetchItems();
+                                                                    }}
+                                                                    style={{
+                                                                        padding: "4px 8px",
+                                                                        marginLeft: "10px",
+                                                                        borderRadius: "6px",
+                                                                        background: "#2ecc71",
+                                                                        color: "#fff",
+                                                                    }}
+                                                                >
+                                                                    Save
+                                                                </button>
+                                                                <button
+                                                                    onClick={() =>
+                                                                        setEditingPrice((prev) => ({
+                                                                            ...prev,
+                                                                            [cat]: false,
                                                                         }))
                                                                     }
-
+                                                                    style={{
+                                                                        padding: "4px 8px",
+                                                                        marginLeft: "5px",
+                                                                        borderRadius: "6px",
+                                                                        background: "#cc2e2e",
+                                                                        color: "#fff",
+                                                                    }}
                                                                 >
+                                                                    Cancel
+                                                                </button>
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        if (window.confirm(`Delete category "${cat}" ?`)) {
+                                                                            const docRef = doc(db, "menu", menuType);
+                                                                            const menuSnap = await getDoc(docRef);
+                                                                            if (menuSnap.exists()) {
+                                                                                const data = menuSnap.data();
+                                                                                const categories = data.categories || {};
 
-                                                                    {isEditingSubcat ? (
-                                                                        <>
-                                                                            <input
-                                                                                type="text"
-                                                                                value={subcatEditValue}
-                                                                                onChange={(e) =>
-                                                                                    setPriceInputs((prev) => ({
-                                                                                        ...prev,
-                                                                                        [`subcat_${key}`]: e.target.value,
-                                                                                    }))
-                                                                                }
-                                                                                style={{
-                                                                                    flex: 1,
-                                                                                    borderRadius: "6px",
-                                                                                    border: "1px solid #ccc",
-                                                                                    padding: "2px 10px",
-                                                                                }}
-                                                                            />
-                                                                            <button
-                                                                                onClick={async () => {
-                                                                                    const docRef = doc(db, "menu", menuType);
-                                                                                    const snap = await getDoc(docRef);
-                                                                                    if (!snap.exists()) return;
+                                                                                const updatedCategories = { ...categories };
+                                                                                delete updatedCategories[cat.toLowerCase()];
 
-                                                                                    const data = snap.data();
-                                                                                    const categories = data.categories || {};
-                                                                                    const categoryObj = categories[cat.toLowerCase()] || {};
+                                                                                await updateDoc(docRef, { categories: updatedCategories });
+                                                                                fetchItems();
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                    style={{
+                                                                        padding: "4px 8px",
+                                                                        marginLeft: "5px",
+                                                                        borderRadius: "6px",
+                                                                        background: "#e74c3c",
+                                                                        color: "#fff",
+                                                                    }}
+                                                                >
+                                                                    Delete
+                                                                </button>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <span>{catObj.price || 0}</span>
+                                                                <button
+                                                                    onClick={() =>
+                                                                        setEditingPrice((prev) => ({
+                                                                            ...prev,
+                                                                            [cat]: true,
+                                                                        }))
+                                                                    }
+                                                                    style={{
+                                                                        padding: "2px 6px",
+                                                                        marginLeft: "10px",
+                                                                        borderRadius: "6px",
+                                                                        background: "#f39c12",
+                                                                        color: "#fff",
+                                                                        fontSize: "0.8rem",
+                                                                    }}
+                                                                >
+                                                                    Edit
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                                                                    // 🔹 rename subcategory (keep items + price safe)
-                                                                                    const updatedCategory = {
-                                                                                        ...categoryObj,
-                                                                                        [subcatEditValue.toLowerCase()]: categoryObj[catItem.toLowerCase()],
-                                                                                    };
-                                                                                    delete updatedCategory[catItem.toLowerCase()];
+                                            {/* 🔹 Expand Category */}
+                                            {isCatExpanded && (
+                                                <div
+                                                    style={{
+                                                        paddingLeft: "12px",
+                                                        marginTop: "5px",
+                                                        borderTop: "1px solid red",
+                                                        display: "flex",
+                                                        flexDirection: "column",
+                                                        gap: "8px",
+                                                        overflow: "hidden",
+                                                        transition: "all 0.25s ease",
+                                                    }}
+                                                >
+                                                    {/* 🔹 Add new category item */}
+                                                    <div style={{ display: "flex", gap: "6px", marginTop: '10px' }}>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="New category item"
+                                                            value={newCatItemName}
+                                                            onChange={(e) =>
+                                                                setCardInputs((prev) => ({
+                                                                    ...prev,
+                                                                    [`cat__${cat}`]: e.target.value,
+                                                                }))
+                                                            }
+                                                            style={{ flex: 1, minWidth: "120px", ...styles.input }}
+                                                        />
+                                                        <button
+                                                            onClick={() => {
+                                                                if (!newCatItemName?.trim()) return;
+                                                                addCategoryItem(cat, newCatItemName);
+                                                                setCardInputs((prev) => ({
+                                                                    ...prev,
+                                                                    [`cat__${cat}`]: "",
+                                                                }));
+                                                            }}
+                                                            style={styles.button}
+                                                        >
+                                                            Add
+                                                        </button>
+                                                    </div>
 
-                                                                                    await updateDoc(docRef, {
-                                                                                        [`categories.${cat.toLowerCase()}`]: updatedCategory,
-                                                                                    });
+                                                    {/* 🔹 Show category items */}
+                                                    {Object.entries(catObj)
+                                                        .filter(([key]) => key !== "price")
+                                                        .map(([catItem, itemsList]) => {
+                                                            const key = `${cat}__${catItem}`;
+                                                            const isCatItemExpanded = expandedCategoryItems[key] || false;
+                                                            const newItemName = cardInputs[key] || "";
 
-                                                                                    setEditingPrice((prev) => ({
-                                                                                        ...prev,
-                                                                                        [`subcat_${key}`]: false,
-                                                                                    }));
-                                                                                    fetchItems();
-                                                                                }}
-                                                                                style={{
-                                                                                    padding: "2px 8px",
-                                                                                    marginLeft: "6px",
-                                                                                    borderRadius: "6px",
-                                                                                    background: "#2ecc71",
-                                                                                    color: "#fff",
-                                                                                }}
-                                                                            >
-                                                                                Save
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={() =>
-                                                                                    setEditingPrice((prev) => ({
-                                                                                        ...prev,
-                                                                                        [`subcat_${key}`]: false,
-                                                                                    }))
-                                                                                }
-                                                                                style={{
-                                                                                    padding: "2px 8px",
-                                                                                    marginLeft: "5px",
-                                                                                    borderRadius: "6px",
-                                                                                    background: "#cc2e2e",
-                                                                                    color: "#fff",
-                                                                                }}
-                                                                            >
-                                                                                Cancel
-                                                                            </button>
+                                                            // 🔹 Subcategory editing state
+                                                            const isEditingSubcat = editingPrice[`subcat_${key}`] || false;
+                                                            const subcatEditValue =
+                                                                priceInputs[`subcat_${key}`] ?? catItem;
 
-                                                                            {/* 🔹 Delete Subcategory */}
-                                                                            <button
-                                                                                onClick={async () => {
-                                                                                    if (window.confirm(`Delete subcategory "${catItem}"?`)) {
+                                                            return (
+                                                                <div
+                                                                    key={key}
+                                                                    style={{ display: "flex", flexDirection: "column", gap: "4px" }}
+                                                                >
+                                                                    {/* 🔹 Subcategory Header */}
+                                                                    <div
+                                                                        style={{ ...styles.cardHeader, cursor: "pointer" }}
+                                                                        onClick={() =>
+                                                                            setExpandedCategoryItems((prev) => ({
+                                                                                ...prev,
+                                                                                [key]: !prev[key],
+                                                                            }))
+                                                                        }
+
+                                                                    >
+
+                                                                        {isEditingSubcat ? (
+                                                                            <>
+                                                                                <input
+                                                                                    type="text"
+                                                                                    value={subcatEditValue}
+                                                                                    onChange={(e) =>
+                                                                                        setPriceInputs((prev) => ({
+                                                                                            ...prev,
+                                                                                            [`subcat_${key}`]: e.target.value,
+                                                                                        }))
+                                                                                    }
+                                                                                    style={{
+                                                                                        flex: 1,
+                                                                                        borderRadius: "6px",
+                                                                                        border: "1px solid #ccc",
+                                                                                        padding: "2px 10px",
+                                                                                    }}
+                                                                                />
+                                                                                <button
+                                                                                    onClick={async () => {
                                                                                         const docRef = doc(db, "menu", menuType);
                                                                                         const snap = await getDoc(docRef);
                                                                                         if (!snap.exists()) return;
@@ -661,7 +632,11 @@ const MenuItems = () => {
                                                                                         const categories = data.categories || {};
                                                                                         const categoryObj = categories[cat.toLowerCase()] || {};
 
-                                                                                        const updatedCategory = { ...categoryObj };
+                                                                                        // 🔹 rename subcategory (keep items + price safe)
+                                                                                        const updatedCategory = {
+                                                                                            ...categoryObj,
+                                                                                            [subcatEditValue.toLowerCase()]: categoryObj[catItem.toLowerCase()],
+                                                                                        };
                                                                                         delete updatedCategory[catItem.toLowerCase()];
 
                                                                                         await updateDoc(docRef, {
@@ -673,142 +648,142 @@ const MenuItems = () => {
                                                                                             [`subcat_${key}`]: false,
                                                                                         }));
                                                                                         fetchItems();
+                                                                                    }}
+                                                                                    style={{
+                                                                                        padding: "2px 8px",
+                                                                                        marginLeft: "6px",
+                                                                                        borderRadius: "6px",
+                                                                                        background: "#2ecc71",
+                                                                                        color: "#fff",
+                                                                                    }}
+                                                                                >
+                                                                                    Save
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() =>
+                                                                                        setEditingPrice((prev) => ({
+                                                                                            ...prev,
+                                                                                            [`subcat_${key}`]: false,
+                                                                                        }))
                                                                                     }
-                                                                                }}
-                                                                                style={{
-                                                                                    padding: "2px 8px",
-                                                                                    marginLeft: "5px",
-                                                                                    borderRadius: "6px",
-                                                                                    background: "#e74c3c",
-                                                                                    color: "#fff",
-                                                                                }}
-                                                                            >
-                                                                                Delete
-                                                                            </button>
-                                                                        </>
-                                                                    ) : (
-                                                                        <>
-                                                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                                                <span>{catItem.toUpperCase()}</span>
-                                                                                <div style={{ whiteSpace: 'nowrap' }}>
-                                                                                    <span>{isCatItemExpanded ? "▲" : "▼"}</span>
-                                                                                    <button
-                                                                                        onClick={(e) => {
-                                                                                            e.stopPropagation();
+                                                                                    style={{
+                                                                                        padding: "2px 8px",
+                                                                                        marginLeft: "5px",
+                                                                                        borderRadius: "6px",
+                                                                                        background: "#cc2e2e",
+                                                                                        color: "#fff",
+                                                                                    }}
+                                                                                >
+                                                                                    Cancel
+                                                                                </button>
+
+                                                                                {/* 🔹 Delete Subcategory */}
+                                                                                <button
+                                                                                    onClick={async () => {
+                                                                                        if (window.confirm(`Delete subcategory "${catItem}"?`)) {
+                                                                                            const docRef = doc(db, "menu", menuType);
+                                                                                            const snap = await getDoc(docRef);
+                                                                                            if (!snap.exists()) return;
+
+                                                                                            const data = snap.data();
+                                                                                            const categories = data.categories || {};
+                                                                                            const categoryObj = categories[cat.toLowerCase()] || {};
+
+                                                                                            const updatedCategory = { ...categoryObj };
+                                                                                            delete updatedCategory[catItem.toLowerCase()];
+
+                                                                                            await updateDoc(docRef, {
+                                                                                                [`categories.${cat.toLowerCase()}`]: updatedCategory,
+                                                                                            });
+
                                                                                             setEditingPrice((prev) => ({
                                                                                                 ...prev,
-                                                                                                [`subcat_${key}`]: true,
+                                                                                                [`subcat_${key}`]: false,
                                                                                             }));
-                                                                                        }}
-                                                                                        style={{
-                                                                                            padding: "2px 6px",
-                                                                                            marginLeft: "10px",
-                                                                                            borderRadius: "6px",
-                                                                                            background: "#f39c12",
-                                                                                            color: "#fff",
-                                                                                            fontSize: "0.8rem",
-                                                                                            cursor: "pointer",
-                                                                                        }}
-                                                                                    >
-                                                                                        Edit
-                                                                                    </button>
+                                                                                            fetchItems();
+                                                                                        }
+                                                                                    }}
+                                                                                    style={{
+                                                                                        padding: "2px 8px",
+                                                                                        marginLeft: "5px",
+                                                                                        borderRadius: "6px",
+                                                                                        background: "#e74c3c",
+                                                                                        color: "#fff",
+                                                                                    }}
+                                                                                >
+                                                                                    Delete
+                                                                                </button>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                                    <span>{catItem.toUpperCase()}</span>
+                                                                                    <div style={{ whiteSpace: 'nowrap' }}>
+                                                                                        <span>{isCatItemExpanded ? "▲" : "▼"}</span>
+                                                                                        <button
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                setEditingPrice((prev) => ({
+                                                                                                    ...prev,
+                                                                                                    [`subcat_${key}`]: true,
+                                                                                                }));
+                                                                                            }}
+                                                                                            style={{
+                                                                                                padding: "2px 6px",
+                                                                                                marginLeft: "10px",
+                                                                                                borderRadius: "6px",
+                                                                                                background: "#f39c12",
+                                                                                                color: "#fff",
+                                                                                                fontSize: "0.8rem",
+                                                                                                cursor: "pointer",
+                                                                                            }}
+                                                                                        >
+                                                                                            Edit
+                                                                                        </button>
+                                                                                    </div>
                                                                                 </div>
-                                                                            </div>
-                                                                        </>
-                                                                    )}
+                                                                            </>
+                                                                        )}
 
-                                                                </div>
+                                                                    </div>
 
-                                                                {/* 🔹 Subcategory Items */}
-                                                                {isCatItemExpanded && (
-                                                                    <div
-                                                                        style={{
-                                                                            paddingLeft: "12px",
-                                                                            display: "flex",
-                                                                            flexDirection: "column",
-                                                                            gap: "6px",
-                                                                        }}
-                                                                    >
-                                                                        {itemsList.map((itm) => {
-                                                                            const editKey = `${key}__${itm.id}`;
-                                                                            const isEditing = editingPrice[editKey] || false;
-                                                                            const editValue = priceInputs[editKey] ?? itm.name;
+                                                                    {/* 🔹 Subcategory Items */}
+                                                                    {isCatItemExpanded && (
+                                                                        <div
+                                                                            style={{
+                                                                                paddingLeft: "12px",
+                                                                                display: "flex",
+                                                                                flexDirection: "column",
+                                                                                gap: "6px",
+                                                                            }}
+                                                                        >
+                                                                            {itemsList.map((itm) => {
+                                                                                const editKey = `${key}__${itm.id}`;
+                                                                                const isEditing = editingPrice[editKey] || false;
+                                                                                const editValue = priceInputs[editKey] ?? itm.name;
 
-                                                                            return (
-                                                                                <div key={itm.id} style={styles.itemRow}>
-                                                                                    {isEditing ? (
-                                                                                        <>
-                                                                                            <input
-                                                                                                type="text"
-                                                                                                value={editValue}
-                                                                                                onChange={(e) =>
-                                                                                                    setPriceInputs((prev) => ({
-                                                                                                        ...prev,
-                                                                                                        [editKey]: e.target.value,
-                                                                                                    }))
-                                                                                                }
-                                                                                                style={{
-                                                                                                    flex: 1,
-                                                                                                    padding: "4px 8px",
-                                                                                                    borderRadius: "6px",
-                                                                                                    border: "1px solid #ccc",
-                                                                                                }}
-                                                                                            />
-                                                                                            <button
-                                                                                                onClick={async () => {
-                                                                                                    const docRef = doc(db, "menu", menuType);
-                                                                                                    const snap = await getDoc(docRef);
-                                                                                                    if (!snap.exists()) return;
-
-                                                                                                    const data = snap.data();
-                                                                                                    const existingItems =
-                                                                                                        data.categories?.[cat.toLowerCase()]?.[catItem.toLowerCase()]?.menuItems || [];
-
-                                                                                                    const updatedItems = existingItems.map((x) =>
-                                                                                                        x.id === itm.id ? { ...x, name: editValue } : x
-                                                                                                    );
-
-                                                                                                    await updateDoc(docRef, {
-                                                                                                        [`categories.${cat.toLowerCase()}.${catItem.toLowerCase()}.menuItems`]: updatedItems,
-                                                                                                    });
-
-                                                                                                    setEditingPrice((prev) => ({
-                                                                                                        ...prev,
-                                                                                                        [editKey]: false,
-                                                                                                    }));
-                                                                                                    fetchItems();
-                                                                                                }}
-                                                                                                style={{
-                                                                                                    padding: "4px 8px",
-                                                                                                    marginLeft: "6px",
-                                                                                                    borderRadius: "6px",
-                                                                                                    background: "#2ecc71",
-                                                                                                    color: "#fff",
-                                                                                                }}
-                                                                                            >
-                                                                                                Save
-                                                                                            </button>
-                                                                                            <button
-                                                                                                onClick={() =>
-                                                                                                    setEditingPrice((prev) => ({
-                                                                                                        ...prev,
-                                                                                                        [editKey]: false,
-                                                                                                    }))
-                                                                                                }
-                                                                                                style={{
-                                                                                                    padding: "4px 8px",
-                                                                                                    marginLeft: "5px",
-                                                                                                    borderRadius: "6px",
-                                                                                                    background: "#cc2e2e",
-                                                                                                    color: "#fff",
-                                                                                                }}
-                                                                                            >
-                                                                                                Cancel
-                                                                                            </button>
-                                                                                            {/* 🔹 Delete Item */}
-                                                                                            <button
-                                                                                                onClick={async () => {
-                                                                                                    if (window.confirm(`Delete item "${itm.name}"?`)) {
+                                                                                return (
+                                                                                    <div key={itm.id} style={styles.itemRow}>
+                                                                                        {isEditing ? (
+                                                                                            <>
+                                                                                                <input
+                                                                                                    type="text"
+                                                                                                    value={editValue}
+                                                                                                    onChange={(e) =>
+                                                                                                        setPriceInputs((prev) => ({
+                                                                                                            ...prev,
+                                                                                                            [editKey]: e.target.value,
+                                                                                                        }))
+                                                                                                    }
+                                                                                                    style={{
+                                                                                                        flex: 1,
+                                                                                                        padding: "4px 8px",
+                                                                                                        borderRadius: "6px",
+                                                                                                        border: "1px solid #ccc",
+                                                                                                    }}
+                                                                                                />
+                                                                                                <button
+                                                                                                    onClick={async () => {
                                                                                                         const docRef = doc(db, "menu", menuType);
                                                                                                         const snap = await getDoc(docRef);
                                                                                                         if (!snap.exists()) return;
@@ -817,7 +792,9 @@ const MenuItems = () => {
                                                                                                         const existingItems =
                                                                                                             data.categories?.[cat.toLowerCase()]?.[catItem.toLowerCase()]?.menuItems || [];
 
-                                                                                                        const updatedItems = existingItems.filter((x) => x.id !== itm.id);
+                                                                                                        const updatedItems = existingItems.map((x) =>
+                                                                                                            x.id === itm.id ? { ...x, name: editValue } : x
+                                                                                                        );
 
                                                                                                         await updateDoc(docRef, {
                                                                                                             [`categories.${cat.toLowerCase()}.${catItem.toLowerCase()}.menuItems`]: updatedItems,
@@ -828,101 +805,156 @@ const MenuItems = () => {
                                                                                                             [editKey]: false,
                                                                                                         }));
                                                                                                         fetchItems();
-                                                                                                    }
-                                                                                                }}
-                                                                                                style={{
-                                                                                                    padding: "4px 8px",
-                                                                                                    marginLeft: "5px",
-                                                                                                    borderRadius: "6px",
-                                                                                                    background: "#e74c3c",
-                                                                                                    color: "#fff",
-                                                                                                }}
-                                                                                            >
-                                                                                                Delete
-                                                                                            </button>
-                                                                                        </>
-                                                                                    ) : (
-                                                                                        <>
-                                                                                            <span>{itm.name.toUpperCase()}</span>
-                                                                                            <div style={{ display: "flex", gap: "6px" }}>
+                                                                                                    }}
+                                                                                                    style={{
+                                                                                                        padding: "4px 8px",
+                                                                                                        marginLeft: "6px",
+                                                                                                        borderRadius: "6px",
+                                                                                                        background: "#2ecc71",
+                                                                                                        color: "#fff",
+                                                                                                    }}
+                                                                                                >
+                                                                                                    Save
+                                                                                                </button>
                                                                                                 <button
                                                                                                     onClick={() =>
                                                                                                         setEditingPrice((prev) => ({
                                                                                                             ...prev,
-                                                                                                            [editKey]: true,
+                                                                                                            [editKey]: false,
                                                                                                         }))
                                                                                                     }
                                                                                                     style={{
-                                                                                                        padding: "2px 6px",
-                                                                                                        marginLeft: "10px",
+                                                                                                        padding: "4px 8px",
+                                                                                                        marginLeft: "5px",
                                                                                                         borderRadius: "6px",
-                                                                                                        background: "#f39c12",
+                                                                                                        background: "#cc2e2e",
                                                                                                         color: "#fff",
-                                                                                                        fontSize: "0.8rem",
-                                                                                                        cursor: "pointer",
                                                                                                     }}
                                                                                                 >
-                                                                                                    Edit
+                                                                                                    Cancel
                                                                                                 </button>
+                                                                                                {/* 🔹 Delete Item */}
                                                                                                 <button
-                                                                                                    onClick={() => toggleVisibility(cat, catItem, itm.id)}
+                                                                                                    onClick={async () => {
+                                                                                                        if (window.confirm(`Delete item "${itm.name}"?`)) {
+                                                                                                            const docRef = doc(db, "menu", menuType);
+                                                                                                            const snap = await getDoc(docRef);
+                                                                                                            if (!snap.exists()) return;
+
+                                                                                                            const data = snap.data();
+                                                                                                            const existingItems =
+                                                                                                                data.categories?.[cat.toLowerCase()]?.[catItem.toLowerCase()]?.menuItems || [];
+
+                                                                                                            const updatedItems = existingItems.filter((x) => x.id !== itm.id);
+
+                                                                                                            await updateDoc(docRef, {
+                                                                                                                [`categories.${cat.toLowerCase()}.${catItem.toLowerCase()}.menuItems`]: updatedItems,
+                                                                                                            });
+
+                                                                                                            setEditingPrice((prev) => ({
+                                                                                                                ...prev,
+                                                                                                                [editKey]: false,
+                                                                                                            }));
+                                                                                                            fetchItems();
+                                                                                                        }
+                                                                                                    }}
                                                                                                     style={{
                                                                                                         padding: "4px 8px",
+                                                                                                        marginLeft: "5px",
                                                                                                         borderRadius: "6px",
-                                                                                                        background: itm.visibility ? "#2ecc71" : "#e74c3c",
+                                                                                                        background: "#e74c3c",
                                                                                                         color: "#fff",
-                                                                                                        cursor: "pointer",
                                                                                                     }}
                                                                                                 >
-                                                                                                    {itm.visibility ? "Disable" : "Enable"}
+                                                                                                    Delete
                                                                                                 </button>
-                                                                                            </div>
-                                                                                        </>
-                                                                                    )}
-                                                                                </div>
-                                                                            );
-                                                                        })}
+                                                                                            </>
+                                                                                        ) : (
+                                                                                            <>
+                                                                                                <span>{itm.name.toUpperCase()}</span>
+                                                                                                <div style={{ display: "flex", gap: "6px" }}>
+                                                                                                    <button
+                                                                                                        onClick={() =>
+                                                                                                            setEditingPrice((prev) => ({
+                                                                                                                ...prev,
+                                                                                                                [editKey]: true,
+                                                                                                            }))
+                                                                                                        }
+                                                                                                        style={{
+                                                                                                            padding: "2px 6px",
+                                                                                                            marginLeft: "10px",
+                                                                                                            borderRadius: "6px",
+                                                                                                            background: "#f39c12",
+                                                                                                            color: "#fff",
+                                                                                                            fontSize: "0.8rem",
+                                                                                                            cursor: "pointer",
+                                                                                                        }}
+                                                                                                    >
+                                                                                                        Edit
+                                                                                                    </button>
+                                                                                                    <button
+                                                                                                        onClick={() => toggleVisibility(cat, catItem, itm.id)}
+                                                                                                        style={{
+                                                                                                            padding: "4px 8px",
+                                                                                                            borderRadius: "6px",
+                                                                                                            background: itm.visibility ? "#2ecc71" : "#e74c3c",
+                                                                                                            color: "#fff",
+                                                                                                            cursor: "pointer",
+                                                                                                        }}
+                                                                                                    >
+                                                                                                        {itm.visibility ? "Disable" : "Enable"}
+                                                                                                    </button>
+                                                                                                </div>
+                                                                                            </>
+                                                                                        )}
+                                                                                    </div>
+                                                                                );
+                                                                            })}
 
-                                                                        {/* 🔹 Add new item */}
-                                                                        <div style={{ display: "flex", gap: "6px" }}>
-                                                                            <input
-                                                                                type="text"
-                                                                                placeholder="New item"
-                                                                                value={newItemName}
-                                                                                onChange={(e) =>
-                                                                                    setCardInputs((prev) => ({
-                                                                                        ...prev,
-                                                                                        [key]: e.target.value,
-                                                                                    }))
-                                                                                }
-                                                                                style={{ flex: 1, ...styles.input }}
-                                                                            />
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    addItem(cat, catItem, cardInputs[key]);
-                                                                                    setCardInputs((prev) => ({ ...prev, [key]: "" }));
-                                                                                }}
-                                                                                style={styles.button}
-                                                                            >
-                                                                                Add
-                                                                            </button>
+                                                                            {/* 🔹 Add new item */}
+                                                                            <div style={{ display: "flex", gap: "6px" }}>
+                                                                                <input
+                                                                                    type="text"
+                                                                                    placeholder="New item"
+                                                                                    value={newItemName}
+                                                                                    onChange={(e) =>
+                                                                                        setCardInputs((prev) => ({
+                                                                                            ...prev,
+                                                                                            [key]: e.target.value,
+                                                                                        }))
+                                                                                    }
+                                                                                    style={{ flex: 1, ...styles.input }}
+                                                                                />
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        addItem(cat, catItem, cardInputs[key]);
+                                                                                        setCardInputs((prev) => ({ ...prev, [key]: "" }));
+                                                                                    }}
+                                                                                    style={styles.button}
+                                                                                >
+                                                                                    Add
+                                                                                </button>
+                                                                            </div>
                                                                         </div>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })
-                                                }
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })
+                                                    }
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                        </div>
                     </div>
-                </div>
-            ) : (<p style={styles.noItems}>No items found for {menuType}</p>)}
+                ) : (<p style={styles.noItems}>No items found for {menuType}</p>)}
 
-        </div>
+            </div>
+            <div style={{ marginBottom: "50px" }}></div>
+            <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
+
+        </>
     );
 };
 

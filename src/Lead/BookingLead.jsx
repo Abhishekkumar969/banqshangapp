@@ -249,59 +249,87 @@ const BookingLead = () => {
     };
 
     return (
-        <div className="booking-lead-container">
-            <h2>BOOKING ESTIMATE</h2>
-            <BackButton />
-            <form className="form-section" onSubmit={handleSubmit}>
-                <LeadForm
-                    ref={leadFormRef} form={form} handleChange={handleChange} setForm={setForm} />
-                <BookingAmenities selectedItems={selectedItems} setSelectedItems={setSelectedItems} />
-                <FoodMenuSelection
-                    selectedMenus={selectedMenus}
-                    setSelectedMenus={setSelectedMenus}
-                    noOfPlates={form.noOfPlates}
-                />
-                <MealSelection
-                    ref={mealRef}
-                    meals={meals}
-                    setMeals={setMeals}
-                    functionDate={form.functionDate}
-                    dayNight={form.dayNight || "Night"}
-                />
-
-                <LeadSummary
-                    ref={leadSummaryRef}
-                    selectedMenus={selectedMenus}
-                    hallCharges={form.hallCharges}
-                    gstBase={gstBase}
-                    setGstBase={setGstBase}
-                    setTotalAmount={setTotalAmount}
-                    setGstAmount={setGstAmount}
-                    setGrandTotal={setGrandTotal}
-                    setSummaryData={setSummaryData}
-                    meals={meals}
-                />
-                <LeadFollowUp
-                    ref={leadFollowUpRef}
-                    form={form} handleChange={handleChange} />
-                <button type="submit" className="save-button" disabled={isSubmitting}>
-                    {isSubmitting
-                        ? isUpdateMode
-                            ? 'Updating...'
-                            : 'Saving...'
-                        : isUpdateMode
-                            ? 'Update Lead & Print'
-                            : 'Save & Print'}
-                </button>
+        <>
+            <form style={{ marginTop: "50px", display: 'flex', justifyContent: 'space-between' }} onSubmit={handleSubmit}>
+                <div></div>
+                <div className="BookedOn">
+                    <label
+                        style={{
+                            fontWeight: 600,
+                            fontSize: "14px",
+                            color: "#333",
+                            whiteSpace: "nowrap",
+                        }}
+                    >
+                        Booking on:
+                    </label>
+                    <input
+                        type="date"
+                        name="enquiryDate"
+                        value={form.enquiryDate}
+                        onChange={handleChange}
+                        style={{ color: 'red', width: '150px' }}
+                    />
+                </div>
             </form>
 
-            {showToast && (
-                <div className="custom-toast">
-                    Please fill all required fields.
-                    <div className="toast-progress"></div>
-                </div>
-            )}
-        </div>
+            <div className="booking-lead-container">
+                <BackButton />
+
+
+
+                <h2>BOOKING ESTIMATE</h2>
+                <form className="form-section" onSubmit={handleSubmit}>
+                    <LeadForm
+                        ref={leadFormRef} form={form} handleChange={handleChange} setForm={setForm} />
+                    <BookingAmenities selectedItems={selectedItems} setSelectedItems={setSelectedItems} />
+                    <FoodMenuSelection
+                        selectedMenus={selectedMenus}
+                        setSelectedMenus={setSelectedMenus}
+                        noOfPlates={form.noOfPlates}
+                    />
+                    <MealSelection
+                        ref={mealRef}
+                        meals={meals}
+                        setMeals={setMeals}
+                        functionDate={form.functionDate}
+                        dayNight={form.dayNight || "Night"}
+                    />
+
+                    <LeadSummary
+                        ref={leadSummaryRef}
+                        selectedMenus={selectedMenus}
+                        hallCharges={form.hallCharges}
+                        gstBase={gstBase}
+                        setGstBase={setGstBase}
+                        setTotalAmount={setTotalAmount}
+                        setGstAmount={setGstAmount}
+                        setGrandTotal={setGrandTotal}
+                        setSummaryData={setSummaryData}
+                        meals={meals}
+                    />
+                    <LeadFollowUp
+                        ref={leadFollowUpRef}
+                        form={form} handleChange={handleChange} />
+                    <button type="submit" className="save-button" disabled={isSubmitting}>
+                        {isSubmitting
+                            ? isUpdateMode
+                                ? 'Updating...'
+                                : 'Saving...'
+                            : isUpdateMode
+                                ? 'Update Lead & Print'
+                                : 'Save & Print'}
+                    </button>
+                </form>
+
+                {showToast && (
+                    <div className="custom-toast">
+                        Please fill all required fields.
+                        <div className="toast-progress"></div>
+                    </div>
+                )}
+            </div>
+        </>
     );
 };
 

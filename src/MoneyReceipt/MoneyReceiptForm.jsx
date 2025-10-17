@@ -1,18 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { db } from '../firebaseConfig';
-import {
-    runTransaction,
-    collection,
-    getDocs,
-    doc,
-    updateDoc,
-    getDoc,
-    setDoc, arrayUnion
-} from 'firebase/firestore';
+import { runTransaction, collection, getDocs, doc, updateDoc, getDoc, setDoc, arrayUnion } from 'firebase/firestore';
 import '../styles/MoneyReceipt.css';
 import { useNavigate } from 'react-router-dom';
 import BackButton from "../components/BackButton";
 import { getAuth } from "firebase/auth";
+import BottomNavigationBar from "../components/BottomNavigationBar";
 
 const MoneyReceipt = () => {
     const [search, setSearch] = useState('');
@@ -32,6 +25,27 @@ const MoneyReceipt = () => {
     const [activeSource, setActiveSource] = useState("prebookings");
     const navigate = useNavigate();
     const [assignedUsers, setAssignedUsers] = useState([]);
+    const [userAppType, setUserAppType] = useState(null);
+
+    useEffect(() => {
+        const fetchUserAppType = async () => {
+            const auth = getAuth();
+            const user = auth.currentUser;
+            if (user) {
+                try {
+                    const userRef = doc(db, 'usersAccess', user.email);
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        const data = userSnap.data();
+                        setUserAppType(data.accessToApp);
+                    }
+                } catch (err) {
+                    console.error("Error fetching user app type:", err);
+                }
+            }
+        };
+        fetchUserAppType();
+    }, []);
 
     // Convert a JS Date to IST date string (yyyy-mm-dd)
     const getISTDateString = (date = new Date()) => {
@@ -353,143 +367,148 @@ const MoneyReceipt = () => {
     };
 
     return (
-        <div>
-            <div style={{ marginBottom: '30px' }}><BackButton /></div>
-            <div className="receipt-container">
-                <h2 className="title">🧾 Money Receipt</h2>
+        <>
+            <div>
+                <div style={{ marginBottom: '30px' }}><BackButton /></div>
+                <div className="receipt-container">
+                    <h2 className="title">🧾 Money Receipt</h2>
 
-                <div className="input-row">
-                    <label>Payment For</label>
-                    <select value={paymentFor} onChange={e => setPaymentFor(e.target.value)}>
-                        <option value="Advance">Advance</option>
-                        <option value="Refund">Refund</option>
-                    </select>
-                </div>
-
-                <input type="text" placeholder="🔍 Search by name, 20-07-2025, mobile, or event" value={search} onChange={e => setSearch(e.target.value)} />
-
-                <div className="source-buttons" style={{ margin: "20px 0", display: "flex", gap: "10px" }}>
-                    {[
-                        { key: "prebookings", label: "Prebookings" },
-                        { key: "vendor", label: "Vendor" },
-                        { key: "decoration", label: "Decoration" },
-                    ].map(({ key, label, hidden }) => (
-                        <button key={key} style={{
-                            backgroundColor: activeSource === key ? "#25baffff" : "#d7f2ffff",
-                            borderRadius: "15px", padding: "8px 16px", color: "black", fontWeight: "600", border: "none", cursor: "pointer",
-                            display: hidden ? "none" : "inline-block"
-                        }} onClick={() => setActiveSource(key)}>{label}</button>
-                    ))}
-                </div>
-
-                {selectedCustomer && (
-                    <div className="receipt-form">
-                        <div className="receipt-box">
-
-                            <p><strong>Sl No.:</strong> {paymentFor === 'Refund' ? (nextRefundSlNo ?? 'Loading...') : (nextSlNo !== null ? (receiptType === 'Cash' ? `C${nextSlNo}` : nextSlNo) : 'Loading...')}</p>
-                            <p><strong>{paymentFor === 'Refund' ? 'Refund to' : 'Received with thanks from'}:</strong> {selectedCustomer.prefix || ''} {selectedCustomer.name || ''}</p>
-                            <p><strong>Customer Mobile:</strong> {selectedCustomer.mobile1 || ''}</p>
-                            {selectedCustomer.functionType && <p><strong>Event:</strong> {selectedCustomer.functionType}</p>}
-                            {selectedCustomer.functionDate && (
-                                <p><strong>Event Date:</strong> {formatISTDate(selectedCustomer.functionDate)}</p>
-                            )}
-
-                            {/* Mode Selection */}
-                            {paymentFor === 'Advance' && (
-                                <div className="mode-group">
-                                    {['BOI', 'SBI', 'Card', 'Cheque', 'Cash'].map(m => (
-                                        <button key={m} className={`mode-button ${mode === m ? 'active' : ''}`} onClick={() => { setMode(m); setReceiptType(m === 'Cash' ? 'Cash' : 'Money Receipt'); }}>{m === 'Card' ? 'Credit Card' : m}</button>
-                                    ))}
-                                </div>
-                            )}
-
-                            {paymentFor === 'Advance' && mode === 'Cash' && (
-                                <div className="input-row">
-                                    <label>Cash To</label>
-                                    <select value={cashTo} onChange={e => setCashTo(e.target.value)}>
-                                        <option value="">-- Select --</option>
-                                        <option value="Cash-Cash">Cash</option>
-                                        {assignedUsers.map(u => (
-                                            <option key={`${u.email}-${u.type}`} value={`${u.name}-${u.type}`}>
-                                                {u.name} - ({u.type})
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}
-
-                            <div className="input-row">
-                                <label>Amount (₹)</label>
-                                <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    value={amount}
-                                    onChange={(e) => {
-                                        let val = e.target.value.replace(/[^0-9.]/g, "");
-                                        if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
-                                        setAmount(val);
-                                    }}
-                                />
-                            </div>
-
-
-                            <p><strong>Amount in Words:</strong> {amountWords}</p>
-
-                            <div className="input-row">
-                                <label>Description</label>
-                                <input type="text" value={description} placeholder="Enter description" onChange={e => setDescription(e.target.value)} />
-                            </div>
-
-                            <div className="input-row">
-                                <label>Date</label>
-                                <input type="date" value={manualDate} onChange={e => setManualDate(e.target.value)} />
-                            </div>
-
-                            <div className="submit-row">
-                                <button onClick={handleSubmit} disabled={isSaving}>{isSaving ? '⏳ Saving...' : paymentFor === 'Refund' ? '💸 Save Refund' : '📝 Save & Print'}</button>
-                            </div>
-
-                        </div>
+                    <div className="input-row">
+                        <label>Payment For</label>
+                        <select value={paymentFor} onChange={e => setPaymentFor(e.target.value)}>
+                            <option value="Advance">Advance</option>
+                            <option value="Refund">Refund</option>
+                        </select>
                     </div>
-                )}
 
-                <div className="match-list">
-                    {customers
-                        .filter(c => {
-                            const searchLower = search.toLowerCase();
+                    <input type="text" placeholder="🔍 Search by name, 20-07-2025, mobile, or event" value={search} onChange={e => setSearch(e.target.value)} />
 
-                            // Function Date ko DD-MM-YYYY & DD/MM/YYYY me convert karo
-                            const formattedDateDash = formatISTDate(c.functionDate); // 25-08-2025
-
-                            const formattedDateSlash = formattedDateDash.replace(/-/g, '-'); // 25-08-2025
-
-                            return (
-                                c.name?.toLowerCase().includes(searchLower) ||
-                                c.mobile1?.includes(search) ||
-                                c.functionType?.toLowerCase().includes(searchLower) ||
-                                formattedDateDash.includes(search) ||
-                                formattedDateSlash.includes(search)
-                            );
-                        })
-                        .map(cust => (
-                            <div
-                                key={cust.id}
-                                className="match-item"
-                                onClick={async () => {
-                                    setSelectedCustomer(cust);
-                                    if (paymentFor === "Advance") await fetchNextSlNo();
-                                }}
-                            >
-                                {cust.name} - {cust.mobile1} - (
-                                {new Date(cust.functionDate)
-                                    .toLocaleDateString("en-GB")
-                                    .replace(/\//g, "-")}
-                                ) {cust.functionType ? `(${cust.functionType})` : ""}
-                            </div>
+                    <div className="source-buttons" style={{ margin: "20px 0", display: "flex", gap: "10px" }}>
+                        {[
+                            { key: "prebookings", label: "Prebookings" },
+                            { key: "vendor", label: "Vendor" },
+                            { key: "decoration", label: "Decoration" },
+                        ].map(({ key, label, hidden }) => (
+                            <button key={key} style={{
+                                backgroundColor: activeSource === key ? "#25baffff" : "#d7f2ffff",
+                                borderRadius: "15px", padding: "8px 16px", color: "black", fontWeight: "600", border: "none", cursor: "pointer",
+                                display: hidden ? "none" : "inline-block"
+                            }} onClick={() => setActiveSource(key)}>{label}</button>
                         ))}
+                    </div>
+
+                    {selectedCustomer && (
+                        <div className="receipt-form">
+                            <div className="receipt-box">
+
+                                <p><strong>Sl No.:</strong> {paymentFor === 'Refund' ? (nextRefundSlNo ?? 'Loading...') : (nextSlNo !== null ? (receiptType === 'Cash' ? `C${nextSlNo}` : nextSlNo) : 'Loading...')}</p>
+                                <p><strong>{paymentFor === 'Refund' ? 'Refund to' : 'Received with thanks from'}:</strong> {selectedCustomer.prefix || ''} {selectedCustomer.name || ''}</p>
+                                <p><strong>Customer Mobile:</strong> {selectedCustomer.mobile1 || ''}</p>
+                                {selectedCustomer.functionType && <p><strong>Event:</strong> {selectedCustomer.functionType}</p>}
+                                {selectedCustomer.functionDate && (
+                                    <p><strong>Event Date:</strong> {formatISTDate(selectedCustomer.functionDate)}</p>
+                                )}
+
+                                {/* Mode Selection */}
+                                {paymentFor === 'Advance' && (
+                                    <div className="mode-group">
+                                        {['BOI', 'SBI', 'Card', 'Cheque', 'Cash'].map(m => (
+                                            <button key={m} className={`mode-button ${mode === m ? 'active' : ''}`} onClick={() => { setMode(m); setReceiptType(m === 'Cash' ? 'Cash' : 'Money Receipt'); }}>{m === 'Card' ? 'Credit Card' : m}</button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {paymentFor === 'Advance' && mode === 'Cash' && (
+                                    <div className="input-row">
+                                        <label>Cash To</label>
+                                        <select value={cashTo} onChange={e => setCashTo(e.target.value)}>
+                                            <option value="">-- Select --</option>
+                                            <option value="Cash-Cash">Cash</option>
+                                            {assignedUsers.map(u => (
+                                                <option key={`${u.email}-${u.type}`} value={`${u.name}-${u.type}`}>
+                                                    {u.name} - ({u.type})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                <div className="input-row">
+                                    <label>Amount (₹)</label>
+                                    <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={amount}
+                                        onChange={(e) => {
+                                            let val = e.target.value.replace(/[^0-9.]/g, "");
+                                            if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
+                                            setAmount(val);
+                                        }}
+                                    />
+                                </div>
+
+
+                                <p><strong>Amount in Words:</strong> {amountWords}</p>
+
+                                <div className="input-row">
+                                    <label>Description</label>
+                                    <input type="text" value={description} placeholder="Enter description" onChange={e => setDescription(e.target.value)} />
+                                </div>
+
+                                <div className="input-row">
+                                    <label>Date</label>
+                                    <input type="date" value={manualDate} onChange={e => setManualDate(e.target.value)} />
+                                </div>
+
+                                <div className="submit-row">
+                                    <button onClick={handleSubmit} disabled={isSaving}>{isSaving ? '⏳ Saving...' : paymentFor === 'Refund' ? '💸 Save Refund' : '📝 Save & Print'}</button>
+                                </div>
+
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="match-list">
+                        {customers
+                            .filter(c => {
+                                const searchLower = search.toLowerCase();
+
+                                // Function Date ko DD-MM-YYYY & DD/MM/YYYY me convert karo
+                                const formattedDateDash = formatISTDate(c.functionDate); // 25-08-2025
+
+                                const formattedDateSlash = formattedDateDash.replace(/-/g, '-'); // 25-08-2025
+
+                                return (
+                                    c.name?.toLowerCase().includes(searchLower) ||
+                                    c.mobile1?.includes(search) ||
+                                    c.functionType?.toLowerCase().includes(searchLower) ||
+                                    formattedDateDash.includes(search) ||
+                                    formattedDateSlash.includes(search)
+                                );
+                            })
+                            .map(cust => (
+                                <div
+                                    key={cust.id}
+                                    className="match-item"
+                                    onClick={async () => {
+                                        setSelectedCustomer(cust);
+                                        if (paymentFor === "Advance") await fetchNextSlNo();
+                                    }}
+                                >
+                                    {cust.name} - {cust.mobile1} - (
+                                    {new Date(cust.functionDate)
+                                        .toLocaleDateString("en-GB")
+                                        .replace(/\//g, "-")}
+                                    ) {cust.functionType ? `(${cust.functionType})` : ""}
+                                </div>
+                            ))}
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <div style={{ marginBottom: "50px" }}></div>
+            <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
+        </>
     );
 };
 

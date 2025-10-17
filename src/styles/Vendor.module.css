@@ -1,6 +1,6 @@
 .vendorWrapper {
   max-width: 900px;
-  margin: auto;
+  margin: 0px auto !important;
   padding: 30px 20px;
   background-color: #f9f9f9;
   border-radius: 10px;
@@ -14,6 +14,7 @@
   font-weight: bold;
   color: #2e6999;
   margin-bottom: 10px;
+  margin-top: 0px;
 }
 
 .vendorSubheader {
@@ -49,6 +50,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   margin-bottom: 30px;
+  white-space: nowrap;
 }
 
 .formSection input {
@@ -118,8 +120,18 @@
   margin-bottom: 30px;
 }
 
+.formSection label {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  font-size: medium;
+}
+
 .summaryInputs label {
-  font-weight: bold;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  font-size: medium;
 }
 
 .summaryInputs input {
@@ -130,7 +142,7 @@
 
 .saveBtn {
   padding: 10px 20px;
-  background-color: #007b55;
+  background-color: #0a7b00;
   color: white;
   font-weight: bold;
   border: none;
@@ -139,6 +151,7 @@
   display: block;
   margin: 0 auto;
   margin-bottom: 20px;
+  width: 100%;
 }
 
 .popupOverlay {
@@ -247,6 +260,22 @@
 @media (max-width: 440px) {
   .vendorHeader {
     font-size: 20px;
+  }
+
+  .formSection label {
+    font-size: smaller;
+  }
+
+  .summaryInputs label {
+    font-size: smaller;
+  }
+
+  .formSection input {
+    padding: 4px 8px;
+  }
+
+  .summaryInputs input {
+    padding: 4px 8px;
   }
 
   .vendorSubheader {

@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import styles from "../styles/Vendor.module.css";
 import { useLocation } from "react-router-dom";
-import { doc, runTransaction, collection, query, where, getDocs } from "firebase/firestore";
+import { getDoc, doc, runTransaction, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import BackButton from "../components/BackButton";
 import { useNavigate } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import BottomNavigationBar from "../components/BottomNavigationBar";
 
 // Convert a JS Date to IST string "YYYY-MM-DD"
 const toISTDate = (date) => {
@@ -51,7 +52,44 @@ const Vendor = () => {
     const [selectAll, setSelectAll] = useState(false);
     const [vendor, setVendor] = useState(null);
     const [predefinedEvents, setPredefinedEvents] = useState([]);
+    const [userAppType, setUserAppType] = useState(null);
 
+    useEffect(() => {
+        const fetchUserAppType = async () => {
+            const auth = getAuth();
+            const user = auth.currentUser;
+            if (user) {
+                try {
+                    const userRef = doc(db, 'usersAccess', user.email);
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        const data = userSnap.data();
+                        setUserAppType(data.accessToApp);
+                    }
+                } catch (err) {
+                    console.error("Error fetching user app type:", err);
+                }
+            }
+        };
+        fetchUserAppType();
+    }, []);
+
+    const formatDateIST = useCallback((dateInput) => {
+        if (!dateInput) return '';
+
+        const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+
+        // IST formatting
+        const istDate = new Date(
+            date.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+        );
+
+        const year = istDate.getFullYear();
+        const month = String(istDate.getMonth() + 1).padStart(2, '0');
+        const day = String(istDate.getDate()).padStart(2, '0');
+
+        return `${year}-${month}-${day}`;
+    }, []);
 
     useEffect(() => {
         const auth = getAuth();
@@ -401,363 +439,383 @@ const Vendor = () => {
     };
 
     return (
-        <div className={styles.vendorWrapper}>
-            <div style={{ marginBottom: '30px' }}>
-                <BackButton />
-            </div>
-
-            {vendor ? (
-                <>
-                    <h4 className={styles.vendorHeader}>
-                        {vendor.firmName || "Vendor Firm Name"}
-                    </h4>
-                    <p className={styles.vendorSubheader}>
-                        {vendor.address || "Vendor Address"}<br />
-                        📞 {vendor.contactNo || "Contact Number"} | 📧 {vendor.email || "Email"}
-                    </p>
-                </>
-            ) : (
-                <p className={styles.message}>Loading vendor info...</p>
-            )}
-
-            {showValidationPopup && (
-                <div className={styles.topPopup}>⚠️ Please fill all the required fields</div>
-            )}
-
-            <div className={styles.formSection}>
-
-                <label>Name :</label>
-                <input name="customerName" value={form.customerName || ""} onChange={handleChange} />
-                {formErrors.customerName && <p className={styles.errorMsg}>{formErrors.customerName}</p>}
-
-                <label>Contact No. :</label>
-                <input name="contactNo" value={form.contactNo} onChange={handleChange} />
-                {formErrors.contactNo && <p className={styles.errorMsg}>{formErrors.contactNo}</p>}
-
-                <label>Date Of Event :</label>
-                <input name="date" type="date" value={form.date} onChange={handleChange} />
-                {formErrors.date && <p className={styles.errorMsg}>{formErrors.date}</p>}
-
-                <label>Start Time :</label>
-                <input name="startTime" type="time" value={form.startTime} onChange={handleChange} />
-                {formErrors.startTime && <p className={styles.errorMsg}>{formErrors.startTime}</p>}
-
-                <label>End Time :</label>
-                <input name="endTime" type="time" value={form.endTime} onChange={handleChange} />
-                {formErrors.endTime && <p className={styles.errorMsg}>{formErrors.endTime}</p>}
-
-                <label>Venue Type :</label>
-                <input name="venueType" value={form.venueType} onChange={handleChange} />
-
-                <label>Booked On :</label>
-                <input
-                    type="date"
-                    name="bookedOn"
-                    value={form.bookedOn}
-                    onChange={handleChange}
-                />
-
-                <label>Address :</label>
-                <input name="address" value={form.address} onChange={handleChange} />
-
-                <label>Event Type :</label>
-                <button
-                    onClick={() => setShowEventPopup(true)} className={styles.vendorPopupBtn}>
-                    🎉 {customEvent || form.typeOfEvent || 'Select Event Type'}
-                </button>
-                {formErrors.typeOfEvent && <p className={styles.errorMsg}>{formErrors.typeOfEvent}</p>}
-
-                <label>Banquet Name:</label>
-                <input
-                    name="banquetName"
-                    value={form.banquetName || ""}
-                    onChange={handleChange}
-                />
-                {formErrors.banquetName && <p className={styles.errorMsg}>{formErrors.banquetName}</p>}
-
-                {enableRoyalty && <>
-                    <label>Note (PayOut) :</label>
-                    <input name="note" value={form.note} onChange={handleChange} /> </>}
-
-            </div>
-
-            <div style={{ margin: "15px 0" }}>
-                <label>
+        <>
+            <form style={{ marginTop: "50px", display: 'flex', justifyContent: 'space-between' }} onSubmit={handleSave}>
+                <div></div>
+                <div className="BookedOn">
+                    <label
+                        style={{
+                            fontWeight: 600,
+                            fontSize: "14px",
+                            color: "#333",
+                            whiteSpace: "nowrap",
+                        }}
+                    >
+                        Booking on:
+                    </label>
                     <input
-                        type="checkbox"
-                        checked={enableRoyalty}
+                        type="date"
+                        name="bookedOn"
+                        value={form.bookedOn ? formatDateIST(form.bookedOn) : ""}
+                        onChange={handleChange}
+                        style={{ color: 'red', width: '150px' }}
+                    />
+                </div>
+            </form>
+
+            <div className={styles.vendorWrapper}>
+                <div style={{ marginBottom: '0px' }}>
+                    <BackButton />
+                </div>
+
+                {vendor ? (
+                    <>
+                        <h4 className={styles.vendorHeader}>
+                            {vendor.firmName || "Vendor Firm Name"}
+                        </h4>
+                        <p className={styles.vendorSubheader}>
+                            {vendor.address || "Vendor Address"}<br />
+                            📞 {vendor.contactNo || "Contact Number"} | 📧 {vendor.email || "Email"}
+                        </p>
+                    </>
+                ) : (
+                    <p className={styles.message}>Loading vendor info...</p>
+                )}
+
+                {showValidationPopup && (
+                    <div className={styles.topPopup}>⚠️ Please fill all the required fields</div>
+                )}
+
+                <div className={styles.formSection}>
+
+                    <label>Name</label>
+                    <input name="customerName" value={form.customerName || ""} onChange={handleChange} />
+                    {formErrors.customerName && <p className={styles.errorMsg}>{formErrors.customerName}</p>}
+
+                    <label>Contact No</label>
+                    <input name="contactNo" value={form.contactNo} onChange={handleChange} />
+                    {formErrors.contactNo && <p className={styles.errorMsg}>{formErrors.contactNo}</p>}
+
+                    <label>Date Of Event</label>
+                    <input name="date" type="date" value={form.date} onChange={handleChange} />
+                    {formErrors.date && <p className={styles.errorMsg}>{formErrors.date}</p>}
+
+                    <label>Start Time</label>
+                    <input name="startTime" type="time" value={form.startTime} onChange={handleChange} />
+                    {formErrors.startTime && <p className={styles.errorMsg}>{formErrors.startTime}</p>}
+
+                    <label>End Time</label>
+                    <input name="endTime" type="time" value={form.endTime} onChange={handleChange} />
+                    {formErrors.endTime && <p className={styles.errorMsg}>{formErrors.endTime}</p>}
+
+                    <label>Venue Type</label>
+                    <input name="venueType" value={form.venueType} onChange={handleChange} />
+
+                    <label>Address</label>
+                    <input name="address" value={form.address} onChange={handleChange} />
+
+                    <label>Event Type</label>
+                    <button
+                        onClick={() => setShowEventPopup(true)} className={styles.vendorPopupBtn}>
+                        🎉 {customEvent || form.typeOfEvent || 'Select Event Type'}
+                    </button>
+                    {formErrors.typeOfEvent && <p className={styles.errorMsg}>{formErrors.typeOfEvent}</p>}
+
+                    <label>Banquet Name</label>
+                    <input
+                        name="banquetName"
+                        value={form.banquetName || ""}
+                        onChange={handleChange}
+                    />
+                    {formErrors.banquetName && <p className={styles.errorMsg}>{formErrors.banquetName}</p>}
+
+                    {enableRoyalty && <>
+                        <label>Note (PayOut)</label>
+                        <input name="note" value={form.note} onChange={handleChange} /> </>}
+
+                </div>
+
+                <div style={{ margin: "15px 0" }}>
+                    <label>
+                        <input
+                            type="checkbox"
+                            checked={enableRoyalty}
+                            onChange={(e) => {
+                                setEnableRoyalty(e.target.checked);
+                                setServices((prev) =>
+                                    prev.map((srv) => {
+                                        const percent = e.target.checked
+                                            ? (srv.royaltyPercent && srv.royaltyPercent !== 0 ? srv.royaltyPercent : 30)
+                                            : 0;
+
+                                        return {
+                                            ...srv,
+                                            royaltyPercent: percent,
+                                            royaltyAmount: ((parseFloat(srv.total) || "") * percent) / 100,
+                                        };
+                                    })
+                                );
+
+                            }}
+                        />
+                    </label>
+                </div>
+
+                <div style={{ overflowX: "auto" }}>
+                    <table
+                        className={styles.vendorTable}
+                        style={{ minWidth: "900px", borderCollapse: "collapse" }} // 👈 min width force
+                    >
+                        <thead>
+                            <tr>
+                                <th>Sl.</th>
+                                <th>
+                                    <label style={{ whiteSpace: 'nowrap' }}>
+                                        Select All <input
+                                            type="checkbox"
+                                            checked={selectAll}
+                                            onChange={(e) => handleSelectAll(e.target.checked)}
+                                        />
+                                    </label>
+                                </th>
+
+                                <th>Service</th>
+                                <th>Remarks</th>
+                                <th>Qty</th>
+                                <th>Rate</th>
+                                <th>Total</th>
+                                {enableRoyalty && <th>Royalty %</th>}
+                                {enableRoyalty && <th>Royalty Amt</th>}
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {services.map((srv, idx) => (
+                                <tr key={idx}>
+                                    <td>{idx + 1}</td>
+
+                                    {/* Multiple select checkbox */}
+                                    <td>
+                                        <input
+                                            type="checkbox"
+                                            checked={srv.isSelected || false}
+                                            onChange={(e) => {
+                                                const checked = e.target.checked;
+                                                setServices(prev =>
+                                                    prev.map((s, i) =>
+                                                        i === idx ? { ...s, isSelected: checked } : s
+                                                    )
+                                                );
+                                            }}
+                                        />
+                                    </td>
+
+                                    {/* Service Name (always read-only) */}
+                                    <td>{srv.name || "—"}</td>
+
+                                    {/* Editable only if selected */}
+                                    <td>
+                                        <input
+                                            type="text"
+                                            value={srv.remarks || ""}
+                                            disabled={!srv.isSelected}   // only editable if selected
+                                            onChange={(e) => handleServiceChange(idx, "remarks", e.target.value)}
+                                        />
+                                    </td>
+                                    <td>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            value={srv.qty || ""}
+                                            disabled={!srv.isSelected}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/[^0-9]/g, "");
+                                                handleServiceChange(idx, "qty", val);
+                                            }}
+                                        />
+                                    </td>
+
+                                    <td>
+                                        <input
+                                            type="text"
+                                            inputMode="decimal"
+                                            value={srv.rate || ""}
+                                            disabled={!srv.isSelected}
+                                            onChange={(e) => {
+                                                let val = e.target.value.replace(/[^0-9.]/g, "");
+                                                if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
+                                                handleServiceChange(idx, "rate", val);
+                                            }}
+                                        />
+                                    </td>
+                                    <td>
+                                        <input type="text" value={srv.total || ""} readOnly />
+                                    </td>
+
+                                    {enableRoyalty && (
+                                        <>
+                                            <td>
+                                                <input
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    value={srv.royaltyPercent || 0}
+                                                    disabled={!srv.isSelected}
+                                                    onChange={(e) => {
+                                                        let val = e.target.value.replace(/[^0-9.]/g, "");
+                                                        if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
+                                                        handleServiceChange(idx, "royaltyPercent", val);
+                                                    }}
+                                                />
+                                            </td>
+                                            <td>
+                                                <input type="text" value={srv.royaltyAmount || ""} readOnly />
+                                            </td>
+                                        </>
+                                    )}
+
+                                </tr>
+                            ))}
+                        </tbody>
+
+
+                    </table>
+                </div>
+
+                <div className={styles.customService}>
+                    <input
+                        placeholder="Add new service"
+                        value={customService}
+                        onChange={(e) => setCustomService(e.target.value)}
+                    />
+                    <button onClick={addCustomService}>Add</button>
+                </div>
+
+                <div className={styles.summaryInputs}>
+                    <label>OverAll Package Cost</label>
+                    <input
+                        type="text"
+                        inputMode="decimal"
+                        value={summaryFields.overAllPackageCost}
                         onChange={(e) => {
-                            setEnableRoyalty(e.target.checked);
-                            setServices((prev) =>
-                                prev.map((srv) => {
-                                    const percent = e.target.checked
-                                        ? (srv.royaltyPercent && srv.royaltyPercent !== 0 ? srv.royaltyPercent : 30)
-                                        : 0;
-
-                                    return {
-                                        ...srv,
-                                        royaltyPercent: percent,
-                                        royaltyAmount: ((parseFloat(srv.total) || "") * percent) / 100,
-                                    };
-                                })
-                            );
-
+                            let val = e.target.value.replace(/[^0-9.]/g, "");
+                            if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
+                            setSummaryFields((prev) => ({
+                                ...prev,
+                                overAllPackageCost: val
+                            }));
                         }}
                     />
-                </label>
-            </div>
 
-            <div style={{ overflowX: "auto" }}>
-                <table
-                    className={styles.vendorTable}
-                    style={{ minWidth: "900px", borderCollapse: "collapse" }} // 👈 min width force
+
+                    <label>Calculated Package Cost</label>
+                    <input type="number" value={summaryFields.totalPackageCost} readOnly />
+
+                    <label>Discount:</label>
+                    <input
+                        type="text"
+                        inputMode="decimal"
+                        value={summaryFields.discount}
+                        onChange={(e) => {
+                            let val = e.target.value.replace(/[^0-9.]/g, "");
+                            if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
+                            setSummaryFields({ ...summaryFields, discount: val });
+                        }}
+                    />
+
+
+                    <label>GST Applicable Amount</label>
+                    <input
+                        type="text"
+                        inputMode="decimal"
+                        value={summaryFields.gstApplicableAmount ?? ""}
+                        onChange={(e) => {
+                            let val = e.target.value.replace(/[^0-9.]/g, "");
+                            if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
+                            setSummaryFields(prev => ({ ...prev, gstApplicableAmount: val }));
+                            setIsGSTManuallyEdited(true); // important!
+                        }}
+                    />
+
+
+                    <label>GST (18%)</label>
+                    <input type="text" value={summaryFields.gstAmount} readOnly />
+
+                    <label>Grand Total</label>
+                    <input type="text" value={summaryFields.grandTotal} readOnly />
+                </div>
+
+                <button
+                    onClick={handleSave}
+                    className={styles.saveBtn}
+                    disabled={isSaving}
                 >
-                    <thead>
-                        <tr>
-                            <th>Sl.</th>
-                            <th>
-                                <label style={{ whiteSpace: 'nowrap' }}>
-                                    Select All <input
-                                        type="checkbox"
-                                        checked={selectAll}
-                                        onChange={(e) => handleSelectAll(e.target.checked)}
-                                    />
-                                </label>
-                            </th>
+                    {isSaving
+                        ? editData
+                            ? "🔄 Updating..."
+                            : "💾 Saving..."
+                        : editData
+                            ? "🛠 Update"
+                            : "💾 Save"}
+                </button>
 
-                            <th>Service</th>
-                            <th>Remarks</th>
-                            <th>Qty</th>
-                            <th>Rate</th>
-                            <th>Total</th>
-                            {enableRoyalty && <th>Royalty %</th>}
-                            {enableRoyalty && <th>Royalty Amt</th>}
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {services.map((srv, idx) => (
-                            <tr key={idx}>
-                                <td>{idx + 1}</td>
-
-                                {/* Multiple select checkbox */}
-                                <td>
-                                    <input
-                                        type="checkbox"
-                                        checked={srv.isSelected || false}
-                                        onChange={(e) => {
-                                            const checked = e.target.checked;
-                                            setServices(prev =>
-                                                prev.map((s, i) =>
-                                                    i === idx ? { ...s, isSelected: checked } : s
-                                                )
-                                            );
-                                        }}
-                                    />
-                                </td>
-
-                                {/* Service Name (always read-only) */}
-                                <td>{srv.name || "—"}</td>
-
-                                {/* Editable only if selected */}
-                                <td>
-                                    <input
-                                        type="text"
-                                        value={srv.remarks || ""}
-                                        disabled={!srv.isSelected}   // only editable if selected
-                                        onChange={(e) => handleServiceChange(idx, "remarks", e.target.value)}
-                                    />
-                                </td>
-                                <td>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={srv.qty || ""}
-                                        disabled={!srv.isSelected}
-                                        onChange={(e) => {
-                                            const val = e.target.value.replace(/[^0-9]/g, "");
-                                            handleServiceChange(idx, "qty", val);
-                                        }}
-                                    />
-                                </td>
-
-                                <td>
-                                    <input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={srv.rate || ""}
-                                        disabled={!srv.isSelected}
-                                        onChange={(e) => {
-                                            let val = e.target.value.replace(/[^0-9.]/g, "");
-                                            if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
-                                            handleServiceChange(idx, "rate", val);
-                                        }}
-                                    />
-                                </td>
-                                <td>
-                                    <input type="text" value={srv.total || ""} readOnly />
-                                </td>
-
-                                {enableRoyalty && (
-                                    <>
-                                        <td>
-                                            <input
-                                                type="text"
-                                                inputMode="decimal"
-                                                value={srv.royaltyPercent || 0}
-                                                disabled={!srv.isSelected}
-                                                onChange={(e) => {
-                                                    let val = e.target.value.replace(/[^0-9.]/g, "");
-                                                    if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
-                                                    handleServiceChange(idx, "royaltyPercent", val);
-                                                }}
-                                            />
-                                        </td>
-                                        <td>
-                                            <input type="text" value={srv.royaltyAmount || ""} readOnly />
-                                        </td>
-                                    </>
-                                )}
-
-                            </tr>
-                        ))}
-                    </tbody>
-
-
-                </table>
-            </div>
-
-            <div className={styles.customService}>
-                <input
-                    placeholder="Add new service"
-                    value={customService}
-                    onChange={(e) => setCustomService(e.target.value)}
-                />
-                <button onClick={addCustomService}>Add</button>
-            </div>
-
-            <div className={styles.summaryInputs}>
-                <label>OverAll Package Cost:</label>
-                <input
-                    type="text"
-                    inputMode="decimal"
-                    value={summaryFields.overAllPackageCost}
-                    onChange={(e) => {
-                        let val = e.target.value.replace(/[^0-9.]/g, "");
-                        if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
-                        setSummaryFields((prev) => ({
-                            ...prev,
-                            overAllPackageCost: val
-                        }));
-                    }}
-                />
-
-
-                <label>Calculated Package Cost:</label>
-                <input type="number" value={summaryFields.totalPackageCost} readOnly />
-
-                <label>Discount:</label>
-                <input
-                    type="text"
-                    inputMode="decimal"
-                    value={summaryFields.discount}
-                    onChange={(e) => {
-                        let val = e.target.value.replace(/[^0-9.]/g, "");
-                        if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
-                        setSummaryFields({ ...summaryFields, discount: val });
-                    }}
-                />
-
-
-                <label>GST Applicable Amount:</label>
-                <input
-                    type="text"
-                    inputMode="decimal"
-                    value={summaryFields.gstApplicableAmount ?? ""}
-                    onChange={(e) => {
-                        let val = e.target.value.replace(/[^0-9.]/g, "");
-                        if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
-                        setSummaryFields(prev => ({ ...prev, gstApplicableAmount: val }));
-                        setIsGSTManuallyEdited(true); // important!
-                    }}
-                />
-
-
-                <label>GST (18%):</label>
-                <input type="text" value={summaryFields.gstAmount} readOnly />
-
-                <label>Grand Total:</label>
-                <input type="text" value={summaryFields.grandTotal} readOnly />
-            </div>
-
-            <button
-                onClick={handleSave}
-                className={styles.saveBtn}
-                disabled={isSaving}
-            >
-                {isSaving
-                    ? editData
-                        ? "🔄 Updating..."
-                        : "💾 Saving..."
-                    : editData
-                        ? "🛠 Update"
-                        : "💾 Save"}
-            </button>
-
-            {showEventPopup && (
-                <div className={styles.popupOverlay} onClick={() => setShowEventPopup(false)}>
-                    <div className={styles.popup} onClick={(e) => e.stopPropagation()}>
-                        <div className={styles.popupHeader}>
-                            <div style={{ right: "10px", position: 'fixed' }}>
-                                <button style={{ backgroundColor: 'red', borderRadius: '12px' }} onClick={() => setShowEventPopup(false)}>X</button>
+                {showEventPopup && (
+                    <div className={styles.popupOverlay} onClick={() => setShowEventPopup(false)}>
+                        <div className={styles.popup} onClick={(e) => e.stopPropagation()}>
+                            <div className={styles.popupHeader}>
+                                <div style={{ right: "10px", position: 'fixed' }}>
+                                    <button style={{ backgroundColor: 'red', borderRadius: '12px' }} onClick={() => setShowEventPopup(false)}>X</button>
+                                </div>
+                                <h3>Select or Add Event Type</h3>
+                                <input
+                                    type="text"
+                                    placeholder="🔎 Search event"
+                                    value={eventSearchQuery}
+                                    onChange={(e) => setEventSearchQuery(e.target.value)}
+                                />
                             </div>
-                            <h3>Select or Add Event Type</h3>
-                            <input
-                                type="text"
-                                placeholder="🔎 Search event"
-                                value={eventSearchQuery}
-                                onChange={(e) => setEventSearchQuery(e.target.value)}
-                            />
-                        </div>
-                        <div className={styles.popupList}>
-                            {predefinedEvents
-                                .filter(event => event.toLowerCase().includes(eventSearchQuery.toLowerCase()))
-                                .map((event, i) => (
-                                    <div
-                                        key={i}
-                                        className={styles.popupItem}
-                                        onClick={() => {
-                                            if (event !== "Not inserted") {
-                                                setForm({ ...form, typeOfEvent: event });
-                                                setCustomEvent('');
-                                                setShowEventPopup(false);
-                                            }
-                                        }}
-                                        style={{ cursor: event === "Not inserted" ? "not-allowed" : "pointer", opacity: event === "Not inserted" ? 0.5 : 1 }}
-                                    >
-                                        {event}
-                                    </div>
-                                ))}
-                        </div>
+                            <div className={styles.popupList}>
+                                {predefinedEvents
+                                    .filter(event => event.toLowerCase().includes(eventSearchQuery.toLowerCase()))
+                                    .map((event, i) => (
+                                        <div
+                                            key={i}
+                                            className={styles.popupItem}
+                                            onClick={() => {
+                                                if (event !== "Not inserted") {
+                                                    setForm({ ...form, typeOfEvent: event });
+                                                    setCustomEvent('');
+                                                    setShowEventPopup(false);
+                                                }
+                                            }}
+                                            style={{ cursor: event === "Not inserted" ? "not-allowed" : "pointer", opacity: event === "Not inserted" ? 0.5 : 1 }}
+                                        >
+                                            {event}
+                                        </div>
+                                    ))}
+                            </div>
 
-                        <div className={styles.popupCustomEvent}>
-                            <input
-                                placeholder="Or enter custom event"
-                                value={customEvent}
-                                onKeyDown={handleCustomEventEnter}
-                                onChange={(e) => {
-                                    setCustomEvent(e.target.value);
-                                    setForm({ ...form, typeOfEvent: '' });
-                                }}
-                            />
-                            <button onClick={() => setShowEventPopup(false)} disabled={!customEvent.trim()}>
-                                Add
-                            </button>
+                            <div className={styles.popupCustomEvent}>
+                                <input
+                                    placeholder="Or enter custom event"
+                                    value={customEvent}
+                                    onKeyDown={handleCustomEventEnter}
+                                    onChange={(e) => {
+                                        setCustomEvent(e.target.value);
+                                        setForm({ ...form, typeOfEvent: '' });
+                                    }}
+                                />
+                                <button onClick={() => setShowEventPopup(false)} disabled={!customEvent.trim()}>
+                                    Add
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )}
+            </div>
+
+            <div style={{ marginBottom: "50px" }}></div>
+            <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
+        </>
     );
 
 };

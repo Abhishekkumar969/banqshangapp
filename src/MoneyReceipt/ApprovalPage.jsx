@@ -3,11 +3,35 @@ import { db } from "../firebaseConfig";
 import { collection, updateDoc, doc, onSnapshot, getDocs, getDoc } from "firebase/firestore";
 import BackButton from "../components/BackButton";
 import { getAuth } from "firebase/auth";
+import { useNavigate } from 'react-router-dom';
+import BottomNavigationBar from "../components/BottomNavigationBar";
 
 export default function ApprovalPage() {
+    const navigate = useNavigate();
     const [receipts, setReceipts] = useState([]);
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
+    const [userAppType, setUserAppType] = useState(null);
+
+    useEffect(() => {
+        const fetchUserAppType = async () => {
+            const auth = getAuth();
+            const user = auth.currentUser;
+            if (user) {
+                try {
+                    const userRef = doc(db, 'usersAccess', user.email);
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        const data = userSnap.data();
+                        setUserAppType(data.accessToApp);
+                    }
+                } catch (err) {
+                    console.error("Error fetching user app type:", err);
+                }
+            }
+        };
+        fetchUserAppType();
+    }, []);
 
     // 🔹 Fetch all pending receipts
     useEffect(() => {
@@ -152,113 +176,120 @@ export default function ApprovalPage() {
 
 
     return (
-        <div style={{ maxWidth: "95%", margin: "0 auto", padding: "10px" }}>
-            <div style={{ marginBottom: "60px" }}>
-                <BackButton />
+        <>
+
+            <div style={{ maxWidth: "95%", margin: "0 auto", padding: "10px" }}>
+                <div style={{ marginBottom: "60px" }}>
+                    <BackButton />
+                </div>
+
+                <h3 style={{ textAlign: "center", marginBottom: "15px", fontSize: "24px" }}>
+                    📜 Pending Approvals
+                </h3>
+
+                {message && (
+                    <p style={{ textAlign: "center", color: "blue", fontSize: "13px" }}>
+                        {message}
+                    </p>
+                )}
+
+                {receipts.length > 0 && (
+                    <div style={{ textAlign: "center", marginBottom: "15px" }}>
+                        <button
+                            onClick={approveAllReceipts}
+                            disabled={loading}
+                            style={{
+                                background: "#5cbf0a",
+                                color: "#fff",
+                                padding: "12px 20px",
+                                border: "none",
+                                borderRadius: "6px",
+                                fontSize: "16px",
+                                cursor: loading ? "not-allowed" : "pointer",
+                            }}
+                        >
+                            {loading ? "Approving..." : "✅ Approve All"}
+                        </button>
+                    </div>
+                )}
+
+                {receipts.length > 0 && (
+                    <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                            <thead>
+                                <tr
+                                    style={{
+                                        border: "1px solid #ccc",
+                                        padding: "8px 6px",
+                                        background: "#31b3ff",
+                                        whiteSpace: "nowrap",
+                                    }}
+                                >
+                                    <th style={{ border: '2px solid #8e8e8eff' }}>SL.</th>
+                                    <th style={{ border: '2px solid #8e8e8eff' }}>SL. No</th>
+                                    <th style={{ border: '2px solid #8e8e8eff' }}>Party</th>
+                                    <th style={{ border: '2px solid #8e8e8eff' }}>Amount</th>
+                                    <th style={{ border: '2px solid #8e8e8eff' }}>Mode</th>
+                                    <th style={{ border: '2px solid #8e8e8eff' }}>Cash</th>
+                                    <th style={{ border: '2px solid #8e8e8eff' }}>Credit</th>
+                                    <th style={{ border: '2px solid #8e8e8eff' }}>Debit</th>
+                                    <th style={{ border: '2px solid #8e8e8eff' }}>Date-Time</th>
+                                    <th style={{ border: '2px solid #8e8e8eff' }}>Particulars</th>
+                                    <th style={{ border: '2px solid #8e8e8eff' }}>Approve</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {receipts.map((r, index) => (
+                                    <tr key={`${r.month}-${r.mapId}`} style={{ whiteSpace: "nowrap" }}>
+                                        <td style={{ border: '2px solid #8e8e8eff' }}>{receipts.length - index}</td>
+                                        <td style={{ border: '2px solid #8e8e8eff' }}>#{r.slNo || "-"}</td>
+                                        <td style={{ border: '2px solid #8e8e8eff' }}>{r.customerName || r.partyName || "-"}</td>
+                                        <td style={{ border: '2px solid #8e8e8eff' }}> ₹{r.amount || 0} </td>
+                                        <td style={{ border: '2px solid #8e8e8eff' }}> {r.mode || "-"} </td>
+                                        <td style={{ border: '2px solid #8e8e8eff' }}> {r.cashTo} </td>
+                                        <td style={{ border: '2px solid #8e8e8eff' }}> {r.paymentFor === "Credit" ? "Credit" : " "} </td>
+                                        <td style={{ border: '2px solid #8e8e8eff' }}> {r.paymentFor === "Debit" ? "Debit" : " "} </td>
+                                        <td style={{ border: '2px solid #8e8e8eff' }}>
+                                            <span>{formatDate(r.createdAt)}</span>
+                                            <br />
+                                            {r.createdAt && (
+                                                <span style={{ fontSize: "0.85em", color: "#555" }}>
+                                                    {new Date(r.createdAt + 5.5 * 60 * 60 * 1000).toLocaleTimeString("en-US", {
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                        hour12: true,
+                                                    })}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td style={{ border: '2px solid #8e8e8eff' }}>{r.particularNature || r.description || "-"}</td>
+                                        <td style={{ border: '2px solid #8e8e8eff' }}>
+                                            <button
+                                                onClick={() => approveReceipt(r.month, r.mapId)}
+                                                disabled={loading}
+                                                style={{
+                                                    background: "#5cbf0a",
+                                                    color: "#fff",
+                                                    padding: "10px",
+                                                    border: "none",
+                                                    borderRadius: "4px",
+                                                    cursor: loading ? "not-allowed" : "pointer",
+                                                }}
+                                            >
+                                                ✅
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
 
-            <h3 style={{ textAlign: "center", marginBottom: "15px", fontSize: "24px" }}>
-                📜 Pending Approvals
-            </h3>
+            <div style={{ marginBottom: "50px" }}></div>
+            <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
 
-            {message && (
-                <p style={{ textAlign: "center", color: "blue", fontSize: "13px" }}>
-                    {message}
-                </p>
-            )}
-
-            {receipts.length > 0 && (
-                <div style={{ textAlign: "center", marginBottom: "15px" }}>
-                    <button
-                        onClick={approveAllReceipts}
-                        disabled={loading}
-                        style={{
-                            background: "#5cbf0a",
-                            color: "#fff",
-                            padding: "12px 20px",
-                            border: "none",
-                            borderRadius: "6px",
-                            fontSize: "16px",
-                            cursor: loading ? "not-allowed" : "pointer",
-                        }}
-                    >
-                        {loading ? "Approving..." : "✅ Approve All"}
-                    </button>
-                </div>
-            )}
-
-            {receipts.length > 0 && (
-                <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                        <thead>
-                            <tr
-                                style={{
-                                    border: "1px solid #ccc",
-                                    padding: "8px 6px",
-                                    background: "#31b3ff",
-                                    whiteSpace: "nowrap",
-                                }}
-                            >
-                                <th style={{ border: '2px solid #8e8e8eff' }}>SL.</th>
-                                <th style={{ border: '2px solid #8e8e8eff' }}>SL. No</th>
-                                <th style={{ border: '2px solid #8e8e8eff' }}>Party</th>
-                                <th style={{ border: '2px solid #8e8e8eff' }}>Amount</th>
-                                <th style={{ border: '2px solid #8e8e8eff' }}>Mode</th>
-                                <th style={{ border: '2px solid #8e8e8eff' }}>Cash</th>
-                                <th style={{ border: '2px solid #8e8e8eff' }}>Credit</th>
-                                <th style={{ border: '2px solid #8e8e8eff' }}>Debit</th>
-                                <th style={{ border: '2px solid #8e8e8eff' }}>Date-Time</th>
-                                <th style={{ border: '2px solid #8e8e8eff' }}>Particulars</th>
-                                <th style={{ border: '2px solid #8e8e8eff' }}>Approve</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {receipts.map((r, index) => (
-                                <tr key={`${r.month}-${r.mapId}`} style={{ whiteSpace: "nowrap" }}>
-                                    <td style={{ border: '2px solid #8e8e8eff' }}>{receipts.length - index}</td>
-                                    <td style={{ border: '2px solid #8e8e8eff' }}>#{r.slNo || "-"}</td>
-                                    <td style={{ border: '2px solid #8e8e8eff' }}>{r.customerName || r.partyName || "-"}</td>
-                                    <td style={{ border: '2px solid #8e8e8eff' }}> ₹{r.amount || 0} </td>
-                                    <td style={{ border: '2px solid #8e8e8eff' }}> {r.mode || "-"} </td>
-                                    <td style={{ border: '2px solid #8e8e8eff' }}> {r.cashTo} </td>
-                                    <td style={{ border: '2px solid #8e8e8eff' }}> {r.paymentFor === "Credit" ? "Credit" : " "} </td>
-                                    <td style={{ border: '2px solid #8e8e8eff' }}> {r.paymentFor === "Debit" ? "Debit" : " "} </td>
-                                    <td style={{ border: '2px solid #8e8e8eff' }}>
-                                        <span>{formatDate(r.createdAt)}</span>
-                                        <br />
-                                        {r.createdAt && (
-                                            <span style={{ fontSize: "0.85em", color: "#555" }}>
-                                                {new Date(r.createdAt + 5.5 * 60 * 60 * 1000).toLocaleTimeString("en-US", {
-                                                    hour: "2-digit",
-                                                    minute: "2-digit",
-                                                    hour12: true,
-                                                })}
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td style={{ border: '2px solid #8e8e8eff' }}>{r.particularNature || r.description || "-"}</td>
-                                    <td style={{ border: '2px solid #8e8e8eff' }}>
-                                        <button
-                                            onClick={() => approveReceipt(r.month, r.mapId)}
-                                            disabled={loading}
-                                            style={{
-                                                background: "#5cbf0a",
-                                                color: "#fff",
-                                                padding: "10px",
-                                                border: "none",
-                                                borderRadius: "4px",
-                                                cursor: loading ? "not-allowed" : "pointer",
-                                            }}
-                                        >
-                                            ✅
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-        </div>
+        </>
     );
 }
