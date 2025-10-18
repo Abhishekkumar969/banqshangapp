@@ -144,7 +144,7 @@ section,
     background: linear-gradient(135deg, #ff1e56, #ff4e00);
     color: white;
     border: none;
-    padding: 8px 0px;
+    padding: 8px 12px;
     border-radius: 50px;
     cursor: pointer;
     width: 100%;
@@ -161,10 +161,9 @@ section,
 @media (min-width: 600px),
 (max-width: 600px) {
     .logout-btn {
-        width: 110px;
+        width: fit-content;
     }
 }
-
 
 /* ===================== Banner ===================== */
 
@@ -324,17 +323,11 @@ section,
 .popup-overlay {
     position: fixed;
     inset: 0;
-    /* top:0, right:0, bottom:0, left:0 shorthand */
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
-
-    /* Flexbox centering */
     display: flex;
     align-items: center;
-    /* Vertical center (viewport ke hisaab se) */
     justify-content: center;
-    /* Horizontal center */
-
     animation: backgroundFadeIn 0.3s ease;
     z-index: 9999;
 }
@@ -405,7 +398,6 @@ section,
 .popup-actions button:hover {
     transform: scale(1.03);
 }
-
 
 /* ===================== Animations ===================== */
 
@@ -501,7 +493,6 @@ section,
     }
 }
 
-
 /* ===================== Mobile Tweaks ===================== */
 @media (max-width: 1200px) {
     .banner-track {
@@ -520,12 +511,6 @@ section,
     .banner img {
         max-height: 160px !important;
     }
-
-    /* .service-box {
-        padding: 0px;
-    } */
-
-
 
     .service-grid {
         display: grid;
@@ -546,17 +531,16 @@ section,
     }
 
     .service-label {
-        font-size: 13px;
-        font-weight: bold;
+        background-color: #fdd6d6;
+        font-size: 12px;
+        padding: 2px 0px;
+        border-radius: 150px !important;
+        font-weight: 800;
         color: #8e0279;
+        margin: 10px 0px;
         position: relative;
         z-index: 1;
-        padding: 5px 5px;
-        background-color: transparent;
-        box-shadow: 1px 2px 3px #ff96ef00,
-            inset -4px -4px 8px #00000000;
-        border-radius: 150px !important;
-        border: 4px solid rgba(255, 255, 255, 0);
+        border: 4px solid white !important;
     }
 
     .service-section {
@@ -603,10 +587,6 @@ section,
         max-height: 160px !important;
     }
 
-    /* .service-box {
-        padding: 0px;
-    } */
-
     .service-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(20%, 1fr));
@@ -625,7 +605,8 @@ section,
     }
 
     .service-label {
-        font-size: 12px;
+        font-weight: 800;
+        font-size: 11px;
     }
 
     .service-section {
@@ -664,14 +645,17 @@ section,
 @media (max-width: 380px) {
     .banner-text {
         font-size: 8px !important;
-        padding: 6px 19px !important;
-        top: 130px;
+        padding: 3px 9px !important;
+        top: 134px;
+    }
 
+    .banner-track {
+        margin: 0px 0px !important;
     }
 
     .service-label {
-        font-size: 10px;
-
+        font-weight: 800;
+        font-size: 9px;
     }
 
     .banner img {
@@ -710,12 +694,12 @@ section,
     }
 
     .logout-btn {
-        padding: 6px 4px;
-        font-weight: 300;
-        font-size: 15px;
-        width: 70px;
+        padding: 4px 3px;
+        font-weight: 900;
+        font-size: 11px;
+        /* width: 70px; */
         margin-top: 5px;
-        margin-bottom: 20px;
+        /* margin-bottom: 20px; */
     }
 
     .service-icon {
@@ -748,6 +732,14 @@ section,
     }
 }
 
+@media (min-width: 365px) and (max-width: 385px) {
+    .service-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(16%, 1fr));
+
+        animation: fadeIn 1s ease-in;
+    }
+}
 
 .banner-image {
     min-width: 100%;
@@ -755,7 +747,6 @@ section,
 }
 
 /* ===================== 3D Effects ===================== */
-
 
 /* Banner 3D */
 .banner {
@@ -774,33 +765,6 @@ section,
 .logout-btn:hover {
     transform: translateY(-3px) scale(1.05);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /* ===================== Bottom Navigation Bar ===================== */
 .bottom-nav-bar {
@@ -885,12 +849,12 @@ section,
     /* Icon background size */
     height: 60px;
     border-radius: 50%;
-    background: #5021a8;
+    background: #a87bec;
     /* Purple color like PhonePe's central button */
     display: flex;
     justify-content: center;
     align-items: center;
-    box-shadow: 0 4px 15px rgba(80, 33, 168, 0.4);
+    box-shadow: inset -4px -4px 5px #5021a866;
     /* Shadow effect */
     border: 4px solid #ffffff;
     /* White border to separate from background */

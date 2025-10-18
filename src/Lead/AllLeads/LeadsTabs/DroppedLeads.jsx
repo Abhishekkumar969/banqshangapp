@@ -182,8 +182,8 @@ const BookingLeadsTable = () => {
     }, [searchTerm, leads]);
 
     return (
-        <div className="leads-table-container">
-            <div className="table-header-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="leads-table-container" >
+            <div className="table-header-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '35px' }}>
                 <div> <BackButton />  </div>
                 <div style={{ flex: 1, textAlign: 'center' }}> <h2 className="leads-header" style={{ margin: 0 }}>🗑️ Dropped Leads</h2> </div>
                 <div> <FilterPopupWrapper onFilter={handleFilters} /> </div>
@@ -298,7 +298,7 @@ const BookingLeadsTable = () => {
                     ▶
                 </button>
             </div>
-            <div style={{marginBottom:'50px'}}></div>
+            <div style={{ marginBottom: '50px' }}></div>
         </div>
     );
 };

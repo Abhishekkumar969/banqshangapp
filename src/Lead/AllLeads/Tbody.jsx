@@ -3,13 +3,32 @@ import { useNavigate } from 'react-router-dom';
 
 const Tbody = ({ leads, isEditing, editing, handleFieldChange, handleEdit, handleDateChange, startEdit, moveLeadToDrop, handlePrint }) => {
     const [localValue, setLocalValue] = useState({});
-    // const [showDropReasonFor, setShowDropReasonFor] = useState(null);
-    // const [dropReason, setDropReason] = useState('');
     const [tempFollowUps, setTempFollowUps] = useState({});
     const [modalData, setModalData] = useState(null);
 
     const headerStyle = { textAlign: "center", border: "2px solid #ffffffff", padding: "2px", fontSize: '13px', fontWeight: '700', color: 'white' };
     const cellStyle = { padding: "2px 6px", border: "2px solid #ffffffff" };
+
+    const handleDropClick = async (lead) => {
+        const reason = window.prompt("Enter drop reason for this lead:");
+        if (!reason) return;
+
+        if (!lead.enquiryDate) {
+            alert("Lead has no enquiryDate!");
+            return;
+        }
+
+        const date = new Date(lead.enquiryDate);
+        if (isNaN(date)) {
+            alert("Invalid enquiryDate!");
+            return;
+        }
+
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const monthYear = `${monthNames[date.getMonth()]}${date.getFullYear()}`;
+
+        await moveLeadToDrop(lead.id, true, reason, monthYear);
+    };
 
     const closeModal = () => setModalData(null);
 
@@ -154,19 +173,20 @@ const Tbody = ({ leads, isEditing, editing, handleFieldChange, handleEdit, handl
                         <td> {lead.enquiryDate ? formatDate(lead.enquiryDate) : '-'} </td>
 
                         <td>
-                            {lead.functionDate ? (() => {
-                                const formatted = formatDate(lead.functionDate); // e.g. "12-10-2025"
-                                const [month] = formatted.split("-");
-                                if (!month || isNaN(month)) return '';
-
-                                const monthNames = [
-                                    "January", "February", "March", "April", "May", "June",
-                                    "July", "August", "September", "October", "November", "December"
-                                ];
-
-                                return monthNames[parseInt(month, 10) - 1]; // Convert month string to index
-                            })() : ''}
+                            {lead.functionDate
+                                ? (() => {
+                                    const date = new Date(lead.functionDate);
+                                    if (isNaN(date)) return '';
+                                    const monthNames = [
+                                        "January", "February", "March", "April", "May", "June",
+                                        "July", "August", "September", "October", "November", "December"
+                                    ];
+                                    return monthNames[date.getMonth()]; // getMonth() gives 0-based index
+                                })()
+                                : ''
+                            }
                         </td>
+
 
                         {['functionType', 'dayNight', 'venueType'].map(field => (
                             <td key={`${lead.id}-${field}`}>
@@ -698,57 +718,23 @@ const Tbody = ({ leads, isEditing, editing, handleFieldChange, handleEdit, handl
                             </td>
                         ))}
 
-                        {/* <td key={`${lead.id}-delete`}>
-                            {showDropReasonFor === lead.id ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <textarea
-                                        placeholder="Enter reason to drop"
-                                        value={dropReason}
-                                        onChange={(e) => setDropReason(e.target.value)}
-                                        style={{
-                                            padding: '6px',
-                                            borderRadius: '4px',
-                                            border: '1px solid #ccc',
-                                            resize: 'none',
-                                            fontSize: '14px',
-                                            width: '200px'
-                                        }}
-                                    />
-                                    <div style={{ display: 'flex', gap: '5px' }}>
-                                        <button
-                                            onClick={() => {
-                                                if (dropReason.trim()) {
-                                                    moveLeadToDrop(lead.id, true, dropReason); // pass reason
-                                                    setShowDropReasonFor(null);
-                                                    setDropReason('');
-                                                } else {
-                                                    alert("Please enter a reason.");
-                                                }
-                                            }}
-                                            style={{ backgroundColor: '#e74c3c', color: '#fff', padding: '6px 10px', border: 'none', borderRadius: '4px' }}
-                                        >
-                                            Confirm Drop
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setShowDropReasonFor(null);
-                                                setDropReason('');
-                                            }}
-                                            style={{ padding: '6px 10px', border: '1px solid #ccc', borderRadius: '4px' }}
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <button
-                                    onClick={() => setShowDropReasonFor(lead.id)}
-                                    style={{ backgroundColor: "#e74c3c", color: "#fff", border: "none", padding: "10px 15px", borderRadius: "5px", cursor: "pointer" }}
-                                >
-                                    Drop
-                                </button>
-                            )}
-                        </td> */}
+                        {/* Drop Button */}
+                        <td>
+                            <button
+                                style={{
+                                    backgroundColor: "#fb4747ff",
+                                    color: "white",
+                                    padding: "4px 8px",
+                                    borderRadius: "4px",
+                                    cursor: "pointer",
+                                    border:'2px solid white',
+                                    boxShadow:'2px 2px 4px #030303ff'
+                                }}
+                                onClick={() => handleDropClick(lead)}
+                            >
+                                Drop
+                            </button>
+                        </td>
 
                     </tr>
                 ))}

@@ -147,7 +147,7 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, moveLeadToDrop,
                         <td key={`Advance_Payment_${i + 1}`} style={{ backgroundColor: 'white' }}></td>
                     ))}
 
-                    <td style={{ backgroundColor: 'white' }} colSpan={8} ></td>
+                    <td style={{ backgroundColor: 'white' }} colSpan={7} ></td>
                 </tr>
             </thead>
 
@@ -226,7 +226,7 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, moveLeadToDrop,
                     ))}
 
                     {[
-                        'Complimentary Items', 'Chargeable Items', 'Custom Menu Items', ' Event Booked By', 'commission', ''
+                        'Complimentary Items', 'Chargeable Items', 'Custom Menu Items', ' Event Booked By', 'commission'
                     ].map(header => (
                         <th key={header}>{header}</th>
                     ))}
@@ -1046,7 +1046,7 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, moveLeadToDrop,
                             </td>
                         ))}
 
-                        <td>{lead.id}</td>
+                        {/* <td>{lead.id}</td> */}
 
                     </tr >
                 ))}

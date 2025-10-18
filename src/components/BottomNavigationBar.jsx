@@ -4,29 +4,39 @@ import { useNavigate } from 'react-router-dom';
 const getNavConfig = (userAppType) => {
 
     let navItems = [
-        { label: 'Home', icon: '🏠', path: '/' },
-        { label: 'Records', icon: '🗂️', path: '/leadstabcontainer' },
-        { label: 'Receipts', icon: '🧾', path: '/MoneyReceipts' },
-        { label: 'Profile', icon: '🧑‍💼', path: '/AdminProfile' },
+        // { label: 'Home', icon: '🏠', path: '/' },
+        // { label: 'Records', icon: '🗂️', path: '/leadstabcontainer' },
+        // { label: 'Receipts', icon: '🧾', path: '/MoneyReceipts' },
+        // { label: 'Profile', icon: '🧑‍💼', path: '/AdminProfile' },
+
+        { icon: '🏠', path: '/' },
+        { icon: '🗂️', path: '/leadstabcontainer' },
+        { icon: '🧾', path: '/MoneyReceipts' },
+        { icon: '🧑‍💼', path: '/AdminProfile' },
     ];
 
     let centralAction = {
-        label: 'Booking',
-        icon: '💒',
-        path: '/Booking',
+        // label: 'Enquiry',
+        icon: '📨',
+        path: '/EnquiryForm',
         isCentral: true
     };
 
     switch (userAppType) {
         case 'C': // Vendor App
             navItems = [
-                { label: 'Home', icon: '🏠', path: '/' },
-                { label: 'UpComings', icon: '🗓️', path: '/VendorTable' },
-                { label: 'Booked', icon: '✅', path: '/VendorBookedTable' },
-                { label: 'Profile', icon: '🧑‍💼', path: '/VendorProfile' },
+                // { label: 'Home', icon: '🏠', path: '/' },
+                // { label: 'UpComings', icon: '🗓️', path: '/VendorTable' },
+                // { label: 'Booked', icon: '✅', path: '/VendorBookedTable' },
+                // { label: 'Profile', icon: '🧑‍💼', path: '/VendorProfile' },
+
+                { icon: '🏠', path: '/' },
+                { icon: '🗓️', path: '/VendorTable' },
+                { icon: '✅', path: '/VendorBookedTable' },
+                { icon: '🧑‍💼', path: '/VendorProfile' },
             ];
             centralAction = {
-                label: 'Form',
+                // label: 'Form',
                 icon: '📝',
                 path: '/VendorOtherForm',
                 isCentral: true
@@ -35,13 +45,18 @@ const getNavConfig = (userAppType) => {
 
         case 'E': // Decoration App
             navItems = [
-                { label: 'Home', icon: '🏠', path: '/' },
-                { label: 'UpComings', icon: '🗓️', path: '/DecorationTable' },
-                { label: 'Booked', icon: '✅', path: '/DecorationBookedTable' },
-                { label: 'Profile', icon: '🧑‍💼', path: '/DecorationProfile' },
+                // { label: 'Home', icon: '🏠', path: '/' },
+                // { label: 'UpComings', icon: '🗓️', path: '/DecorationTable' },
+                // { label: 'Booked', icon: '✅', path: '/DecorationBookedTable' },
+                // { label: 'Profile', icon: '🧑‍💼', path: '/DecorationProfile' },
+
+                { icon: '🏠', path: '/' },
+                { icon: '🗓️', path: '/DecorationTable' },
+                { icon: '✅', path: '/DecorationBookedTable' },
+                { icon: '🧑‍💼', path: '/DecorationProfile' },
             ];
             centralAction = {
-                label: 'Form',
+                // label: 'Form',
                 icon: '📝',
                 path: '/DecorationOtherForm',
                 isCentral: true

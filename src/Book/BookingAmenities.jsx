@@ -1,39 +1,58 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../firebaseConfig";
 import '../styles/BookingAmenities.css';
 
-const defaultAmenities = [
-    "Welcome flex",
-    "DJ with Floor",
-    "Flower Decoration (Artificial)",
-    "Temporary Electricity Challan",
-    "Generator Power Backup",
-    "Security Guards",
-];
-
-const toAddAmenities = [
-    "6 Nos. Luxury Rooms",
-    "9 Nos. Luxury Rooms"
-];
-
 const BookingAmenities = ({ selectedItems, setSelectedItems }) => {
-    const [amenities, setAmenities] = useState(defaultAmenities);
-    
+    const [defaultAmenities, setDefaultAmenities] = useState([]);
+    const [toAddAmenities, setToAddAmenities] = useState([]);
+    const [customAmenities, setCustomAmenities] = useState([]);
     const [customItem, setCustomItem] = useState('');
     const [suggestions, setSuggestions] = useState([]);
+    const [amenities, setAmenities] = useState([]);
 
-    // Merge previously selected custom items into amenities list
-    useEffect(() => {
-        const merged = [...new Set([...defaultAmenities, ...toAddAmenities,...selectedItems])];
-        setAmenities(merged);
-    }, [selectedItems]);
+    // Fetch amenities from Firestore
+    const fetchAmenities = useCallback(async () => {
+        try {
+            const q = query(collection(db, "usersAccess"), where("accessToApp", "==", "A"));
+            const snap = await getDocs(q);
 
-    // Pre-fill selection only if nothing is selected
-    useEffect(() => {
-        if (selectedItems.length === 0) {
-            setSelectedItems(defaultAmenities);
+            if (!snap.empty) {
+                const allDefault = [];
+                const allToAdd = [];
+
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    if (data.amenities && Array.isArray(data.amenities)) allDefault.push(...data.amenities);
+                    if (data.toAddAmenities && Array.isArray(data.toAddAmenities)) allToAdd.push(...data.toAddAmenities);
+                });
+
+                const uniqueDefault = [...new Set(allDefault)];
+                const uniqueToAdd = [...new Set(allToAdd)];
+
+                setDefaultAmenities(uniqueDefault);
+                setToAddAmenities(uniqueToAdd);
+
+                // Preselect only default amenities
+                if (selectedItems.length === 0) setSelectedItems(uniqueDefault);
+
+            } else {
+                console.warn("No usersAccess doc found with accessToApp: 'A'");
+            }
+        } catch (err) {
+            console.error("Error fetching amenities:", err);
         }
     }, [selectedItems.length, setSelectedItems]);
 
+    useEffect(() => {
+        fetchAmenities();
+    }, [fetchAmenities]);
+
+    // Merge all amenities for display
+    useEffect(() => {
+        const merged = [...new Set([...defaultAmenities, ...toAddAmenities, ...customAmenities])];
+        setAmenities(merged);
+    }, [defaultAmenities, toAddAmenities, customAmenities]);
 
     // Load previous suggestions
     useEffect(() => {
@@ -42,22 +61,20 @@ const BookingAmenities = ({ selectedItems, setSelectedItems }) => {
     }, []);
 
     const handleCheckboxChange = (item) => {
-        setSelectedItems((prev) =>
-            prev.includes(item)
-                ? prev.filter((i) => i !== item)
-                : [...prev, item]
+        setSelectedItems(prev =>
+            prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]
         );
     };
 
     const handleAddCustomItem = () => {
-        const trimmedItem = customItem.trim();
-        if (trimmedItem && !amenities.includes(trimmedItem)) {
-            const updatedAmenities = [...amenities, trimmedItem];
-            setAmenities(updatedAmenities);
-            setSelectedItems((prev) => [...prev, trimmedItem]);
+        const trimmed = customItem.trim();
+        if (!trimmed) return;
+        if (!amenities.includes(trimmed)) {
+            setCustomAmenities(prev => [...prev, trimmed]);
+            setSelectedItems(prev => [...prev, trimmed]);
 
-            // Save as suggestion
-            const updatedSuggestions = [...suggestions, trimmedItem];
+            // Save suggestion to localStorage
+            const updatedSuggestions = [...new Set([...suggestions, trimmed])];
             setSuggestions(updatedSuggestions);
             localStorage.setItem("customAmenitySuggestions", JSON.stringify(updatedSuggestions));
         }
@@ -65,9 +82,7 @@ const BookingAmenities = ({ selectedItems, setSelectedItems }) => {
     };
 
     const filteredSuggestions = suggestions.filter(
-        (sug) =>
-            sug.toLowerCase().includes(customItem.toLowerCase()) &&
-            sug.toLowerCase() !== customItem.toLowerCase()
+        sug => sug.toLowerCase().includes(customItem.toLowerCase()) && sug.toLowerCase() !== customItem.toLowerCase()
     );
 
     const handleSuggestionClick = (sug) => {
@@ -76,9 +91,8 @@ const BookingAmenities = ({ selectedItems, setSelectedItems }) => {
 
     return (
         <div className="booking-amenities">
-            <h4 style={{ marginTop: '40px' }}>
-                Complimentary Booking Amenities
-            </h4>
+            <h4 style={{ marginTop: '40px' }}>Complimentary Booking Amenities</h4>
+
             <ul className="amenities-list">
                 {amenities.map((item, index) => (
                     <li key={index}>
@@ -98,16 +112,14 @@ const BookingAmenities = ({ selectedItems, setSelectedItems }) => {
                     type="text"
                     value={customItem}
                     onChange={(e) => setCustomItem(e.target.value)}
-                    placeholder=""
+                    placeholder="Add custom amenity..."
                 />
                 <button type="button" onClick={handleAddCustomItem}>Add</button>
 
                 {customItem && filteredSuggestions.length > 0 && (
                     <ul className="suggestion-box">
-                        {filteredSuggestions.map((sug, index) => (
-                            <li key={index} onClick={() => handleSuggestionClick(sug)}>
-                                {sug}
-                            </li>
+                        {filteredSuggestions.map((sug, idx) => (
+                            <li key={idx} onClick={() => handleSuggestionClick(sug)}>{sug}</li>
                         ))}
                     </ul>
                 )}

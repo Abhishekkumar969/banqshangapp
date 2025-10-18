@@ -21,7 +21,6 @@ const BookingLead = () => {
     const leadSummaryRef = useRef();
     const leadFollowUpRef = useRef();
 
-
     const leadToEdit = location.state?.leadToEdit || location.state?.enquiry || null;
     const isUpdateMode = !!leadToEdit;
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -212,7 +211,7 @@ const BookingLead = () => {
                 await setDoc(
                     monthDocRef,
                     { [docId]: { ...leadToEdit, ...leadData, updatedAt: Timestamp.now(), monthYear } },
-                    { merge: false }
+                    { merge: true }
                 );
 
                 if (oldMonthYear !== monthYear) {
@@ -343,8 +342,8 @@ const BookingLead = () => {
                                 ? 'Updating...'
                                 : 'Saving...'
                             : isUpdateMode
-                                ? 'Update Lead & Print'
-                                : 'Save & Print'}
+                                ? 'Update'
+                                : 'Save'}
                     </button>
                 </form>
 

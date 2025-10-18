@@ -170,6 +170,9 @@ const MealSelection = forwardRef(({ meals, setMeals, functionDate, dayNight }, r
 
                         {mealOptions.map(meal => {
                             const availableOptions = getMealOptionsForMeal(meal, dayMeals.date, functionDate, dayNight);
+
+                            if (!dayMeals.date) return null;
+
                             if (availableOptions.length === 0) return null;
                             const selected = !!dayMeals[meal];
                             const data = dayMeals[meal] || {};

@@ -1,42 +1,78 @@
-// src/components/CustomMenuCharges.jsx
 import React, { useState, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
 import debounce from 'lodash.debounce';
+import { doc, getDoc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { db } from '../firebaseConfig';
 import '../styles/CustomChargeItems.css';
-
-const predefinedMenuItems = [
-    { id: 1, name: 'Cowmin + Manchuriyan + Golgappa + Chat', qty: '1', rate: '', selected: false },
-    { id: 2, name: 'Salad Bar', qty: '1', rate: '', selected: false },
-    { id: 3, name: 'Soft Drinks / Mocktails', qty: '1', rate: '', selected: false },
-];
 
 const blankIfZero = v => (v === 0 ? '' : v);
 
-const mergeWithPredefined = (selected = []) => {
-    const merged = [...predefinedMenuItems];
+const mergeWithDbItems = (dbItems = [], selected = []) => {
+    const merged = dbItems.map(item => ({
+        ...item,
+        qty: blankIfZero(item.qty),
+        rate: blankIfZero(item.rate),
+        selected: false
+    }));
+
     selected.forEach(sel => {
         const idx = merged.findIndex(p => p.id === sel.id);
         const cleaned = {
             ...sel,
             qty: blankIfZero(sel.qty),
             rate: blankIfZero(sel.rate),
+            selected: true
         };
         if (idx !== -1) merged[idx] = { ...merged[idx], ...cleaned };
         else merged.push(cleaned);
     });
+
     return merged;
 };
 
-
-
 const CustomMenuCharges = forwardRef(({ menuCharges, setMenuCharges }, ref) => {
-    const [localItems, setLocalItems] = useState(mergeWithPredefined(menuCharges));
+    const [dbItems, setDbItems] = useState([]);
+    const [localItems, setLocalItems] = useState([]);
     const [errors, setErrors] = useState({});
 
+    // Fetch user's Menu Items from Firestore
     useEffect(() => {
-        if (menuCharges) {
-            setLocalItems(mergeWithPredefined(menuCharges));
+        const fetchMenuItems = async () => {
+            try {
+                const auth = getAuth();
+                const user = auth.currentUser;
+                if (!user) return;
+
+                const userRef = doc(db, 'usersAccess', user.email);
+                const userSnap = await getDoc(userRef);
+                if (!userSnap.exists()) return;
+
+                const data = userSnap.data();
+                if (data.accessToApp !== 'A' || !Array.isArray(data.menuItems)) return;
+
+                // menuItems is array of strings
+                const items = data.menuItems.map((menu, idx) => ({
+                    id: idx + 1,
+                    name: menu || '',
+                    qty: '',
+                    rate: '',
+                    selected: false
+                }));
+
+                setDbItems(items);
+            } catch (err) {
+                console.error('Error fetching menuItems:', err);
+            }
+        };
+        fetchMenuItems();
+    }, []);
+
+    // Merge selected items whenever dbItems or menuCharges change
+    useEffect(() => {
+        if (dbItems.length) {
+            setLocalItems(mergeWithDbItems(dbItems, menuCharges));
         }
-    }, [menuCharges]);
+    }, [dbItems, menuCharges]);
 
     const numOrBlank = v => (v === '' ? '' : Number(v));
 
@@ -56,7 +92,6 @@ const CustomMenuCharges = forwardRef(({ menuCharges, setMenuCharges }, ref) => {
         return Object.keys(newErrors).length === 0;
     };
 
-    // ✅ Expose validation to parent
     useImperativeHandle(ref, () => ({
         validateMenuCharges: () => validateItems(localItems)
     }));
@@ -66,16 +101,12 @@ const CustomMenuCharges = forwardRef(({ menuCharges, setMenuCharges }, ref) => {
             validateItems(items);
             const selectedOnly = items
                 .filter(i => i.selected)
-                .map(i => {
-                    const qty = numOrBlank(i.qty);
-                    const rate = numOrBlank(i.rate);
-                    return {
-                        ...i,
-                        qty,
-                        rate,
-                        total: qty === '' || rate === '' ? 0 : qty * rate
-                    };
-                });
+                .map(i => ({
+                    ...i,
+                    qty: numOrBlank(i.qty),
+                    rate: numOrBlank(i.rate),
+                    total: i.qty === '' || i.rate === '' ? 0 : i.qty * i.rate
+                }));
             setMenuCharges(selectedOnly);
         }, 200), [setMenuCharges]
     );
@@ -93,60 +124,41 @@ const CustomMenuCharges = forwardRef(({ menuCharges, setMenuCharges }, ref) => {
         updateRow(idx, row => ({ selected: !row.selected }));
 
     const handleChange = (idx, field, value) =>
-        updateRow(idx, () => ({
-            [field]: value // string rakhte hain, conversion later hoga
-        }));
+        updateRow(idx, () => ({ [field]: value }));
 
     const addNewItem = () => {
         setLocalItems(prev => {
             const next = [
                 ...prev,
-                { id: Date.now(), name: '', qty: '', rate: '', selected: true }
+                { id: Date.now().toString(), name: '', qty: '', rate: '', selected: true }
             ];
             debouncedSave(next);
             return next;
         });
     };
+
     return (
         <div className="custom-items-section">
             <h4>3. Menu Item Charges</h4>
 
             {localItems.map((item, idx) => (
-                <div key={idx} className="custom-item-card">
+                <div key={item.id} className="custom-item-card">
                     <div className="item-header-row">
-                        <label
-                            style={{
-                                display: "inline-block",
-                                position: "relative",
-                                cursor: "pointer",
-                                marginRight: "12px",
-                            }}
-                        >
+                        <label style={{ display: "inline-block", cursor: "pointer", marginRight: "12px" }}>
                             <input
                                 type="checkbox"
                                 checked={item.selected}
                                 onChange={() => toggleSelection(idx)}
-                                style={{
-                                    opacity: 0,
-                                    width: 0,
-                                    height: 0,
-                                }}
+                                style={{ opacity: 0, width: 0, height: 0 }}
                             />
-                            <span
-                                style={{
-                                    position: "relative",
-                                    display: "inline-block",
-                                    width: "14px",
-                                    height: "14px",
-                                    backgroundColor: item.selected ? "#4af650ff" : "#ffffffff",
-                                    border: "0.5px solid gray",
-                                    borderRadius: "6px",
-                                    boxShadow: item.selected
-                                        ? "0 4px #9b9b9bff, 0 6px 8px rgba(27, 116, 7, 1)"
-                                        : "0 4px #adadadff, 0 6px 5px rgba(0, 0, 0, 0)",
-                                    transition: "all 0.1s ease-in-out",
-                                }}
-                            />
+                            <span style={{
+                                display: "inline-block",
+                                width: "14px",
+                                height: "14px",
+                                backgroundColor: item.selected ? "#4af650ff" : "#ffffffff",
+                                border: "0.5px solid gray",
+                                borderRadius: "6px"
+                            }} />
                         </label>
 
                         <input
@@ -157,9 +169,9 @@ const CustomMenuCharges = forwardRef(({ menuCharges, setMenuCharges }, ref) => {
                         />
                     </div>
 
-                    <div >
+                    <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
-                            <span className="math-symbol" style={{ display: 'flex', alignItems: 'center' }}> Rate: </span>
+                            <span className="math-symbol"> Rate: </span>
                             <input
                                 style={{ width: '40vw', marginTop: '10px' }}
                                 type="text"
@@ -177,7 +189,7 @@ const CustomMenuCharges = forwardRef(({ menuCharges, setMenuCharges }, ref) => {
                         {errors[idx]?.rate && <span className="error">Required</span>}
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
-                            <span className="math-symbol" style={{ display: 'flex', alignItems: 'center' }}> Rate: </span>
+                            <span className="math-symbol"> Qty: </span>
                             <input
                                 style={{ width: '40vw', marginTop: '10px' }}
                                 type="text"
@@ -194,10 +206,7 @@ const CustomMenuCharges = forwardRef(({ menuCharges, setMenuCharges }, ref) => {
                         {errors[idx]?.qty && <span className="error">Required</span>}
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
-                            <label style={{ display: "flex", alignItems: 'center' }}></label>
-                            <span>Total: ₹ {item.qty !== '' && item.rate !== ''
-                                ? `₹${(Number(item.qty) * Number(item.rate)).toFixed(0)}`
-                                : '—'}</span>
+                            <span>Total: ₹{item.qty !== '' && item.rate !== '' ? (Number(item.qty) * Number(item.rate)).toFixed(0) : '—'}</span>
                         </div>
                     </div>
                 </div>

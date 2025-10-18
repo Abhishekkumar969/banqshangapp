@@ -351,7 +351,35 @@ const BookingLeadsTable = () => {
     const handleEdit = (id, index) => setEditing(prev => ({ ...prev, [id]: { ...(prev[id] || {}), [index]: true } }));
     const isEditing = (id, field) => editingField[id]?.[field];
 
-    const sendToPrint = (lead) => {
+    const sendToPrint = async (lead) => {
+
+        const auth = getAuth();
+        const user = auth.currentUser;
+        let termsList = [];
+
+        if (user) {
+            try {
+                const userRef = doc(db, "usersAccess", user.email);
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists()) {
+                    const data = userSnap.data();
+                    if (data.accessToApp === "A" && typeof data.termsAndConditions === "string") {
+                        // Split the string into numbered array
+                        termsList = data.termsAndConditions
+                            .split(/\s*\d+\.\s*/)   // split by numbers with dot
+                            .filter(t => t.trim() !== "");
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching termsAndConditions:", err);
+            }
+        }
+
+        const termsHTML = termsList.length
+            ? termsList.map((t, i) => `<tr><td>${i + 1}</td><td>${t}</td></tr>`).join("")
+            : `<tr><td colspan="2">No Terms & Conditions found</td></tr>`;
+
+
         const fmtDate = (d) => {
             if (!d) return 'N/A';
             if (d?.toDate) return d.toDate().toLocaleDateString('en-GB');
@@ -575,29 +603,13 @@ const BookingLeadsTable = () => {
 
     <div class="section-header">Terms & Conditions</div>
     <table border="1" cellspacing="0" cellpadding="6">
-      ${[
-                "GST 18% Extra as applicable.",
-                "Booking Advance 25% at the time of signing of the agreement after that rest amount will be payable before 30 days of the function",
-                "Any Pet will not allowed in the premises.",
-                "Complimentary Room Check-in Starts from 11:30 AM onwards on function date & Check-Out time 8:00 AM",
-                "DJ & Sound Music will not allowed after 10 PM.",
-                "No Refund or extension of Date is permitted.",
-                "One security Cheque and Adharcard to be deposited at the time of booking.",
-                "In Case of any damage to the premises, you are responsible and have to pay by customer for the damage.",
-                "Extra usage of venue beyond the special time would be charged extra on an hourly basis.",
-                "The hall should be vacant on or before the end time mentioned in contract.",
-                "In case of extension of time. Applicable charges will Levied on an Hourly Basis subject to its availability.",
-                "Booking Cancel will be acceptable before 1 month from function date & it will be extendable only.",
-                "50% amount will be refunded, if booking will be cancel within 1 month from function date.",
-                "Any physical damage will be responsible & pay by customer.",
-                "Security Charges will be applicable @Rs. 10,000/-",
-                "Kindly Note that the Shangri-La Palace does not allow fire crackers within or around the Vicinity of the Premises.",
-                "Consumption of Alcohol / Intoxicating item and smoking is strictly prohibited inside our premises."
-            ].map((t, i) => `<tr><td>${i + 1}</td><td>${t}</td></tr>`).join('')}
-        </table>
-        <!-- Signature Section -->
-            <table style="width:100%; margin-top: 20px; border: none;">
-              <tr>
+      ${termsHTML}
+    </table>
+
+
+    <!-- Signature Section -->
+    <table style="width:100%; margin-top: 20px; border: none;">
+            <tr>
               <td style="width:50%; text-align:center; border:none; vertical-align:bottom;">
                 _________________________<br>
                 Guest's Signature
@@ -608,9 +620,10 @@ const BookingLeadsTable = () => {
                 Authorized Signatory<br>
               </td>
             </tr>
-        </table>
-</body>
-</html>`;
+    </table>
+    
+    </body>
+    </html>`;
 
         const iframe = document.createElement("iframe");
         iframe.style.position = "fixed";

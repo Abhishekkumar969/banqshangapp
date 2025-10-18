@@ -130,21 +130,8 @@ const Prebook = () => {
           padding: '0 20px'
         }}>
           <div>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              padding: '8px 16px',
-              background: 'linear-gradient(90deg, #cb1111ff 30%, #fc6625ff 70%)',
-              borderRadius: '25px',
-              color: '#fff',
-              fontWeight: '400',
-              fontSize: '14px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              backdropFilter: 'blur(5px)',
-              marginTop: '5px',
-            }}>
-              <span>👋 Hello, {userName}</span>
+            <div>
+              <span className="logout-btn top-bar-header" >👋 Hello, {userName}</span>
             </div>
           </div>
 
@@ -184,8 +171,8 @@ const Prebook = () => {
                 <div className="service-grid">
                   <ServiceBox label="Enquiry" onClick={() => navigate('/EnquiryForm')} icon="📨" />
                   <ServiceBox label="Lead" onClick={() => navigate('/bookingLead')} icon="🚀" />
-                  <ServiceBox label="Booking" onClick={() => navigate('/Booking')} icon="💒" />
-                  <ServiceBox label="Records" onClick={() => navigate('/leadstabcontainer')} icon="🗂️" />
+                  <ServiceBox label="Book" onClick={() => navigate('/Booking')} icon="💒" />
+                  <ServiceBox label="Record" onClick={() => navigate('/leadstabcontainer')} icon="🗂️" />
                 </div>
               </div>
             </>
@@ -200,7 +187,7 @@ const Prebook = () => {
                 <div className="service-grid">
                   <ServiceBox label="Receipt" onClick={() => navigate('/MoneyReceipt')} icon="🧾" />
                   <ServiceBox label="Voucher" onClick={() => navigate('/Receipts')} icon="🎟️" />
-                  <ServiceBox label="Records" onClick={() => navigate('/MoneyReceipts')} icon="📚" />
+                  <ServiceBox label="Record" onClick={() => navigate('/MoneyReceipts')} icon="📚" />
                   <ServiceBox label="Approve" onClick={() => navigate('/ApprovalPage')} icon="✅" />
                 </div>
               </div>
@@ -215,7 +202,7 @@ const Prebook = () => {
                 <h3 className="service-section-text">Accountant</h3>
                 <div className="service-grid">
                   <ServiceBox label="Cashflow" onClick={() => navigate('/AccountantForm')} icon="💸" />
-                  <ServiceBox label="Accounts" onClick={() => navigate('/Accountant')} icon="📇" />
+                  <ServiceBox label="Record" onClick={() => navigate('/Accountant')} icon="📇" />
                 </div>
               </div>
             </>
@@ -230,7 +217,7 @@ const Prebook = () => {
                 <div className="service-grid">
                   {/* <ServiceBox label="Profile" onClick={() => navigate('/AdminProfile')} icon="👤" /> */}
                   <ServiceBox label="Menu" onClick={() => navigate('/MenuItems')} icon="🍽" />
-                  <ServiceBox label="Calendar" onClick={() => setShowCalendar(true)} icon="📅" />
+                  <ServiceBox label="Dates" onClick={() => setShowCalendar(true)} icon="📅" />
                   <ServiceBox label="GST" onClick={() => navigate('/GSTSummary')} icon="💹" />
                 </div>
               </div>
@@ -243,7 +230,7 @@ const Prebook = () => {
               <div className="service-section">
                 <h3 className="service-section-text">Vendor</h3>
                 <div className="service-grid">
-                  <ServiceBox label="UpComings" onClick={() => navigate('/VendorTable')} icon="📇" />
+                  <ServiceBox label="UpComing" onClick={() => navigate('/VendorTable')} icon="📇" />
                   <ServiceBox label="Booked" onClick={() => navigate('/VendorBookedTable')} icon="🗂️" />
                   <ServiceBox label="Dropped" onClick={() => navigate('/VendorDeoppedTable')} icon="🗑️" />
                 </div>
@@ -328,7 +315,19 @@ const Prebook = () => {
             </>
           )}
 
-          <div style={{ marginBottom: "150px" }}></div>
+          {/* Dropped */}
+          {/* {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
+            <>          <div className="service-section" >
+              <h3 className="service-section-text">Dropped</h3>
+              <div className="service-grid">
+                <ServiceBox label="Lead" onClick={() => navigate('/DroppedLeads')} icon="🚀" />
+
+              </div>
+            </div>
+            </>
+          )} */}
+
+          <div style={{ marginBottom: "70px" }}></div>
         </div>
 
         <CalendarPopup isOpen={showCalendar} onClose={() => setShowCalendar(false)} />

@@ -229,6 +229,7 @@ const MoneyReceipts = () => {
   });
 
   let runningBalance = 0;
+
   const finalTableData = tableData.map(row => {
     runningBalance += row.credit - row.debit;
     return {
@@ -236,7 +237,6 @@ const MoneyReceipts = () => {
       balance: runningBalance,
     };
   });
-
 
   const formatDate = (date) => {
     if (!date) return "-";
@@ -254,13 +254,37 @@ const MoneyReceipts = () => {
     return `${day}-${month}-${year}`; // DD-MM-YYYY in IST
   };
 
-
   const getDisplayName = (receipt) => {
     return (receipt.customerPrefix || '') + ' ' +
       (receipt.customerName || receipt.partyName || '-');
   };
 
-  const handlePrint = useCallback((receipt) => {
+  const handlePrint = useCallback(async (receipt) => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    // Default values in case fetch fails
+    let firmName = "Shangri-La Palace";
+    let address = "A Unit of the Patli Hospitality LLP";
+    let contactNo = "Mob. No. - 7004298385, 9334310274, 9234505587";
+
+    if (user) {
+      try {
+        const userRef = doc(db, "usersAccess", user.email);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          if (data.accessToApp === "A") {
+            firmName = data.firmName || firmName;
+            address = data.address || address;
+            contactNo = data.contactNo || contactNo;
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching user info:", err);
+      }
+    }
+
     const partyName = getDisplayName(receipt).trim();
 
     const content = `
@@ -383,11 +407,10 @@ const MoneyReceipts = () => {
    <div style="border: 1px solid maroon; padding: 1px">
     <div style="border: 1px solid maroon; padding: 30px">
     <div class="header-title">MONEY RECEIPT</div>
-    <div class="main-title">Shangri-La Palace</div>
-    <div class="sub-header">A Unit of the Patli Hospitality LLP</div>
-    <div class="sub-header">Opp. CISRO Hospital, Near Saguna More, Naya Tola, Bailey Road, Danapur, Patna - 801 503</div>
-    <div class="sub-header">Mob. No. - 7004298385, 9334310274, 9234505587</div>
-
+  <div class="main-title">${firmName}</div>
+      <div class="sub-header">${address}</div>
+      <div class="sub-header">${contactNo}</div>
+      
     <div class="line-group">
       <div>No. <span>${receipt.slNo}</span></div>
       <div>Date <span class="short-underline">${new Date(receipt.receiptDate).toLocaleDateString('en-GB')}</span></div>
@@ -443,10 +466,11 @@ const MoneyReceipts = () => {
       document.body.appendChild(iframe);
     }
 
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(content);
-    doc.close();
+    const iframeDoc = iframe.contentWindow.document;
+    iframeDoc.open();
+    iframeDoc.write(content);
+    iframeDoc.close();
+
 
     iframe.onload = function () {
       iframe.contentWindow.focus();

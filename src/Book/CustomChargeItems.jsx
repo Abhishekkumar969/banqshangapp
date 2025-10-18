@@ -1,48 +1,81 @@
 import React, { useState, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
 import debounce from 'lodash.debounce';
+import { doc, getDoc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { db } from '../firebaseConfig';
 import '../styles/CustomChargeItems.css';
-
-// ✅ Predefined items with stable IDs
-const predefinedItems = [
-    { id: 1, name: 'Natural Flower Decorations', qty: '1', rate: '', selected: false },
-    { id: 2, name: 'Sahnai', qty: '1', rate: '', selected: false },
-    { id: 3, name: 'PAAN Stall', qty: '1', rate: '', selected: false },
-    {
-        id: 4,
-        name: 'Jaimala Package (2pcs jaimala Roses, 30 Baratimala, 2pcs Samdhimala, 1 chadar, 1pcs )',
-        qty: '1',
-        rate: '',
-        selected: false
-    },
-    { id: 5, name: 'Additional Rooms ', qty: '', rate: '4000', selected: false },
-];
 
 const blankIfZero = v => (v === 0 ? '' : v);
 
-const mergeWithPredefined = (selected = []) => {
-    const merged = [...predefinedItems];
+const mergeWithDbItems = (dbItems = [], selected = []) => {
+    const merged = dbItems.map(item => ({
+        ...item,
+        qty: blankIfZero(item.qty),
+        rate: blankIfZero(item.rate),
+        selected: false
+    }));
+
     selected.forEach(sel => {
         const idx = merged.findIndex(p => p.id === sel.id);
         const cleaned = {
             ...sel,
             qty: blankIfZero(sel.qty),
             rate: blankIfZero(sel.rate),
+            selected: true
         };
         if (idx !== -1) merged[idx] = { ...merged[idx], ...cleaned };
         else merged.push(cleaned);
     });
+
     return merged;
 };
 
+
+
+
 const CustomChargeItems = forwardRef(({ customItems, setCustomItems }, ref) => {
-    const [localItems, setLocalItems] = useState(mergeWithPredefined(customItems));
+    const [dbItems, setDbItems] = useState([]);
+    const [localItems, setLocalItems] = useState([]);
     const [errors, setErrors] = useState({});
 
+    // Fetch user's Add-Ons from Firestore
     useEffect(() => {
-        if (customItems) {
-            setLocalItems(mergeWithPredefined(customItems));
+        const fetchAddons = async () => {
+            try {
+                const auth = getAuth();
+                const user = auth.currentUser;
+                if (!user) return;
+
+                const userRef = doc(db, 'usersAccess', user.email);
+                const userSnap = await getDoc(userRef);
+                if (!userSnap.exists()) return;
+
+                const data = userSnap.data();
+                if (data.accessToApp !== 'A' || !Array.isArray(data.addons)) return;
+
+                const items = data.addons.map((addon, idx) => ({
+                    id: idx + 1,
+                    name: addon || '',
+                    qty: '',
+                    rate: '',
+                    selected: false
+                }));
+
+                setDbItems(items);
+            } catch (err) {
+                console.error('Error fetching addons:', err);
+            }
+        };
+        fetchAddons();
+    }, []);
+
+
+    // Merge selected items whenever dbItems or customItems change
+    useEffect(() => {
+        if (dbItems.length) {
+            setLocalItems(mergeWithDbItems(dbItems, customItems));
         }
-    }, [customItems]);
+    }, [dbItems, customItems]);
 
     const numOrBlank = v => (v === '' ? '' : Number(v));
 
@@ -71,16 +104,12 @@ const CustomChargeItems = forwardRef(({ customItems, setCustomItems }, ref) => {
             validateItems(items);
             const selectedOnly = items
                 .filter(i => i.selected)
-                .map(i => {
-                    const qty = numOrBlank(i.qty);
-                    const rate = numOrBlank(i.rate);
-                    return {
-                        ...i,
-                        qty,
-                        rate,
-                        total: qty === '' || rate === '' ? 0 : qty * rate
-                    };
-                });
+                .map(i => ({
+                    ...i,
+                    qty: numOrBlank(i.qty),
+                    rate: numOrBlank(i.rate),
+                    total: i.qty === '' || i.rate === '' ? 0 : i.qty * i.rate
+                }));
             setCustomItems(selectedOnly);
         }, 200), [setCustomItems]
     );
@@ -98,15 +127,13 @@ const CustomChargeItems = forwardRef(({ customItems, setCustomItems }, ref) => {
         updateRow(idx, row => ({ selected: !row.selected }));
 
     const handleChange = (idx, field, value) =>
-        updateRow(idx, () => ({
-            [field]: value // keep as string, convert later
-        }));
+        updateRow(idx, () => ({ [field]: value }));
 
     const addNewItem = () => {
         setLocalItems(prev => {
             const next = [
                 ...prev,
-                { id: Date.now(), name: '', qty: '', rate: '', selected: true }
+                { id: Date.now().toString(), name: '', qty: '', rate: '', selected: true }
             ];
             debouncedSave(next);
             return next;
@@ -120,35 +147,21 @@ const CustomChargeItems = forwardRef(({ customItems, setCustomItems }, ref) => {
             {localItems.map((item, idx) => (
                 <div key={item.id} className="custom-item-card">
                     <div className="item-header-row">
-                        <label
-                            style={{
-                                display: "inline-block",
-                                position: "relative",
-                                cursor: "pointer",
-                                marginRight: "12px",
-                            }}
-                        >
+                        <label style={{ display: "inline-block", cursor: "pointer", marginRight: "12px" }}>
                             <input
                                 type="checkbox"
                                 checked={item.selected}
                                 onChange={() => toggleSelection(idx)}
                                 style={{ opacity: 0, width: 0, height: 0 }}
                             />
-                            <span
-                                style={{
-                                    position: "relative",
-                                    display: "inline-block",
-                                    width: "14px",
-                                    height: "14px",
-                                    backgroundColor: item.selected ? "#4af650ff" : "#fff",
-                                    border: "0.5px solid gray",
-                                    borderRadius: "6px",
-                                    boxShadow: item.selected
-                                        ? "0 4px #9b9b9bff, 0 6px 8px rgba(27, 116, 7, 1)"
-                                        : "0 4px #adadadff, 0 6px 5px rgba(0, 0, 0, 0)",
-                                    transition: "all 0.1s ease-in-out",
-                                }}
-                            />
+                            <span style={{
+                                display: "inline-block",
+                                width: "14px",
+                                height: "14px",
+                                backgroundColor: item.selected ? "#4af650ff" : "#fff",
+                                border: "0.5px solid gray",
+                                borderRadius: "6px"
+                            }} />
                         </label>
 
                         <input

@@ -35,10 +35,17 @@ const AdminProfile = () => {
     "Flower Decoration (Artificial)",
     "Temporary Electricity Challan",
     "Generator Power Backup",
-    "Security Guards",
+    "Security Guards"
+  ];
+
+  const [toAddAmenitiesValues, setToAddAmenitiesValues] = useState([]);
+  const [toAddAmenitiesMenuOpen, setToAddAmenitiesMenuOpen] = useState(false);
+  const [hasToAddAmenitiesChanges, setHasToAddAmenitiesChanges] = useState(false);
+  const toAddAmenities = [
     "6 Nos. Luxury Rooms",
     "9 Nos. Luxury Rooms"
   ];
+
 
   const [addons, setAddons] = useState([]);
   const [addonsMenuOpen, setAddonsMenuOpen] = useState(false);
@@ -109,7 +116,7 @@ const AdminProfile = () => {
               setAmenities(data.amenities || []);
               setAddons(data.addons || []);
               setMenuItems(data.menuItems || []);
-
+              setToAddAmenitiesValues(data.toAddAmenities || []);
             } else {
               console.warn("❌ No Admin Profile record found for this user.");
             }
@@ -143,7 +150,7 @@ const AdminProfile = () => {
     }
   };
 
-   return (
+  return (
     <>
       <div className={styles.container}>
         <div className={styles.backButtonWrapper}>
@@ -157,8 +164,8 @@ const AdminProfile = () => {
               {adminProfile?.name
                 ? adminProfile.name
                 : adminProfile?.firmName
-                ? adminProfile.firmName
-                : "Decoration"}{" "}
+                  ? adminProfile.firmName
+                  : "Decoration"}{" "}
               👋
             </h2>
 
@@ -179,11 +186,11 @@ const AdminProfile = () => {
                             {field === "contactNo"
                               ? "Phone Number"
                               : field === "firmName"
-                              ? "Firm Name"
-                              : field === "termsAndConditions"
-                              ? "Terms & Conditions"
-                              : field.charAt(0).toUpperCase() +
-                                field.slice(1)}
+                                ? "Firm Name"
+                                : field === "termsAndConditions"
+                                  ? "Terms & Conditions"
+                                  : field.charAt(0).toUpperCase() +
+                                  field.slice(1)}
                             :
                           </strong>
                         </div>
@@ -228,11 +235,11 @@ const AdminProfile = () => {
                             {field === "contactNo"
                               ? "Phone Number"
                               : field === "firmName"
-                              ? "Firm Name"
-                              : field === "termsAndConditions"
-                              ? "Terms & Conditions"
-                              : field.charAt(0).toUpperCase() +
-                                field.slice(1)}
+                                ? "Firm Name"
+                                : field === "termsAndConditions"
+                                  ? "Terms & Conditions"
+                                  : field.charAt(0).toUpperCase() +
+                                  field.slice(1)}
                             :
                           </strong>
                           <button
@@ -279,6 +286,7 @@ const AdminProfile = () => {
                 setHasChanges: setHasVenueChanges,
                 color: "#4ebecdff",
               },
+
               {
                 title: "Function Types",
                 open: functionMenuOpen,
@@ -291,6 +299,7 @@ const AdminProfile = () => {
                 setHasChanges: setHasFunctionChanges,
                 color: "#e0f7fa",
               },
+
               {
                 title: "Complimentary Booking Amenities",
                 open: amenitiesMenuOpen,
@@ -303,6 +312,20 @@ const AdminProfile = () => {
                 setHasChanges: setHasAmenitiesChanges,
                 color: "#f1f8e9",
               },
+
+              {
+                title: "To Add Complimentary Amenities",
+                open: toAddAmenitiesMenuOpen,
+                setOpen: setToAddAmenitiesMenuOpen,
+                values: toAddAmenitiesValues,
+                setValues: setToAddAmenitiesValues,
+                profileKey: "toAddAmenities", // stored in Firestore
+                defaultOptions: toAddAmenities,
+                hasChanges: hasToAddAmenitiesChanges,
+                setHasChanges: setHasToAddAmenitiesChanges,
+                color: "#f9fbe7",
+              },
+
               {
                 title: "Add-Ons Charges",
                 open: addonsMenuOpen,
@@ -315,6 +338,7 @@ const AdminProfile = () => {
                 setHasChanges: setHasAddonsChanges,
                 color: "#e8f5e9",
               },
+
               {
                 title: "Menu Item Charges",
                 open: menuItemsMenuOpen,
@@ -327,15 +351,15 @@ const AdminProfile = () => {
                 setHasChanges: setHasMenuItemsChanges,
                 color: "#fff3e0",
               },
+
             ].map((section, idx) => (
               <div key={idx} className={styles.fieldRow}>
                 <div className={styles.sectionHeader}>
                   <label className={styles.subHeading}>{section.title}:</label>
                   <button
                     type="button"
-                    className={`${styles.toggleButton} ${
-                      section.open ? styles.activeToggle : ""
-                    }`}
+                    className={`${styles.toggleButton} ${section.open ? styles.activeToggle : ""
+                      }`}
                     onClick={() => section.setOpen((p) => !p)}
                   >
                     {section.open ? "x" : ">"}
@@ -381,7 +405,7 @@ const AdminProfile = () => {
                         section.setValues(vals);
                         section.setHasChanges(
                           JSON.stringify(vals) !==
-                            JSON.stringify(adminProfile?.[section.profileKey] || [])
+                          JSON.stringify(adminProfile?.[section.profileKey] || [])
                         );
                       }}
                       onCreateOption={(inputValue) => {
