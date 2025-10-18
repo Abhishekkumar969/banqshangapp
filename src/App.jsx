@@ -9,6 +9,7 @@ import InstallPrompt from "./components/InstallPrompt";
 
 import BookingLead from './Lead/BookingLead';
 import BookingLeadsTable from './Lead/AllLeads/BookingLeadsTable';
+import DroppedLeads from './Lead/AllLeads/LeadsTabs/DroppedLeads';
 
 import Booking from './Book/Booking';
 import BookingTable from './Book/AllLeads/BookingLeadsTable';
@@ -93,6 +94,7 @@ function AppRoutes() {
 
         <Route path="/bookingLead" element={<PrivateRoute><BookingLead /></PrivateRoute>} />
         <Route path="/leads" element={<PrivateRoute><BookingLeadsTable /></PrivateRoute>} />
+        <Route path="/DroppedLeads" element={<PrivateRoute><DroppedLeads /></PrivateRoute>} />
 
         <Route path="/Booking" element={<PrivateRoute><Booking /></PrivateRoute>} />
         <Route path="/BookingTable" element={<PrivateRoute><BookingTable /></PrivateRoute>} />
