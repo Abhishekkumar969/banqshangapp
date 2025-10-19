@@ -19,6 +19,8 @@ import MoneyReceipt from './MoneyReceipt/MoneyReceiptForm';
 import MoneyReceipts from './MoneyReceipt/MoneyReceipts';
 import Receipts from './MoneyReceipt/Receipts';
 import LeadsTabContainer from './Lead/AllLeads/LeadsTabContainer';
+import PastLeadsTabContainer from './Lead/AllLeads/PastLeadsTabContainer';
+
 import PrivateRoute from "./auth/PrivateRoute";
 import ReceiverCollectionsPage from './pages/ReceiverCollectionsPage';
 
@@ -44,6 +46,8 @@ import ApprovalPage from './MoneyReceipt/ApprovalPage';
 
 import EnquiryForm from "./Enquiry/EnquiryForm";
 import EnquiryDetails from "./Enquiry/EnquiryDetails";
+import PastEnquiry from "./Enquiry/pastEnquiry/pastEnquiry";
+
 
 import CateringAssign from "./Catering/CateringAssign";
 import CateringAssigned from "./Catering/CateringAssigned";
@@ -85,6 +89,8 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<PrivateRoute><Prebook /></PrivateRoute>} />
         <Route path="/leadstabcontainer" element={<PrivateRoute><LeadsTabContainer /></PrivateRoute>} />
+        <Route path="/PastLeadsTabContainer" element={<PrivateRoute><PastLeadsTabContainer /></PrivateRoute>} />
+
         <Route path="/GSTSummary" element={<PrivateRoute><GSTSummary /></PrivateRoute>} />
 
         <Route path="/MoneyReceipt" element={<PrivateRoute><MoneyReceipt /></PrivateRoute>} />
@@ -122,6 +128,7 @@ function AppRoutes() {
 
         <Route path="/EnquiryForm" element={<PrivateRoute><EnquiryForm /></PrivateRoute>} />
         <Route path="/EnquiryDetails" element={<PrivateRoute><EnquiryDetails /></PrivateRoute>} />
+        <Route path="/PastEnquiry" element={<PrivateRoute><PastEnquiry /></PrivateRoute>} />
 
         <Route path="/CateringAssign" element={<PrivateRoute><CateringAssign /></PrivateRoute>} />
         <Route path="/CateringAssigned" element={<PrivateRoute><CateringAssigned /></PrivateRoute>} />
