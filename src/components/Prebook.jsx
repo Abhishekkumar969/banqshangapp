@@ -173,6 +173,7 @@ const Prebook = () => {
                   <ServiceBox label="Lead" onClick={() => navigate('/bookingLead')} icon="🚀" />
                   <ServiceBox label="Book" onClick={() => navigate('/Booking')} icon="💒" />
                   <ServiceBox label="Record" onClick={() => navigate('/leadstabcontainer')} icon="🗂️" />
+                  <ServiceBox label="Recycle Bin" onClick={() => navigate('/PastLeadsTabContainer')} icon="🗑️" />
                 </div>
               </div>
             </>

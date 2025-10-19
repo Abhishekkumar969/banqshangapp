@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { getAuth } from 'firebase/auth';
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
+import { useSearchParams } from "react-router-dom";
 
 const BackButton = ({ setActiveTab }) => {
   const scrollRef = useRef(null);
@@ -12,6 +13,9 @@ const BackButton = ({ setActiveTab }) => {
   const [userAppType, setUserAppType] = useState(null);
   const [openDropdown, setOpenDropdown] = useState(null);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab"); // get ?tab= value
 
   const handleToggleDropdown = (menu, e) => {
     if (openDropdown === menu) {
@@ -83,7 +87,7 @@ const BackButton = ({ setActiveTab }) => {
     flex: "0 0 auto",
     whiteSpace: "nowrap",
     fontWeight: 600,
-    boxShadow: "inset -0 -4px 2.2px #2e6999b4",
+    boxShadow: "inset -0 -4px 2.2px #014a85fe",
     transition: "all 0.15s ease-in-out",
     fontSize: "0.9rem",
     position: "relative",
@@ -91,7 +95,7 @@ const BackButton = ({ setActiveTab }) => {
 
   const activeButtonStyle = {
     ...iconButtonStyle,
-    background: "linear-gradient(180deg, #2e6999, #87c1ebff)",
+    background: "linear-gradient(270deg, #5eb1ecff, #3c80b7ff)",
     color: "#fff",
   };
 
@@ -138,6 +142,12 @@ const BackButton = ({ setActiveTab }) => {
     fetchUserAppType();
   }, []);
 
+  useEffect(() => {
+    if (location.pathname === "/leadstabcontainer" && typeof setActiveTab === "function") {
+      setActiveTab("EnquiryDetails");
+    }
+  }, [location.pathname, setActiveTab]);
+
   return (
     <div style={containerStyle}>
 
@@ -171,9 +181,10 @@ const BackButton = ({ setActiveTab }) => {
           >
             <button
               style={
-                activeTab === "enquiry"
-                  || location.pathname === "/EnquiryForm"
-                  || location.pathname === "/leadstabcontainer"
+                activeTab === "enquiry" ||
+                  ["/EnquiryForm"].includes(location.pathname) ||
+                  (["/leadstabcontainer", "/PastLeadsTabContainer"].includes(location.pathname) &&
+                    ["enquiry", "PastEnquiry"].includes(tabParam))
                   ? activeButtonStyle
                   : iconButtonStyle
               }
@@ -198,7 +209,8 @@ const BackButton = ({ setActiveTab }) => {
                 }}
               >
                 <div style={dropdownItemStyle} onClick={() => navigate("/EnquiryForm")}>📨 Enquiry Form</div>
-                <div style={dropdownItemStyle} onClick={() => navigate("/leadstabcontainer")}>🗂️ Records</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/leadstabcontainer?tab=enquiry")}>🗂️ Records</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/PastLeadsTabContainer?tab=PastEnquiry")}>🗑️ Recycle Bin</div>
               </div>
             )}
           </div>
@@ -213,12 +225,14 @@ const BackButton = ({ setActiveTab }) => {
           >
             <button
               style={
-                activeTab === "leads"
-                  || location.pathname === "/bookingLead"
-                  || location.pathname === "/leadstabcontainer"
+                activeTab === "leads" ||
+                  ["/bookingLead"].includes(location.pathname) ||
+                  (["/leadstabcontainer", "/PastLeadsTabContainer"].includes(location.pathname) &&
+                    ["leads", "dropped"].includes(tabParam))
                   ? activeButtonStyle
                   : iconButtonStyle
               }
+
             >
               🚀 Lead
             </button>
@@ -227,7 +241,6 @@ const BackButton = ({ setActiveTab }) => {
               <div
                 style={{
                   position: "fixed",
-                  // top: dropdownPos.top,
                   top: "45px",
                   left: dropdownPos.left,
                   background: "#fff",
@@ -240,7 +253,9 @@ const BackButton = ({ setActiveTab }) => {
                 }}
               >
                 <div style={dropdownItemStyle} onClick={() => navigate("/bookingLead")}>🚀 Lead</div>
-                <div style={dropdownItemStyle} onClick={() => navigate("/leadstabcontainer")}>🗂️ Records</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/leadstabcontainer?tab=leads")}>🗂️ Records</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/PastLeadsTabContainer?tab=dropped")}>🗑️ Recycle Bin</div>
+
               </div>
             )}
           </div>
@@ -255,12 +270,14 @@ const BackButton = ({ setActiveTab }) => {
           >
             <button
               style={
-                activeTab === "Bookings"
-                  || location.pathname === "/Booking"
-                  || location.pathname === "/leadstabcontainer"
+                activeTab === "Bookings" ||
+                  ["/Booking"].includes(location.pathname) ||
+                  (["/leadstabcontainer", "/PastLeadsTabContainer"].includes(location.pathname) &&
+                    ["bookings", "cancelled"].includes(tabParam))
                   ? activeButtonStyle
                   : iconButtonStyle
               }
+
             >
               💒 Booking
             </button>
@@ -282,7 +299,9 @@ const BackButton = ({ setActiveTab }) => {
                 }}
               >
                 <div style={dropdownItemStyle} onClick={() => navigate("/Booking")}>💒 Bookings</div>
-                <div style={dropdownItemStyle} onClick={() => navigate("/leadstabcontainer")}>🗂️ Records</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/leadstabcontainer?tab=bookings")}>🗂️ Records</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/PastLeadsTabContainer?tab=cancelled")}>🗑️ Recycle Bin</div>
+
               </div>
             )}
           </div>

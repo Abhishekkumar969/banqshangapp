@@ -113,6 +113,27 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, moveLeadToDrop,
         return `${day}-${month}-${year}`;
     };
 
+    const handleDropClick = async (lead) => {
+        const reason = window.prompt("Enter drop reason for this lead:");
+        if (!reason) return;
+
+        if (!lead.enquiryDate) {
+            alert("Lead has no enquiryDate!");
+            return;
+        }
+
+        const date = new Date(lead.enquiryDate);
+        if (isNaN(date)) {
+            alert("Invalid enquiryDate!");
+            return;
+        }
+
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const monthYear = `${monthNames[date.getMonth()]}${date.getFullYear()}`;
+
+        await moveLeadToDrop(lead.id, true, reason, monthYear);
+    };
+
     return (
         <>
             <thead>
@@ -226,7 +247,7 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, moveLeadToDrop,
                     ))}
 
                     {[
-                        'Complimentary Items', 'Chargeable Items', 'Custom Menu Items', ' Event Booked By', 'commission'
+                        'Complimentary Items', 'Chargeable Items', 'Custom Menu Items', ' Event Booked By', 'commission', 'Drop'
                     ].map(header => (
                         <th key={header}>{header}</th>
                     ))}
@@ -1047,6 +1068,24 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, moveLeadToDrop,
                         ))}
 
                         {/* <td>{lead.id}</td> */}
+
+                        {/* Drop Button */}
+                        <td>
+                            <button
+                                style={{
+                                    backgroundColor: "#fb4747ff",
+                                    color: "white",
+                                    padding: "4px 8px",
+                                    borderRadius: "4px",
+                                    cursor: "pointer",
+                                    border: '2px solid white',
+                                    boxShadow: '2px 2px 4px #030303ff'
+                                }}
+                                onClick={() => handleDropClick(lead)}
+                            >
+                                Drop
+                            </button>
+                        </td>
 
                     </tr >
                 ))}

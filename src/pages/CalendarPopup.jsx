@@ -8,13 +8,20 @@ const AllBookingDatesPopup = ({ isOpen, onClose }) => {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
+
     const date = new Date(dateStr);
-    const istDate = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
-    const day = String(istDate.getDate()).padStart(2, "0");
-    const month = String(istDate.getMonth() + 1).padStart(2, "0");
-    const year = istDate.getFullYear();
-    return `${day}-${month}-${year}`;
+    if (isNaN(date)) return "-"; // guard for invalid dates
+
+    // Convert to IST using Intl.DateTimeFormat (reliable + timezone-safe)
+    const options = {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      timeZone: "Asia/Kolkata"
+    };
+    return new Intl.DateTimeFormat("en-GB", options).format(date);
   };
+
 
   useEffect(() => {
     const fetchDates = async () => {
@@ -115,6 +122,7 @@ const AllBookingDatesPopup = ({ isOpen, onClose }) => {
     <>
       <div className="overlay">
         <div className="popup-container">
+
           <div
             style={{
               display: "flex",
@@ -155,44 +163,53 @@ const AllBookingDatesPopup = ({ isOpen, onClose }) => {
             />
           </div>
 
-          <table className="scrollable-table">
-            <thead>
-              <tr>
-                <th>Enquiry Dates</th>
-                <th>Lead Hold Dates</th>
-                <th>Lead Dates</th>
-                <th>Booked Dates</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mergedDates
-                .filter((row) => !searchTerm || row.date.includes(searchTerm))
-                .map((row, index) => (
-                  <tr key={index}>
-                    <td style={{ backgroundColor: getBgColor(row.enquiry?.venueType), whiteSpace: 'nowrap' }}>
-                      {row.enquiry ? row.date : ""}
-                    </td>
-                    <td
-                      style={{ backgroundColor: getBgColor(row.bookingHold?.venueType), whiteSpace: 'nowrap' }}
-                    >
-                      {row.bookingHold ? row.date : ""}
-                      {row.bookingHold?.winProbability && (
-                        <div>({row.bookingHold.winProbability}% prob)</div>
-                      )}
-                    </td>
-                    <td style={{ backgroundColor: getBgColor(row.hold?.venueType), whiteSpace: 'nowrap' }}>
-                      {row.hold ? row.date : ""}
-                      {row.hold?.winProbability && (
-                        <div>{row.hold.winProbability}% prob</div>
-                      )}
-                    </td>
-                    <td style={{ backgroundColor: getBgColor(row.booked?.venueType), whiteSpace: 'nowrap' }}>
-                      {row.booked ? row.date : ""}
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
+          <div className="table-scroll-wrapper">
+            <table className="scrollable-table">
+              <thead>
+                <tr>
+                  <th>Enquiry</th>
+                  <th>Lead</th>
+                  <th>Lead Hold</th>
+                  <th>Booked</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mergedDates
+                  .filter((row) => !searchTerm || row.date.includes(searchTerm))
+                  .map((row, index) => (
+                    <tr key={index}>
+                      <td style={{ backgroundColor: getBgColor(row.enquiry?.venueType) }}>
+                        {row.enquiry ? formatDate(row.enquiry.rawDate) : ""}
+                      </td>
+                      <td style={{ backgroundColor: getBgColor(row.hold?.venueType) }}>
+                        {row.hold ? (
+                          <>
+                            {formatDate(row.hold.rawDate)}
+                            {row.hold?.winProbability && (<div>{row.hold.winProbability}% prob</div>)}
+                          </>
+                        ) : ("")}
+                      </td>
+                      <td style={{ backgroundColor: getBgColor(row.bookingHold?.venueType) }}>
+                        {row.bookingHold ? (
+                          <>
+                            {formatDate(row.bookingHold.rawDate)}
+                            {row.bookingHold?.winProbability && (
+                              <div>({row.bookingHold.winProbability}% prob)</div>
+                            )}
+                          </>
+                        ) : (
+                          ""
+                        )}
+                      </td>
+                      <td style={{ backgroundColor: getBgColor(row.booked?.venueType) }}>
+                        {row.booked ? formatDate(row.booked.rawDate) : ""}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+
         </div>
       </div>
 
@@ -209,11 +226,11 @@ const AllBookingDatesPopup = ({ isOpen, onClose }) => {
 
         .popup-container {
           background-color: white;
-          padding: 25px;
+
           border-radius: 10px;
-          width: 95%;
+          width: 100%;
           max-width: 1000px;
-          max-height: 90vh;
+          max-height: 100vh;
           overflow: hidden;
           display: flex;
           flex-direction: column;
@@ -248,7 +265,7 @@ const AllBookingDatesPopup = ({ isOpen, onClose }) => {
         .scrollable-table tbody {
           display: block;
           overflow-y: auto;
-          max-height: 300px;
+      
           scrollbar-width: none; 
         }
 
@@ -270,6 +287,57 @@ const AllBookingDatesPopup = ({ isOpen, onClose }) => {
           font-weight: bolder;
           cursor: pointer;
         }
+
+
+
+        .table-scroll-wrapper {
+    width: 100%;
+    max-height: 300px;
+    overflow-x: auto;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .scrollable-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 350px; /* ensure horizontal scroll if needed */
+  }
+
+  .scrollable-table thead {
+    background: linear-gradient(to bottom, #58bfff, #1a9cff);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .scrollable-table th,
+  .scrollable-table td {
+    padding: 5px 0px;
+    text-align: center;
+    border: 2px solid #fafafa;
+    box-shadow: 
+        inset 2px 2px 8px rgba(255, 255, 255, 0.6),
+        inset -2px -2px 8px rgba(0, 0, 0, 0.25),
+        6px 6px 12px rgba(0, 0, 0, 0.4);
+    white-space: nowrap;
+  }
+
+  .scrollable-table tbody tr:nth-child(even) {
+    background: #f9f9f9;
+  }
+
+  .scrollable-table tbody tr:nth-child(odd) {
+    background: #fff;
+  }
+
+  .scrollable-table th {
+    box-shadow: inset 1px 1px #39cdfeff;
+  }
+
+  .scrollable-table td {
+    box-shadow: inset 1px 1px #cbcbcbff;
+  }
       `}</style>
     </>
   );

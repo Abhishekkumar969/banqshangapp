@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteField, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import './BookingLeadsTable.css';
 import Tbody from './Tbody';
@@ -130,35 +130,51 @@ const BookingLeadsTable = () => {
         }
     }, [availableFY, financialYear]);
 
-    const moveLeadToDrop = async (leadId, removeOriginal = false) => {
+    const moveLeadToDrop = (leadId, removeOriginal = false, reason = '', monthYear) => {
         try {
-            const leadRef = doc(db, 'prebookings', leadId);
-            const leadSnap = await getDoc(leadRef);
+            const monthRef = doc(db, "prebookings", monthYear);
 
-            if (!leadSnap.exists()) {
-                console.error('Lead not found:', leadId);
-                return;
-            }
+            // Listen to the month document in real-time
+            const unsubscribe = onSnapshot(monthRef, async (monthSnap) => {
+                if (!monthSnap.exists()) return;
 
-            const leadData = leadSnap.data();
+                const monthData = monthSnap.data();
+                const leadData = monthData[leadId];
+                if (!leadData) return;
 
-            const dropRef = doc(db, 'cancelledBookings', leadId);
-            await setDoc(dropRef, {
-                ...leadData,
-                droppedAt: new Date()
+                // Determine monthYear for bookingLeads based on enquiryDate
+                const enquiryDateObj = new Date(leadData.enquiryDate);
+                const monthNames = [
+                    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+                ];
+                const pastMonthYear = `${monthNames[enquiryDateObj.getMonth()]}${enquiryDateObj.getFullYear()}`;
+                const pastRef = doc(db, "cancelledBookings", pastMonthYear);
+
+                // Move lead to cancelledBookings
+                await setDoc(
+                    pastRef,
+                    {
+                        [leadId]: {
+                            ...leadData,
+                            droppedAt: new Date(),
+                            dropReason: reason || "No reason provided"
+                        }
+                    },
+                    { merge: true }
+                );
+
+                // Optionally remove original lead
+                if (removeOriginal) {
+                    await updateDoc(monthRef, { [leadId]: deleteField() });
+                }
+
+                // Unsubscribe after operation to avoid repeated triggers
+                unsubscribe();
             });
 
-            if (removeOriginal) {
-                await deleteDoc(leadRef);
-
-                // 🔥 Remove from local state
-                setLeads(prev => prev.filter(l => l.id !== leadId));
-                setFilteredLeads(prev => prev.filter(l => l.id !== leadId));
-            }
-
-            console.log(`Lead ${leadId} moved to dropLeads`);
         } catch (error) {
-            console.error('Error moving lead to dropLeads:', error);
+            console.error("Error moving lead to pastEnquiry:", error);
         }
     };
 
@@ -868,9 +884,9 @@ const BookingLeadsTable = () => {
 
     return (
         <div className="leads-table-container">
-            <div style={{ marginBottom: '30px' }}> <BackButton />  </div>
+            <div style={{ marginBottom: '30px' }}> <BackButton /> </div>
             <div className="table-header-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1px' }}>
-                <div style={{ flex: 1, textAlign: 'center' }}> <h2 className="leads-header" style={{ margin: 0 }}>📋 Leads</h2> </div>
+                <div style={{ flex: 1, textAlign: 'center' }}> <h2 className="leads-header" style={{ margin: 0 }}>💒 Bookings</h2> </div>
             </div>
 
             <div>

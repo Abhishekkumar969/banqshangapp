@@ -1,73 +1,73 @@
-import React, { useState } from 'react';
-import BookingLeadsTable from './BookingLeadsTable';
-import DroppedLeads from './LeadsTabs/DroppedLeads';
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import EnquiryDetails from '../../Enquiry/EnquiryDetails';
+import BookingLeadsTable from './BookingLeadsTable';
 import AllBookings from '../../Book/AllLeads/BookingLeadsTable';
-import CancelledBookings from '../../Book/CancelledLeads/CancelledLeadsTable';
 import '../../styles/LeadsTabContainer.css';
 import BackButton from "../../components/BackButton";
 
-
 const LeadsTabContainer = () => {
+    const location = useLocation();
+    const queryParams = new URLSearchParams(location.search);
+    const tabFromURL = queryParams.get("tab");
+
+    // Default to 'booking' (Leads tab) if no tab in URL
     const [activeTab, setActiveTab] = useState('booking');
+
+    useEffect(() => {
+        if (tabFromURL === "enquiry") {
+            setActiveTab("EnquiryDetails");
+        } else if (tabFromURL === "bookings") {
+            setActiveTab("all");
+        } else {
+            // If URL is empty or ?tab=leads, default to 'booking'
+            setActiveTab("booking");
+        }
+    }, [tabFromURL]);
 
     const renderActiveComponent = () => {
         switch (activeTab) {
-            // pastLeads
             case 'EnquiryDetails': return <EnquiryDetails />;
             case 'booking': return <BookingLeadsTable />;
-            case 'dropped': return <DroppedLeads />;
             case 'all': return <AllBookings />;
-            case 'cancelled': return <CancelledBookings />;
             default: return null;
         }
     };
 
+    const handleTabClick = (tabKey, urlParam) => {
+        setActiveTab(tabKey);
+        window.history.replaceState(null, "", `?tab=${urlParam}`);
+    };
+
     return (
         <div className="leads-tab-wrapper">
-            <BackButton />
-            <div>{renderActiveComponent()}</div>
-            <div className="tab-buttons">
+            <BackButton setActiveTab={setActiveTab} />
 
+            <div>{renderActiveComponent()}</div>
+
+            <div className="tab-buttons">
                 <button
-                    onClick={() => setActiveTab('EnquiryDetails')}
+                    onClick={() => handleTabClick('EnquiryDetails', 'enquiry')}
                     className={activeTab === 'EnquiryDetails' ? 'active' : ''}
                 >
-                    <span>Enquiry </span>
+                    <span>Enquiry</span>
                 </button>
 
                 <button
-                    onClick={() => setActiveTab('booking')}
+                    onClick={() => handleTabClick('booking', 'leads')}
                     className={activeTab === 'booking' ? 'active' : ''}
                 >
-                    <span>Leads </span>
+                    <span>Leads</span>
                 </button>
 
-
-                {/* <button
-                    onClick={() => setActiveTab('dropped')}
-                    className={activeTab === 'dropped' ? 'active' : ''}
-                >
-                    <span>Dropped</span>
-                </button> */}
-
                 <button
-                    onClick={() => setActiveTab('all')}
+                    onClick={() => handleTabClick('all', 'bookings')}
                     className={activeTab === 'all' ? 'active' : ''}
                 >
                     <span>Bookings</span>
                 </button>
-
-                {/* <button
-                    onClick={() => setActiveTab('cancelled')}
-                    className={activeTab === 'cancelled' ? 'active' : ''}
-                >
-                    <span>Cancelled</span>
-                </button> */}
-                
             </div>
         </div>
-
     );
 };
 

@@ -32,7 +32,6 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-
 .leads-table th,
 .leads-table td {
     padding: 8px 12px;
@@ -130,7 +129,6 @@
     cursor: pointer;
 }
 
-
 .event-summary-container {
     border: 1px solid gray;
     margin: 5px;
@@ -138,50 +136,16 @@
     padding: 5px;
 }
 
-@media (max-width: 768px) {
-    .leads-header {
-        font-size: 1em;
-        padding: 10px;
-    }
-
-    .leads-table {
-        min-width: 100%;
-    }
-
-
-    .win-prob-legend {
-        font-size: 0.75rem;
-        /* padding: 8px; */
-    }
-
-    .sort-button {
-        font-size: 1em;
-        padding: 9px;
-
-    }
+.filter-item {
+    display: flex;
+    gap: 10px;
+    white-space: nowrap;
+    justify-content: space-between;
+    align-items: center;
 }
 
-@media (max-width: 480px) {
-    .leads-header {
-        font-size: 1em;
-    }
-
-    .leads-table th {
-        font-size: 14px;
-        padding: 5px 3px;
-        font-weight: 800;
-    }
-
-
-    .legend-box {
-        width: 12px;
-        height: 12px;
-    }
-
-    .event-summary-container {
-        font-size: 12px;
-    }
-
+.filter-item .filterInput {
+    padding: 7px 10px;
 }
 
 /* CSS */
@@ -240,14 +204,6 @@
     align-items: flex-end;
 }
 
-.filter-item {
-    display: flex;
-    gap: 10px;
-    white-space: nowrap;
-    justify-content: space-between;
-    align-items: center;
-}
-
 .clear-btnq {
     border-radius: 5px;
     background-color: #fe1504;
@@ -261,8 +217,90 @@
     padding: 10px 20px;
 }
 
-.filter-item .filterInput {
-    padding: 7px 10px;
+.import-btn {
+    background: #4caf50;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    margin: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.import-btn:hover {
+    background: #45a049;
+}
+
+@media (max-width: 768px) {
+
+    .filters-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .leads-header {
+        font-size: 1em;
+        padding: 10px;
+    }
+
+    .leads-table {
+        min-width: 100%;
+    }
+
+
+    .win-prob-legend {
+        font-size: 0.75rem;
+        /* padding: 8px; */
+    }
+
+    .sort-button {
+        font-size: 1em;
+        padding: 9px;
+
+
+    }
+
+    .filter-item .filterInput {
+        width: 50vw;
+    }
+
+    .date-filters,
+    .fy-clear {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .filter-item {
+        display: flex;
+        gap: 10px;
+        white-space: nowrap;
+        justify-content: space-between !important;
+        align-items: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .leads-header {
+        font-size: 1em;
+    }
+
+    .leads-table th {
+        font-size: 14px;
+        padding: 5px 3px;
+        font-weight: 800;
+    }
+
+
+    .legend-box {
+        width: 12px;
+        height: 12px;
+    }
+
+    .event-summary-container {
+        font-size: 12px;
+    }
+
 }
 
 @media screen and (max-width: 500px) {
@@ -273,9 +311,12 @@
 
     .date-filters,
     .fy-clear {
-        flex-direction: column;
+        flex-direction: column !important;
         gap: 10px;
+
     }
+
+
 
     .clear-btn {
         align-self: stretch;
@@ -297,19 +338,18 @@
         width: 50vw;
     }
 
-}
+    .date-filters,
+    .fy-clear {
+        flex-direction: column;
+        gap: 10px;
+    }
 
-.import-btn {
-    background: #4caf50;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    margin: 5px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: bold;
-}
+    .filter-item {
+        display: flex;
+        gap: 10px;
+        white-space: nowrap;
+        justify-content: space-between !important;
+        align-items: center;
+    }
 
-.import-btn:hover {
-    background: #45a049;
 }

@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { collection, getDocs, doc, updateDoc, getDoc, setDoc, deleteField } from 'firebase/firestore';
+import { collection, doc, updateDoc, onSnapshot, setDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import '../../styles/BookingLeadsTable.css';
 import Tbody from './Tbody';
-import FilterPopupWrapper from './FilterPopupWrapper';
 import BackButton from "../../components/BackButton";
 import { useLocation } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
@@ -23,35 +22,51 @@ const BookingLeadsTable = () => {
     const [availableFY, setAvailableFY] = useState([]);
     const [financialYear, setFinancialYear] = useState('');
 
-    // for current fy year 
-    // const [financialYear, setFinancialYear] = useState(null);
-
-    const moveLeadToDrop = async (leadId, removeOriginal = false, reason = '', monthYear) => {
+    const moveLeadToDrop = (leadId, removeOriginal = false, reason = '', monthYear) => {
         try {
-            const monthRef = doc(db, 'bookingLeads', monthYear);
-            const monthSnap = await getDoc(monthRef);
-            if (!monthSnap.exists()) return;
+            const monthRef = doc(db, "bookingLeads", monthYear);
 
-            const leadData = monthSnap.data()[leadId];
+            // Listen to the month document in real-time
+            const unsubscribe = onSnapshot(monthRef, async (monthSnap) => {
+                if (!monthSnap.exists()) return;
 
-            // Save to dropLeads collection
-            const dropRef = doc(db, 'dropLeads', leadId);
-            await setDoc(dropRef, {
-                ...leadData,
-                droppedAt: new Date(),
-                dropReason: reason || 'No reason provided'
+                const monthData = monthSnap.data();
+                const leadData = monthData[leadId];
+                if (!leadData) return;
+
+                // Determine monthYear for bookingLeads based on enquiryDate
+                const enquiryDateObj = new Date(leadData.enquiryDate);
+                const monthNames = [
+                    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+                ];
+                const pastMonthYear = `${monthNames[enquiryDateObj.getMonth()]}${enquiryDateObj.getFullYear()}`;
+                const pastRef = doc(db, "dropLeads", pastMonthYear);
+
+                // Move lead to dropLeads
+                await setDoc(
+                    pastRef,
+                    {
+                        [leadId]: {
+                            ...leadData,
+                            droppedAt: new Date(),
+                            dropReason: reason || "No reason provided"
+                        }
+                    },
+                    { merge: true }
+                );
+
+                // Optionally remove original lead
+                if (removeOriginal) {
+                    await updateDoc(monthRef, { [leadId]: deleteField() });
+                }
+
+                // Unsubscribe after operation to avoid repeated triggers
+                unsubscribe();
             });
 
-            if (removeOriginal) {
-                // Delete the lead key from the month document
-                await updateDoc(monthRef, { [leadId]: deleteField() });
-
-                setLeads(prev => prev.filter(l => l.id !== leadId));
-                setFilteredLeads(prev => prev.filter(l => l.id !== leadId));
-            }
-
         } catch (error) {
-            console.error('Error moving lead to dropLeads:', error);
+            console.error("Error moving lead to pastEnquiry:", error);
         }
     };
 
@@ -67,31 +82,42 @@ const BookingLeadsTable = () => {
     }, [location.state]);
 
     useEffect(() => {
-        const fetchLeads = async () => {
-            const querySnapshot = await getDocs(collection(db, "bookingLeads"));
-            let allLeads = [];
+        // Reference to the "bookingLeads" collection
+        const bookingLeadsRef = collection(db, "bookingLeads");
 
-            querySnapshot.forEach(docSnap => {
-                const monthData = docSnap.data();
-                const monthLeads = Object.entries(monthData).map(([id, data]) => ({
-                    id,
-                    ...data,
-                    monthYear: docSnap.id,
-                }));
-                allLeads.push(...monthLeads);
-            });
+        // Real-time listener
+        const unsubscribe = onSnapshot(
+            bookingLeadsRef,
+            (querySnapshot) => {
+                let allLeads = [];
 
-            const sortedData = allLeads.sort((a, b) => {
-                const dateA = a.createdAt?.toDate?.() || new Date(0);
-                const dateB = b.createdAt?.toDate?.() || new Date(0);
-                return dateB - dateA;
-            });
+                querySnapshot.forEach(docSnap => {
+                    const monthData = docSnap.data(); // e.g. { abc123: {...}, xyz456: {...} }
+                    const monthLeads = Object.entries(monthData).map(([id, data]) => ({
+                        id,
+                        ...data,
+                        monthYear: docSnap.id,
+                    }));
+                    allLeads.push(...monthLeads);
+                });
 
-            setLeads(sortedData);
-            setFilteredLeads(sortedData);
-        };
+                // Sort by createdAt descending
+                const sortedData = allLeads.sort((a, b) => {
+                    const dateA = a.createdAt?.toDate?.() || new Date(0);
+                    const dateB = b.createdAt?.toDate?.() || new Date(0);
+                    return dateB - dateA;
+                });
 
-        fetchLeads();
+                setLeads(sortedData);
+                setFilteredLeads(sortedData);
+            },
+            (error) => {
+                console.error("Error fetching bookingLeads:", error);
+            }
+        );
+
+        // Cleanup listener on unmount
+        return () => unsubscribe();
     }, []);
 
     const handleSort = (field) => {
@@ -108,49 +134,6 @@ const BookingLeadsTable = () => {
         const dateB = new Date(b[sortField]) || new Date(0);
         return sortAsc ? dateA - dateB : dateB - dateA;
     });
-
-    const handleFilters = (filters) => {
-        let filtered = [...leads];
-
-        if (filters.winMin) {
-            filtered = filtered.filter(l => Number(l.winProbability) >= Number(filters.winMin));
-        }
-        if (filters.winMax) {
-            filtered = filtered.filter(l => Number(l.winProbability) <= Number(filters.winMax));
-        }
-        if (filters.followUpBefore) {
-            filtered = filtered.filter(l => {
-                const validDates = (l.followUpDates || []).filter(Boolean).sort();
-                return validDates.length && validDates[0] <= filters.followUpBefore;
-            });
-        }
-        if (filters.followUpAfter) {
-            filtered = filtered.filter(l => {
-                const validDates = (l.followUpDates || []).filter(Boolean).sort();
-                return validDates.length && validDates[0] >= filters.followUpAfter;
-            });
-        }
-        if (filters.contactSearch) {
-            filtered = filtered.filter(l => l.mobile1?.toLowerCase().includes(filters.contactSearch.toLowerCase()));
-        }
-        if (filters.nameSearch) {
-            filtered = filtered.filter(l => l.name?.toLowerCase().includes(filters.nameSearch.toLowerCase()));
-        }
-        if (filters.holdDateFrom) {
-            filtered = filtered.filter(l => l.holdDate && l.holdDate >= filters.holdDateFrom);
-        }
-        if (filters.holdDateTo) {
-            filtered = filtered.filter(l => l.holdDate && l.holdDate <= filters.holdDateTo);
-        }
-        if (filters.functionDateFrom) {
-            filtered = filtered.filter(l => l.functionDate && l.functionDate >= filters.functionDateFrom);
-        }
-        if (filters.functionDateTo) {
-            filtered = filtered.filter(l => l.functionDate && l.functionDate <= filters.functionDateTo);
-        }
-
-        setFilteredLeads(filtered);
-    };
 
     const handleFieldChange = async (id, field, value) => {
         const lead = leads.find(l => l.id === id);
@@ -748,9 +731,9 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
     return (
         <div className="leads-table-container">
             <div style={{ marginBottom: '30px' }}> <BackButton />  </div>
+
             <div className="table-header-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ flex: 1, textAlign: 'center' }}> <h2 className="leads-header" style={{ margin: 0 }}>📋 Leads</h2> </div>
-                <div> <FilterPopupWrapper onFilter={handleFilters} /> </div>
             </div>
 
             <div>

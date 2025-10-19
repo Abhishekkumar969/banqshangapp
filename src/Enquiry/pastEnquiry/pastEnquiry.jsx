@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useRef } from "react";
-import { deleteField, updateDoc, doc, setDoc, collection, onSnapshot, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebaseConfig";
-import "../Book/AllLeads/BookingLeadsTable.css";
+import { updateDoc, deleteField, doc, setDoc, collection, onSnapshot, serverTimestamp } from "firebase/firestore";
+import { db } from "../../firebaseConfig";
+import "../../Book/AllLeads/BookingLeadsTable.css";
 import { useNavigate } from "react-router-dom";
-import BackButton from "../components/BackButton";
+import BackButton from "../../components/BackButton";
 
-const EnquiryDetails = () => {
+const PastEnquiry = () => {
   const [enquiries, setEnquiries] = useState([]);
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState("functionDate");
@@ -18,38 +18,42 @@ const EnquiryDetails = () => {
   const [filteredEnquiries, setFilteredEnquiries] = useState([]);
 
   useEffect(() => {
-    // Reference to the "enquiry" collection
-    const enquiryCollectionRef = collection(db, "enquiry");
+    // Reference to the "pastEnquiry" collection
+    const pastEnquiryRef = collection(db, "pastEnquiry");
 
-    // Set up real-time listener
-    const unsubscribe = onSnapshot(enquiryCollectionRef, (querySnapshot) => {
-      let allEnquiries = [];
+    // Real-time listener
+    const unsubscribe = onSnapshot(
+      pastEnquiryRef,
+      (querySnapshot) => {
+        let allEnquiries = [];
 
-      querySnapshot.forEach((docSnap) => {
-        const monthData = docSnap.data(); // e.g. { abc123: {...}, xyz456: {...} }
+        querySnapshot.forEach((docSnap) => {
+          const monthData = docSnap.data(); // e.g. { abc123: {...}, xyz456: {...} }
 
-        Object.entries(monthData).forEach(([fieldId, enquiry]) => {
-          allEnquiries.push({
-            id: fieldId,
-            monthYear: docSnap.id, // e.g. "Sep2025"
-            ...enquiry,
+          Object.entries(monthData).forEach(([fieldId, enquiry]) => {
+            allEnquiries.push({
+              id: fieldId,
+              monthYear: docSnap.id, // e.g. "Sep2025"
+              ...enquiry,
+            });
           });
         });
-      });
 
-      // Sort by createdAt descending
-      allEnquiries.sort((a, b) => {
-        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
-        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
-        return dateB - dateA;
-      });
+        // Sort by createdAt descending
+        allEnquiries.sort((a, b) => {
+          const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+          const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+          return dateB - dateA;
+        });
 
-      setEnquiries(allEnquiries);
-    }, (error) => {
-      console.error("Error listening to enquiries:", error);
-    });
+        setEnquiries(allEnquiries);
+      },
+      (error) => {
+        console.error("Error listening to past enquiries:", error);
+      }
+    );
 
-    // Cleanup listener on unmount
+    // Cleanup on unmount
     return () => unsubscribe();
   }, []);
 
@@ -232,12 +236,11 @@ const EnquiryDetails = () => {
     }
   }, [availableFY, financialYear]);
 
-
-  const moveLeadToDrop = (leadId, removeOriginal = false, reason = '', monthYear) => {
+  const moveLeadTounDrop = (leadId, removeOriginal = false, reason = '', monthYear) => {
     try {
-      const monthRef = doc(db, "enquiry", monthYear);
+      const monthRef = doc(db, "pastEnquiry", monthYear);
 
-      // Listen to the month document in real-time
+      // Real-time listener on the pastEnquiry document
       const unsubscribe = onSnapshot(monthRef, async (monthSnap) => {
         if (!monthSnap.exists()) return;
 
@@ -245,18 +248,16 @@ const EnquiryDetails = () => {
         const leadData = monthData[leadId];
         if (!leadData) return;
 
-        // Determine monthYear for pastEnquiry based on enquiryDate
+        // Determine monthYear for the target 'enquiry' collection
         const enquiryDateObj = new Date(leadData.enquiryDate);
-        const monthNames = [
-          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-        ];
-        const pastMonthYear = `${monthNames[enquiryDateObj.getMonth()]}${enquiryDateObj.getFullYear()}`;
-        const pastRef = doc(db, "pastEnquiry", pastMonthYear);
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const targetMonthYear = `${monthNames[enquiryDateObj.getMonth()]}${enquiryDateObj.getFullYear()}`;
+        const targetRef = doc(db, "enquiry", targetMonthYear);
 
-        // Move lead to pastEnquiry
+        // Move lead to 'enquiry'
         await setDoc(
-          pastRef,
+          targetRef,
           {
             [leadId]: {
               ...leadData,
@@ -267,17 +268,17 @@ const EnquiryDetails = () => {
           { merge: true }
         );
 
-        // Optionally remove original lead
+        // Optionally remove original from pastEnquiry
         if (removeOriginal) {
           await updateDoc(monthRef, { [leadId]: deleteField() });
         }
 
-        // Unsubscribe after operation to avoid repeated triggers
+        // Unsubscribe after moving to avoid repeated triggers
         unsubscribe();
       });
 
     } catch (error) {
-      console.error("Error moving lead to pastEnquiry:", error);
+      console.error("Error moving lead to enquiry:", error);
     }
   };
 
@@ -299,14 +300,14 @@ const EnquiryDetails = () => {
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const monthYear = `${monthNames[date.getMonth()]}${date.getFullYear()}`;
 
-    await moveLeadToDrop(lead.id, true, reason, monthYear);
+    await moveLeadTounDrop(lead.id, true, reason, monthYear);
   };
 
   return (
     <div className="leads-table-container">
       <div style={{ marginBottom: '30px' }}> <BackButton />  </div>
 
-      <h2 className="leads-header">Enquiry</h2>
+      <h2 className="leads-header">Dropped Enquiries</h2>
 
       <input type="text"
         placeholder="Search by name, mobile, function type, date..."
@@ -439,7 +440,7 @@ const EnquiryDetails = () => {
                 <th>Day/Night</th>
                 <th>Share Media</th>
                 <th>Actions</th>
-                <th>Drop</th>
+                <th>ReSotre</th>
               </tr>
             </thead>
             <tbody style={{ whiteSpace: "nowrap" }}>
@@ -506,6 +507,7 @@ const EnquiryDetails = () => {
                         Share Media
                       </button>
                     </td>
+
                     <td>
                       <button
                         style={{
@@ -519,9 +521,10 @@ const EnquiryDetails = () => {
                         }}
                         onClick={() => handleDropClick(enq)}
                       >
-                        Drop
+                        ReSotre
                       </button>
                     </td>
+
                   </tr>
                 ))
               ) : (
@@ -586,4 +589,4 @@ const EnquiryDetails = () => {
 
 };
 
-export default EnquiryDetails;
+export default PastEnquiry;
