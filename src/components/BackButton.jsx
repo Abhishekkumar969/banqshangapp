@@ -6,6 +6,8 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import { useSearchParams } from "react-router-dom";
 
+import './BackButton.css';
+
 const BackButton = ({ setActiveTab }) => {
   const scrollRef = useRef(null);
   const navigate = useNavigate();
@@ -71,8 +73,7 @@ const BackButton = ({ setActiveTab }) => {
     padding: "4px 0",
     whiteSpace: "nowrap",
     flex: 1,
-    scrollbarWidth: "none",
-    msOverflowStyle: "none",
+
   };
 
   const iconButtonStyle = {
@@ -113,6 +114,8 @@ const BackButton = ({ setActiveTab }) => {
     if (typeof setActiveTab === "function") setActiveTab(tabKey);
     navigate(fallbackPath);
   };
+
+
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -162,7 +165,7 @@ const BackButton = ({ setActiveTab }) => {
       </div>
 
       {/* Scrollable Menu */}
-      <div ref={scrollRef} style={scrollGroupStyle}>
+      <div ref={scrollRef} style={scrollGroupStyle} className="scrollable-menu">
 
         {/* Dashboard */}
         <button

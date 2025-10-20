@@ -115,7 +115,7 @@ const Prebook = () => {
 
   return (
     <>
-      <div style={{ marginBottom: '45px' }}> <BackButton />  </div>
+      <div style={{ marginBottom: '55px' }}> <BackButton />  </div>
       <div className="prebook-wrapper">
 
         {/* LogOut */}

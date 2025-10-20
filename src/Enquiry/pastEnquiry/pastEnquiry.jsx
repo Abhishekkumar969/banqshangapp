@@ -413,7 +413,7 @@ const PastEnquiry = () => {
               ) : (
                 <tr>
                   <td colSpan="4" style={{ textAlign: "center" }}>
-                    No enquiries found.
+                  
                   </td>
                 </tr>
               )}
@@ -529,7 +529,7 @@ const PastEnquiry = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: "center" }}>
+                  <td colSpan="11" style={{ textAlign: "left" }}>
                     No enquiries found.
                   </td>
                 </tr>

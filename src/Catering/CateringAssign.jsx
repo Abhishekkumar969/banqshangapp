@@ -16,6 +16,7 @@ const CateringAssign = () => {
     const [sortOrder, setSortOrder] = useState("desc");
     const navigate = useNavigate();
     const [userAppType, setUserAppType] = useState(null);
+    const [showSubitems, setShowSubitems] = useState(null);
 
     useEffect(() => {
         const fetchUserAppType = async () => {
@@ -40,11 +41,9 @@ const CateringAssign = () => {
     const convertToISTDate = (dateStr) => {
         if (!dateStr) return "-";
         const d = new Date(dateStr);
-        const istTime = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
-        const day = String(istTime.getDate()).padStart(2, "0");
-        const month = String(istTime.getMonth() + 1).padStart(2, "0");
-        const year = istTime.getFullYear();
-        return `${day}-${month}-${year}`;
+        // Use toLocaleString with IST timezone
+        const options = { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Kolkata" };
+        return d.toLocaleDateString("en-GB", options); // returns dd-mm-yyyy
     };
 
     const convertToIST12Hour = (timeStr) => {
@@ -132,9 +131,10 @@ const CateringAssign = () => {
             Object.entries(booking.selectedMenus || {}).forEach(([menuKey, menuVal]) => {
                 const assigned = bookingAssign[menuKey] || {};
                 assignedMenus[menuKey] = {
-                    qty: assigned.qty ?? menuVal.qty ?? 0,
-                    extQty: assigned.extQty ?? menuVal.extQty ?? 0,
+                    qty: assigned.qty ?? menuVal.noOfPlates ?? 0,
+                    extQty: assigned.extQty ?? menuVal.extraPlates ?? 0,
                     rate: assigned.rate ?? menuVal.rate ?? 0,
+                    selectedSubItems: menuVal.selectedSubItems || [], // ✅ add this
                 };
             });
 
@@ -146,6 +146,8 @@ const CateringAssign = () => {
                     qty: assigned.qty ?? menu.qty ?? 0,
                     extQty: assigned.extQty ?? menu.extQty ?? 0,
                     rate: assigned.rate ?? menu.rate ?? 0,
+                    selectedSubItems: menu.selectedSubItems || [], // ✅ add this
+
                 };
             });
 
@@ -167,6 +169,8 @@ const CateringAssign = () => {
                             startTime: mealDetails.startTime ?? "",
                             endTime: mealDetails.endTime ?? "",
                             total: mealDetails.total ?? 0,
+                            selectedItems: mealDetails.selectedItems || [], // ✅ add this
+
                         };
                     }
                 });
@@ -289,11 +293,10 @@ const CateringAssign = () => {
                                     <td>{booking.name}</td>
                                     <td>
                                         {booking.functionDate
-                                            ? new Date(booking.functionDate).toLocaleDateString(
-                                                "en-GB"
-                                            )
+                                            ? convertToISTDate(booking.functionDate)
                                             : ""}
                                     </td>
+
                                     <td>
                                         {booking.selectedMenus
                                             ? Object.entries(booking.selectedMenus).map(
@@ -402,7 +405,7 @@ const CateringAssign = () => {
                             {/* ✅ Booked On (IST) */}
                             <div style={{ marginBottom: "15px" }}>
                                 <div >
-                                    <label style={{ marginRight: "8px", fontWeight: "bold", whiteSpace: 'nowrap' }}>Booked On:</label>
+                                    <label style={{ marginRight: "8px", fontWeight: "bold", whiteSpace: 'nowrap' }}>Assign On:</label>
                                     <input
                                         type="date"
                                         value={assignments[popupBooking.id]?.general?.bookedOn || new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().split("T")[0]}
@@ -413,10 +416,10 @@ const CateringAssign = () => {
                                 </div>
                             </div>
 
-                            <h2 className="modal-title">🍽 Assign Catering</h2>
 
                             {/* ✅ Name + Number */}
                             <div className="menu-block">
+                                <h2 className="modal-title">🍽 Assign Catering</h2>
                                 <div className="menu-fields">
                                     <div className="field">
                                         <label>Name</label>
@@ -465,20 +468,59 @@ const CateringAssign = () => {
                             {/* Selected Menus */}
                             {popupBooking.selectedMenus && Object.keys(popupBooking.selectedMenus).length > 0 && (
                                 <div className="menus-container">
-                                    <h3>Selected Menus</h3>
+
+
+                                    {showSubitems && (
+                                        <div className="subitems-popup-overlay" onClick={() => setShowSubitems(null)}>
+                                            <div
+                                                className="subitems-popup"
+                                                onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside
+                                            >
+                                                <h3>{showSubitems.menuName}</h3>
+
+                                                <ul>
+                                                    {showSubitems.items.map((item, i) => (
+                                                        <li key={i}>{item}</li>
+                                                    ))}
+                                                </ul>
+
+                                                <button className="close-btn" onClick={() => setShowSubitems(null)}>
+                                                    Close
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {Object.entries(popupBooking.selectedMenus).map(
                                         ([menuKey, menuVal]) => {
                                             const assigned =
                                                 assignments[popupBooking.id]?.[menuKey] || {};
                                             return (
                                                 <div key={menuKey} className="menu-block">
-                                                    <h4 className="menu-name">{menuKey}</h4>
+                                                    <h3>Selected Menus</h3>
+                                                    <h4 className="menu-name">
+                                                        {menuKey}
+                                                        {menuVal.selectedSubItems && menuVal.selectedSubItems.length > 0 && (
+                                                            <button
+                                                                className="subitems-btn"
+                                                                onClick={() =>
+                                                                    setShowSubitems({
+                                                                        menuName: menuKey,
+                                                                        items: menuVal.selectedSubItems,
+                                                                    })
+                                                                }
+                                                            >
+                                                                {menuVal.selectedSubItems.length} Items
+                                                            </button>
+                                                        )}
+                                                    </h4>
+
                                                     <div className="menu-fields">
                                                         <div className="field">
                                                             <label>Pax</label>
                                                             <input
                                                                 type="number"
-                                                                value={assigned.qty ?? menuVal.qty ?? ""}
+                                                                value={assigned.qty ?? menuVal.noOfPlates ?? ""}
                                                                 onChange={(e) =>
                                                                     handleInputChange(
                                                                         popupBooking.id,
@@ -496,7 +538,7 @@ const CateringAssign = () => {
                                                             <label>Extra Plates</label>
                                                             <input
                                                                 type="number"
-                                                                value={assigned.extQty ?? ""}
+                                                                value={assigned.extQty ?? menuVal.extraPlates ?? ""}
                                                                 onChange={(e) =>
                                                                     handleInputChange(
                                                                         popupBooking.id,
@@ -539,13 +581,15 @@ const CateringAssign = () => {
                             {/* ✅ Custom Menus */}
                             {popupBooking.customMenuCharges && popupBooking.customMenuCharges.length > 0 && (
                                 <div className="menus-container">
-                                    <h3>Custom Menus</h3>
+
+
                                     {popupBooking.customMenuCharges.map((menuVal, i) => {
                                         const assigned =
                                             assignments[popupBooking.id]?.[`custom-${i}`] || {};
                                         return (
                                             <div key={`custom-${i}`} className="menu-block">
-                                                <h4 className="menu-name">{menuVal.name}</h4>
+                                                <h3>Custom Menus</h3>
+                                                <h4 className="menu-name">{menuVal.name} </h4>
                                                 <div className="menu-fields">
                                                     <div className="field">
                                                         <label>Pax</label>
@@ -611,15 +655,42 @@ const CateringAssign = () => {
                             {/* ✅ Custom Meals */}
                             {popupBooking.meals && Object.keys(popupBooking.meals).length > 0 && (
                                 <div className="menus-container">
-                                    <h3>Meals</h3>
+
+
+                                    {/* ✅ Only one popup */}
+                                    {showSubitems && (
+                                        <div
+                                            className="subitems-popup-overlay"
+                                            onClick={() => setShowSubitems(null)}
+                                        >
+                                            <div
+                                                className="subitems-popup"
+                                                onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside
+                                            >
+                                                <h3>{showSubitems.menuName}</h3>
+                                                <ul>
+                                                    {showSubitems.items.map((item, i) => (
+                                                        <li key={i}>{item}</li>
+                                                    ))}
+                                                </ul>
+
+                                                <button
+                                                    className="close-btn"
+                                                    onClick={() => setShowSubitems(null)}
+                                                >
+                                                    Close
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {Object.entries(popupBooking.meals)
                                         .filter(([key]) => key !== "No. of days" && key !== "note")
                                         .map(([dayName, dayMeals], dayIdx) => (
                                             <div key={dayIdx} className="menu-block">
+                                                <h3>Meals</h3>
                                                 <h4>
-                                                    {dayName}
-                                                    ({dayMeals.date ? convertToISTDate(dayMeals.date) : ""})
+                                                    {dayName} ({dayMeals.date ? convertToISTDate(dayMeals.date) : ""})
                                                 </h4>
 
                                                 {/* Meals for that day */}
@@ -640,16 +711,50 @@ const CateringAssign = () => {
                                                                     marginBottom: "15px",
                                                                     borderRadius: "5px",
                                                                     backgroundColor: "#f9f9f9",
-                                                                    alignItems: "center",
+                                                                    padding: "10px",
+                                                                    alignItems: "flex-start",
                                                                 }}
                                                             >
-                                                                {/* Meal Name */}
-                                                                <div style={{ flex: "1 1 100%", marginBottom: "5px" }}>
-                                                                    <strong>{mealName}</strong> | Option: {mealDetails.option}
+                                                                {/* Meal Name + Subitems button inline */}
+                                                                <div
+                                                                    style={{
+                                                                        display: "flex",
+                                                                        alignItems: "center",
+                                                                        justifyContent: "space-between",
+                                                                        flex: "1 1 100%",
+                                                                        marginBottom: "10px",
+                                                                    }}
+                                                                >
+                                                                    <div>
+                                                                        <strong>{mealName}</strong> | Option: {mealDetails.option}
+                                                                    </div>
+
+                                                                    {/* ✅ Use selectedItems here */}
+                                                                    {mealDetails.selectedItems && mealDetails.selectedItems.length > 0 && (
+                                                                        <button
+                                                                            className="subitems-btn"
+                                                                            onClick={() =>
+                                                                                setShowSubitems({
+                                                                                    menuName: mealName,
+                                                                                    items: mealDetails.selectedItems, // ✅ correct
+                                                                                })
+                                                                            }
+                                                                        >
+                                                                            {mealDetails.selectedItems.length} Items
+                                                                        </button>
+                                                                    )}
+
                                                                 </div>
 
-                                                                {/* Inputs in a row */}
-                                                                <div style={{ display: "flex", flex: "1 1 100%", gap: "10px", flexWrap: "wrap" }}>
+                                                                {/* Inputs: Pax, Extra Plates, Rate */}
+                                                                <div
+                                                                    style={{
+                                                                        display: "flex",
+                                                                        flex: "1 1 100%",
+                                                                        gap: "10px",
+                                                                        flexWrap: "wrap",
+                                                                    }}
+                                                                >
                                                                     <div style={{ flex: "1 1 120px", minWidth: "120px" }}>
                                                                         <label>Pax</label>
                                                                         <input
@@ -664,7 +769,7 @@ const CateringAssign = () => {
                                                                                 )
                                                                             }
                                                                             style={{ width: "100%", padding: "5px" }}
-                                                                            onWheel={(e) => e.target.blur()} // ✅ prevent scroll
+                                                                            onWheel={(e) => e.target.blur()} // prevent scroll
                                                                         />
                                                                     </div>
 
@@ -672,7 +777,7 @@ const CateringAssign = () => {
                                                                         <label>Extra Plates</label>
                                                                         <input
                                                                             type="number"
-                                                                            value={assigned.extQty ?? ""}
+                                                                            value={assigned.extQty ?? mealDetails.pax ?? ""}
                                                                             onChange={(e) =>
                                                                                 handleInputChange(
                                                                                     popupBooking.id,
@@ -682,7 +787,7 @@ const CateringAssign = () => {
                                                                                 )
                                                                             }
                                                                             style={{ width: "100%", padding: "5px" }}
-                                                                            onWheel={(e) => e.target.blur()} // ✅ prevent scroll
+                                                                            onWheel={(e) => e.target.blur()}
                                                                         />
                                                                     </div>
 
@@ -700,13 +805,12 @@ const CateringAssign = () => {
                                                                                 )
                                                                             }
                                                                             style={{ width: "100%", padding: "5px" }}
-                                                                            onWheel={(e) => e.target.blur()} // ✅ prevent scroll
+                                                                            onWheel={(e) => e.target.blur()}
                                                                         />
                                                                     </div>
                                                                 </div>
                                                             </div>
                                                         );
-
                                                     })}
                                             </div>
                                         ))}

@@ -150,7 +150,7 @@ const AllBookingDatesPopup = ({ isOpen, onClose }) => {
           <div style={{ marginBottom: "10px", textAlign: "center" }}>
             <input
               type="text"
-              placeholder="Search date (e.g., 17-8-2025)"
+              placeholder="Search date (e.g., 07/08/2025)"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
@@ -175,8 +175,22 @@ const AllBookingDatesPopup = ({ isOpen, onClose }) => {
               </thead>
               <tbody>
                 {mergedDates
-                  .filter((row) => !searchTerm || row.date.includes(searchTerm))
+                  .filter((row) => {
+                    if (!searchTerm) return true;
+
+                    const normalizeDate = (str) => {
+                      const parts = str.split(/[/-]/).map((p) => Number(p));
+                      if (parts.length !== 3) return "";
+                      const [d, m, y] = parts;
+                      return `${d}-${m}-${y}`;
+                    };
+
+                    const searchNorm = normalizeDate(searchTerm.trim());
+                    const rowNorm = normalizeDate(row.date);
+                    return rowNorm === searchNorm;
+                  })
                   .map((row, index) => (
+
                     <tr key={index}>
                       <td style={{ backgroundColor: getBgColor(row.enquiry?.venueType) }}>
                         {row.enquiry ? formatDate(row.enquiry.rawDate) : ""}
