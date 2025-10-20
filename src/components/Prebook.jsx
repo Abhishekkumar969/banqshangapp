@@ -231,7 +231,7 @@ const Prebook = () => {
               <div className="service-section">
                 <h3 className="service-section-text">Vendor</h3>
                 <div className="service-grid">
-                  <ServiceBox label="UpComing" onClick={() => navigate('/VendorTable')} icon="📇" />
+                  <ServiceBox label="UpComing" onClick={() => navigate('/VendorTable')} icon="🪩" />
                   <ServiceBox label="Booked" onClick={() => navigate('/VendorBookedTable')} icon="🗂️" />
                   <ServiceBox label="Dropped" onClick={() => navigate('/VendorDeoppedTable')} icon="🗑️" />
                 </div>
@@ -248,7 +248,7 @@ const Prebook = () => {
                 {vendor?.functionTypes?.length > 0 && (
                   <>
                     <ServiceBox label="Form" onClick={() => navigate('/VendorOtherForm')} icon="📝" />
-                    <ServiceBox label="UpComings" onClick={() => navigate('/VendorTable')} icon="📇" />
+                    <ServiceBox label="UpComings" onClick={() => navigate('/VendorTable')} icon="🪩" />
                     <ServiceBox label="Booked" onClick={() => navigate('/VendorBookedTable')} icon="🗂️" />
                     <ServiceBox label="Dropped" onClick={() => navigate('/VendorDeoppedTable')} icon="🗑️" />
                   </>
@@ -263,7 +263,7 @@ const Prebook = () => {
               <div className="service-section">
                 <h3 className="service-section-text">Decoration</h3>
                 <div className="service-grid">
-                  <ServiceBox label="UpComings" onClick={() => navigate('/DecorationTable')} icon="📇" />
+                  <ServiceBox label="UpComings" onClick={() => navigate('/DecorationTable')} icon="🌸" />
                   <ServiceBox label="Booked" onClick={() => navigate('/DecorationBookedTable')} icon="🗂️" />
                   <ServiceBox label="Dropped" onClick={() => navigate('/DecorationDeoppedTable')} icon="🗑️" />
                 </div>
@@ -280,7 +280,7 @@ const Prebook = () => {
                 {decoration?.functionTypes?.length > 0 && (
                   <>
                     <ServiceBox label="Form" onClick={() => navigate('/DecorationOtherForm')} icon="📝" />
-                    <ServiceBox label="UpComings" onClick={() => navigate('/DecorationTable')} icon="📇" />
+                    <ServiceBox label="UpComings" onClick={() => navigate('/DecorationTable')} icon="🌸" />
                     <ServiceBox label="Booked" onClick={() => navigate('/DecorationBookedTable')} icon="🗂️" />
                     <ServiceBox label="Dropped" onClick={() => navigate('/DecorationDeoppedTable')} icon="🗑️" />
                   </>
@@ -295,7 +295,7 @@ const Prebook = () => {
               <div className="service-section">
                 <h3 className="service-section-text">Catering</h3>
                 <div className="service-grid">
-                  <ServiceBox label="Assign" onClick={() => navigate('/CateringAssign')} icon="📝" />
+                  <ServiceBox label="Assign" onClick={() => navigate('/CateringAssign')} icon="👨‍🍳" />
                   <ServiceBox label="Records" onClick={() => navigate('/CateringAssigned')} icon="🗂️" />
                 </div>
               </div>
@@ -310,23 +310,11 @@ const Prebook = () => {
                 <div className="service-grid">
                   <ServiceBox label="Business" onClick={() => navigate('/StatsPage')} icon="📈" />
                   <ServiceBox label="Access" onClick={() => navigate('/UserAccessPanel')} icon="🔐" />
-                  <ServiceBox label="Save/ Delete" onClick={() => setShowDownload(true)} icon="📇" />
+                  <ServiceBox label="Save & BackUp" onClick={() => setShowDownload(true)} icon="📇" />
                 </div>
               </div>
             </>
           )}
-
-          {/* Dropped */}
-          {/* {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
-            <>          <div className="service-section" >
-              <h3 className="service-section-text">Dropped</h3>
-              <div className="service-grid">
-                <ServiceBox label="Lead" onClick={() => navigate('/DroppedLeads')} icon="🚀" />
-
-              </div>
-            </div>
-            </>
-          )} */}
 
           <div style={{ marginBottom: "70px" }}></div>
         </div>

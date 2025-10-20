@@ -39,6 +39,10 @@ const BackButton = ({ setActiveTab }) => {
     "/BookingTable": "Bookings",
     "/MoneyReceipts": "MoneyReceipts",
     "/Accountant": "Accountant",
+    "/MenuItems": "MenuItems",
+    "/GSTSummary": "GSTSummary",
+
+
   };
 
   const activeTab = routeToTab[location.pathname];
@@ -114,8 +118,6 @@ const BackButton = ({ setActiveTab }) => {
     if (typeof setActiveTab === "function") setActiveTab(tabKey);
     navigate(fallbackPath);
   };
-
-
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -394,6 +396,172 @@ const BackButton = ({ setActiveTab }) => {
             )}
           </div>
         )}
+
+
+        {/* Vendor */}
+        {(userAppType === 'A' || userAppType === 'B' || userAppType === 'D' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
+          <div
+            className="dropdown-container"
+            style={{ position: "relative" }}
+            onClick={(e) => handleToggleDropdown("Vendor", e)}
+          >
+            <button
+              style={
+                activeTab === "Vendor"
+                  || location.pathname === "/VendorOtherForm"
+                  || location.pathname === "/VendorTable"
+                  || location.pathname === "/VendorBookedTable"
+                  || location.pathname === "/VendorDeoppedTable"
+
+                  ? activeButtonStyle
+                  : iconButtonStyle
+              }            >
+              🪩 Vendor
+            </button>
+
+            {openDropdown === "Vendor" && (
+              <div
+                style={{
+                  position: "fixed",
+                  // top: dropdownPos.top,
+                  top: "45px",
+                  left: dropdownPos.left,
+                  background: "#fff",
+                  border: "1px solid #ccc",
+                  borderRadius: "10px",
+                  padding: "6px 0",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+                  minWidth: "180px",
+                  zIndex: 999999,
+                }}
+              >
+                <div style={dropdownItemStyle} onClick={() => navigate("/VendorOtherForm")}>📝 Form</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/VendorTable")}>🪩 UpComings</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/VendorBookedTable")}>🗂️ Booked</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/VendorDeoppedTable")}>🗑️ Dropped</div>
+
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Decoration */}
+        {(userAppType === 'A' || userAppType === 'B' || userAppType === 'D' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
+          <div
+            className="dropdown-container"
+            style={{ position: "relative" }}
+            onClick={(e) => handleToggleDropdown("Decoration", e)}
+          >
+            <button
+              style={
+                activeTab === "Decoration"
+                  || location.pathname === "/DecorationOtherForm"
+                  || location.pathname === "/DecorationTable"
+                  || location.pathname === "/DecorationBookedTable"
+                  || location.pathname === "/DecorationDeoppedTable"
+                  ? activeButtonStyle
+                  : iconButtonStyle
+              }            >
+              🌸 Decoration
+            </button>
+
+            {openDropdown === "Decoration" && (
+              <div
+                style={{
+                  position: "fixed",
+                  // top: dropdownPos.top,
+                  top: "45px",
+                  left: dropdownPos.left,
+                  background: "#fff",
+                  border: "1px solid #ccc",
+                  borderRadius: "10px",
+                  padding: "6px 0",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+                  minWidth: "180px",
+                  zIndex: 999999,
+                }}
+              >
+                <div style={dropdownItemStyle} onClick={() => navigate("/DecorationOtherForm")}>📝 Form</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/DecorationTable")}>🌸 UpComings</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/DecorationBookedTable")}>🗂️ Booked</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/DecorationDeoppedTable")}>🗑️ Dropped</div>
+
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Catering */}
+        {(userAppType === 'A' || userAppType === 'B' || userAppType === 'D' || userAppType === 'E' || userAppType === 'F' || userAppType === 'G') && (
+          <div
+            className="dropdown-container"
+            style={{ position: "relative" }}
+            onClick={(e) => handleToggleDropdown("Catering", e)}
+          >
+            <button
+              style={
+                activeTab === "Catering"
+                  || location.pathname === "/CateringAssign"
+                  || location.pathname === "/CateringAssigned"
+                  ? activeButtonStyle
+                  : iconButtonStyle
+              }            >
+              👨‍🍳 Catering
+            </button>
+
+            {openDropdown === "Catering" && (
+              <div
+                style={{
+                  position: "fixed",
+                  top: "45px",
+                  left: dropdownPos.left,
+                  background: "#fff",
+                  border: "1px solid #ccc",
+                  borderRadius: "10px",
+                  padding: "6px 0",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+                  minWidth: "180px",
+                  zIndex: 999999,
+                }}
+              >
+                <div style={dropdownItemStyle} onClick={() => navigate("/CateringAssign")}>📝 Assign</div>
+                <div style={dropdownItemStyle} onClick={() => navigate("/CateringAssigned")}>🗂️ Records</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Menu */}
+        <button
+          onClick={() => navigate("/MenuItems")}
+          style={activeTab === "MenuItems" ? activeButtonStyle : iconButtonStyle}
+        >
+          🍽 Menu
+        </button>
+
+        {/* GST */}
+        <button
+          onClick={() => navigate("/GSTSummary")}
+          style={activeTab === "GSTSummary" ? activeButtonStyle : iconButtonStyle}
+        >
+          💹 GST
+        </button>
+
+        {/* StatsPage */}
+        <button
+          onClick={() => navigate("/StatsPage")}
+          style={activeTab === "StatsPage" ? activeButtonStyle : iconButtonStyle}
+        >
+          📈 StatsPage
+        </button>
+
+        {/* UserAccessPanel */}
+        <button
+          onClick={() => navigate("/UserAccessPanel")}
+          style={activeTab === "UserAccessPanel" ? activeButtonStyle : iconButtonStyle}
+        >
+          🔐 Access
+        </button>
 
         <div style={{ marginRight: "80px" }}></div>
       </div>
