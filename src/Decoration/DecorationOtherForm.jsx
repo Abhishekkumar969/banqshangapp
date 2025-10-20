@@ -416,7 +416,7 @@ const Decoration = () => {
     };
 
     return (
-        <>
+        <div style={{ paddingTop: '35px' }} >
             <form style={{ marginTop: "50px", display: 'flex', justifyContent: 'space-between' }} onSubmit={handleSave}>
                 <div></div>
                 <div className="BookedOn">
@@ -439,7 +439,6 @@ const Decoration = () => {
                     />
                 </div>
             </form>
-
 
             <div className={styles.decorationWrapper}>
                 <div style={{ marginBottom: '30px' }}>
@@ -801,7 +800,7 @@ const Decoration = () => {
 
             <div style={{ marginBottom: "50px" }}></div>
             <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
-        </>
+        </div>
     );
 
 };
