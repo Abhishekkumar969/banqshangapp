@@ -439,7 +439,7 @@ const Vendor = () => {
     };
 
     return (
-        <>
+        <div style={{ paddingTop: '35px' }} >
             <form style={{ marginTop: "50px", display: 'flex', justifyContent: 'space-between' }} onSubmit={handleSave}>
                 <div></div>
                 <div className="BookedOn">
@@ -464,9 +464,8 @@ const Vendor = () => {
             </form>
 
             <div className={styles.vendorWrapper}>
-                <div style={{ marginBottom: '0px' }}>
-                    <BackButton />
-                </div>
+                <div > <BackButton />  </div>
+
 
                 {vendor ? (
                     <>
@@ -815,7 +814,7 @@ const Vendor = () => {
 
             <div style={{ marginBottom: "50px" }}></div>
             <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
-        </>
+        </div>
     );
 
 };
