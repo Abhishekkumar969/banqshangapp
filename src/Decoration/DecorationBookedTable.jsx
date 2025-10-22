@@ -46,7 +46,6 @@ const toISTTime = (timeStr) => {
   return `${String(hour12).padStart(2, "0")}:${String(istMinutes).padStart(2, "0")} ${ampm}`;
 };
 
-
 const DecorationTable = () => {
   const [allBookings, setAllBookings] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,6 +56,7 @@ const DecorationTable = () => {
   const [decorationProfile, setDecorationProfile] = useState(null);
   const navigate = useNavigate();
   const [userAppType, setUserAppType] = useState(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState(null);
 
   useEffect(() => {
     const fetchUserAppType = async () => {
@@ -152,6 +152,7 @@ const DecorationTable = () => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user && user.email) {
+        setCurrentUserEmail(user.email); // ✅ store email
         try {
           const q = query(
             collection(db, "usersAccess"),
@@ -567,13 +568,32 @@ const DecorationTable = () => {
 
                   {[
                     'Name', 'Contact', 'Address', 'Event Type', 'Venue type', 'Time', 'Total', 'Discount',
-                    'GST Amt', `Grand Total: ₹${summary.grandTotal.toLocaleString("en-IN")}`, 'Advance Records',
+                    'GST Amt', `Grand Total: ₹${summary.grandTotal.toLocaleString("en-IN")}`,
+                  ].map(header => (
+                    <th key={header}>{header}</th>
+                  ))}
+
+                  {(summary.userEmail === currentUserEmail) && (
+                    <th>Advance Records</th>
+                  )}
+
+                  {[
                     `Total Advance: ₹${summary.advanceTotal.toLocaleString("en-IN")}`,
                     `Total Remaining: ₹${summary.remainingTotal.toLocaleString("en-IN")}`,
-                    'Services', 'Add Advance', 'Print', 'Update',
+                    'Services',
+                  ].map(header => (
+                    <th key={header}>{header}</th>
+                  ))}
+
+                  {(summary.userEmail === currentUserEmail) && (
+                    <th>Add Advance</th>,
+                    <th>Update</th>,
+                    <th>Print</th>
+                  )}
+
+                  {[
                     'Logs', 'Notes', `Avg PayOut % : ${avgPayOutPercent}%`,
                     `To be PayOut: ₹${summary.totalPayOut.toLocaleString("en-IN")}`,
-                    'Approval',
                     'PayOut Records',
                     `Total PayOut ₹${filteredBookings.reduce((acc, booking) => {
                       // const sv = normalizeServices(booking.services);
@@ -645,16 +665,18 @@ const DecorationTable = () => {
   );
 };
 
-function BookingRow({ v, idx, filteredCount, convertTo12Hour, getAdvanceTotal, getGrandTotal, normalizeServices, navigate, getPrintFormat, handleAddAmountClick }) {
+function BookingRow({ v, idx, filteredCount, getAdvanceTotal, getGrandTotal, normalizeServices, navigate, getPrintFormat, handleAddAmountClick }) {
   const [showPopupView, setShowPopupView] = useState(false);
   const [showRates, setShowRates] = useState(false);
   const [decorationProfile, setDecorationProfile] = useState(null);
   const [appUserName, setAppUserName] = useState("App User");
+  const [currentUserEmail, setCurrentUserEmail] = useState(null);
 
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user && user.email) {
+        setCurrentUserEmail(user.email); // ✅ store email
         try {
           const q = query(
             collection(db, "usersAccess"),
@@ -825,66 +847,68 @@ function BookingRow({ v, idx, filteredCount, convertTo12Hour, getAdvanceTotal, g
       <td>₹{v.summary?.gstAmount || 0}</td>
       <td style={{ backgroundColor: '#1ce202ff' }}><strong>₹{grandTotal}</strong></td>
 
-      <td >
-        <div style={{ display: 'flex' }}>
-          {allAdvances.map((a, i) => (
-            <span
-              key={i}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                padding: '7px 10px',
-                margin: '0px 5px',
-                borderRadius: '7px',
-                boxShadow: `
+      {(v.userEmail === currentUserEmail) && (
+        <td >
+          <div style={{ display: 'flex' }}>
+            {allAdvances.map((a, i) => (
+              <span
+                key={i}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '7px 10px',
+                  margin: '0px 5px',
+                  borderRadius: '7px',
+                  boxShadow: `
                   2px 2px 5px rgba(158, 156, 156, 0.4),
                   inset -2px -2px 5px rgba(119, 119, 119, 0.6)
                 `,
-                fontWeight: 'bold',
-                transition: 'all 0.2s ease-in-out',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = `
+                  fontWeight: 'bold',
+                  transition: 'all 0.2s ease-in-out',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = `
                   4px 4px 8px rgba(0,0,0,0.5),
                   inset -2px -2px 5px rgba(202, 202, 202, 0.6)
                 `;
-                e.currentTarget.style.backgroundColor = '#e4e4e4ff';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = `
+                  e.currentTarget.style.backgroundColor = '#e4e4e4ff';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = `
                   2px 2px 5px rgba(158, 156, 156, 0.4),
                   inset -2px -2px 5px rgba(119, 119, 119, 0.6),
                   `;
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-            >
-              <span>₹{a.amount} ({formatDate(a.date)})</span>
-              <button
-                onClick={() => handlePrintPayment(v, a)}
-                style={{
-                  marginLeft: '10px',
-                  background: '#b52e2e',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  padding: '2px 12px',
-                  boxShadow: '1px 1px 3px rgba(0,0,0,0.3)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
+                  e.currentTarget.style.backgroundColor = 'transparent';
                 }}
-                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
               >
-                Print
-              </button>
-            </span>
+                <span>₹{a.amount} ({formatDate(a.date)})</span>
+                <button
+                  onClick={() => handlePrintPayment(v, a)}
+                  style={{
+                    marginLeft: '10px',
+                    background: '#b52e2e',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    padding: '2px 12px',
+                    boxShadow: '1px 1px 3px rgba(0,0,0,0.3)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  Print
+                </button>
+              </span>
 
-          ))}
-        </div>
-      </td>
+            ))}
+          </div>
+        </td>
+      )}
 
       <td><strong>₹{advanceTotal}</strong></td>
       <td style={{ backgroundColor: '#f80000c1' }}><strong>₹{remaining}</strong></td>
@@ -930,67 +954,72 @@ function BookingRow({ v, idx, filteredCount, convertTo12Hour, getAdvanceTotal, g
         )}
       </td>
 
-      <td><button style={{ backgroundColor: 'green' }} onClick={() => handleAddAmountClick(v)}>Add Amount</button></td>
+      {(v.userEmail === currentUserEmail) && (
+        <td><button style={{ backgroundColor: 'green' }} onClick={() => handleAddAmountClick(v)}>Add Amount</button></td>
+      )}
 
-      <td style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", padding: "11px 8px" }}>
-        <div ref={printRef} style={{ display: "none" }}>{getPrintFormat(v, showRates)}</div>
+      {(v.userEmail === currentUserEmail) && (
+        <td style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", padding: "11px 8px" }}>
+          <div ref={printRef} style={{ display: "none" }}>{getPrintFormat(v, showRates)}</div>
 
-        <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
-          <div onClick={() => setShowRates(!showRates)} style={{ width: "50px", height: "24px", borderRadius: "20px", background: showRates ? "#4caf50" : "#ccc", position: "relative", cursor: "pointer", transition: "background 0.3s" }}>
-            <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#fff", position: "absolute", top: "2px", left: showRates ? "26px" : "2px", transition: "left 0.3s", boxShadow: "0 2px 5px rgba(0,0,0,0.2)" }}></div>
-          </div>
-          <span style={{ fontWeight: "bold" }}>{!showRates ? <span style={{ color: "red", textDecoration: "line-through" }}>R&T</span> : <span style={{ color: "green" }}>R&T</span>}</span>
-        </label>
+          <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+            <div onClick={() => setShowRates(!showRates)} style={{ width: "50px", height: "24px", borderRadius: "20px", background: showRates ? "#4caf50" : "#ccc", position: "relative", cursor: "pointer", transition: "background 0.3s" }}>
+              <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#fff", position: "absolute", top: "2px", left: showRates ? "26px" : "2px", transition: "left 0.3s", boxShadow: "0 2px 5px rgba(0,0,0,0.2)" }}></div>
+            </div>
+            <span style={{ fontWeight: "bold" }}>{!showRates ? <span style={{ color: "red", textDecoration: "line-through" }}>R&T</span> : <span style={{ color: "green" }}>R&T</span>}</span>
+          </label>
 
-        <button onClick={() => {
-          if (!printRef.current) return;
-          const iframe = document.createElement("iframe");
-          iframe.style.display = "none";
-          document.body.appendChild(iframe);
-          const doc = iframe.contentWindow.document;
-          doc.open();
-          doc.write(printRef.current.innerHTML);
-          doc.close();
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
-        }} style={{ backgroundColor: "#51bc36ff", color: "white", border: "none", borderRadius: "5px", cursor: "pointer", marginRight: "10px" }}>🖨</button>
-      </td>
+          <button onClick={() => {
+            if (!printRef.current) return;
+            const iframe = document.createElement("iframe");
+            iframe.style.display = "none";
+            document.body.appendChild(iframe);
+            const doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write(printRef.current.innerHTML);
+            doc.close();
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+          }} style={{ backgroundColor: "#51bc36ff", color: "white", border: "none", borderRadius: "5px", cursor: "pointer", marginRight: "10px" }}>🖨</button>
+        </td>
+      )}
 
-      <td>
-        {!v.dropReason && <button onClick={() => navigate("/Decoration", { state: { decorationData: v } })} style={{ backgroundColor: v.source === 'decoration' ? '#4CAF50' : '#2196F3', color: 'white', padding: '6px 10px', borderRadius: '6px' }}>{v.source === 'decoration' ? '✏️Update' : '📘 Book'}</button>}
+      {(v.userEmail === currentUserEmail) && (
+        <td>
+          {!v.dropReason && <button onClick={() => navigate("/Decoration", { state: { decorationData: v } })} style={{ backgroundColor: v.source === 'decoration' ? '#4CAF50' : '#2196F3', color: 'white', padding: '6px 10px', borderRadius: '6px' }}>{v.source === 'decoration' ? '✏️Update' : '📘 Book'}</button>}
 
-        {v.dropReason ? (
-          <span style={{ color: 'red', fontWeight: 'bold' }}>Dropped: {v.dropReason}</span>
-        ) : (
-          <button
-            style={{ backgroundColor: '#f44336', color: 'white', padding: '6px 10px', borderRadius: '6px', marginLeft: '5px' }}
-            onClick={async () => {
-              const reason = prompt("Enter drop reason:");
-              if (!reason) return;
+          {v.dropReason ? (
+            <span style={{ color: 'red', fontWeight: 'bold' }}>Dropped: {v.dropReason}</span>
+          ) : (
+            <button
+              style={{ backgroundColor: '#f44336', color: 'white', padding: '6px 10px', borderRadius: '6px', marginLeft: '5px' }}
+              onClick={async () => {
+                const reason = prompt("Enter drop reason:");
+                if (!reason) return;
 
-              try {
-                const monthDocRef = doc(db, "decoration", v.monthYear);
-                await updateDoc(monthDocRef, {
-                  [`${v.id}.dropReason`]: reason
-                });
-                // alert("decoration marked as dropped ✅");
-              } catch (err) {
-                console.error("❌ Error saving drop reason:", err);
-                alert("Failed to mark decoration as dropped ❌");
-              }
-            }}
-          >
-            ⛔ Drop
-          </button>
-        )}
-      </td>
+                try {
+                  const monthDocRef = doc(db, "decoration", v.monthYear);
+                  await updateDoc(monthDocRef, {
+                    [`${v.id}.dropReason`]: reason
+                  });
+                  // alert("decoration marked as dropped ✅");
+                } catch (err) {
+                  console.error("❌ Error saving drop reason:", err);
+                  alert("Failed to mark decoration as dropped ❌");
+                }
+              }}
+            >
+              ⛔ Drop
+            </button>
+          )}
+        </td>
+      )}
 
       <DecorationLogPopupCell decoration={v} />
 
       <td>{v.note || ''}</td>
       <td>{avgRoyaltyPercent > 0 ? `${avgRoyaltyPercent}%` : ''}</td>
       <td>{totalRoyalty > 0 ? `₹${totalRoyalty}` : ''}</td>
-      <td>Approval From Admin</td>
       <td>{royaltyPayments.map(p => {
         const date = new Date(p.receiptDate);
         const formattedDate = `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`;
