@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { collection, doc, updateDoc, onSnapshot, setDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import '../../styles/BookingLeadsTable.css';
@@ -21,6 +21,8 @@ const BookingLeadsTable = () => {
     const [toDate, setToDate] = useState('');
     const [availableFY, setAvailableFY] = useState([]);
     const [financialYear, setFinancialYear] = useState('');
+    const hasPrinted = useRef(false);
+    const hasSentWhatsApp = useRef(false);
 
     const moveLeadToDrop = (leadId, removeOriginal = false, reason = '', monthYear) => {
         try {
@@ -69,17 +71,6 @@ const BookingLeadsTable = () => {
             console.error("Error moving lead to pastEnquiry:", error);
         }
     };
-
-    useEffect(() => {
-        const trigger = location.state?.triggerPrint;
-        const storedLead = localStorage.getItem('leadToPrint');
-
-        if (trigger && storedLead) {
-            setTimeout(() => {
-                localStorage.removeItem('leadToPrint');
-            }, 300);
-        }
-    }, [location.state]);
 
     useEffect(() => {
         // Reference to the "bookingLeads" collection
@@ -281,7 +272,7 @@ const BookingLeadsTable = () => {
         setFilteredLeads(filtered);
     }, [searchTerm, leads]);
 
-    const handlePrint = (lead) => {
+    const handlePrint = useCallback((lead) => {
         const amenitiesList = (lead.bookingAmenities || [])
             .map(item => `<li style="padding-left:40px">☑ ${item}</li>`)
             .join("");
@@ -589,8 +580,64 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
 
         // cleanup
         setTimeout(() => document.body.removeChild(iframe), 1000);
+    }, []);
 
-    };
+    useEffect(() => {
+        if (location.state?.triggerPrint && !hasPrinted.current) {
+            const savedLead = localStorage.getItem("leadToPrint");
+
+            if (savedLead) {
+                const lead = JSON.parse(savedLead);
+                handlePrint(lead); // print immediately
+                hasPrinted.current = true; // mark as printed
+            }
+
+            window.history.replaceState({}, document.title);
+        }
+    }, [location.state, handlePrint]);
+
+    const handleWhatsApp = useCallback((lead) => {
+        if (!lead || !lead.mobile1) {
+            alert("No mobile number found for WhatsApp!");
+            return;
+        }
+
+        const amenitiesList = (lead.bookingAmenities || []).join(", ");
+        const selectedMenus = (lead.menuSummaries || []).map(m => `${m.menuName}: ₹${m.menuTotal}`).join("\n");
+        const hallCharges = lead.hallCharges ? `Venue Charges: ₹${lead.hallCharges}` : "";
+        const gst = lead.gstBase && Number(lead.gstBase) > 0 ? `GST: ₹${lead.gstAmount}` : "";
+        const mealsText = lead.meals ? "Meals selected" : "";
+
+        // Construct message text (URL-encoded)
+        const message = encodeURIComponent(`
+Booking Estimate for ${lead.prefix || ""} ${lead.name || ""}:
+${hallCharges}
+${selectedMenus ? "Menu Selection:\n" + selectedMenus : ""}
+${mealsText ? mealsText : ""}
+Amenities: ${amenitiesList}
+${gst ? gst : ""}
+Grand Total: ₹${lead.grandTotal || 0}
+    `);
+
+        // Mobile number (without spaces or symbols)
+        const mobile = lead.mobile1.replace(/\D/g, "");
+        const whatsappURL = `https://wa.me/${mobile}?text=${message}`;
+
+        window.open(whatsappURL, "_blank");
+    }, []);
+
+    // ✅ Auto-send WhatsApp if trigger in location.state
+    useEffect(() => {
+        if (location.state?.triggerWhatsApp && !hasSentWhatsApp.current) {
+            const savedLead = localStorage.getItem("leadToPrint"); // same storage
+            if (savedLead) {
+                const lead = JSON.parse(savedLead);
+                handleWhatsApp(lead);
+                hasSentWhatsApp.current = true; // prevent repeat
+            }
+            window.history.replaceState({}, document.title);
+        }
+    }, [location.state, handleWhatsApp]);
 
     const handleWinFilter = (range) => {
         let [min, max] = range; // e.g., [0, 25]
@@ -1511,6 +1558,7 @@ ${Number(menuData.qty || 0).toLocaleString('en-IN')}
                                 startEdit={startEdit}
                                 moveLeadToDrop={moveLeadToDrop}
                                 handlePrint={handlePrint} />
+                                
                         </table>
                     </div>
                 </div>
