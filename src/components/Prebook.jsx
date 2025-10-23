@@ -214,7 +214,7 @@ const Prebook = () => {
                   <ServiceBox
                     label="Past Records"
                     onClick={() => navigate('/PastLeadsTabContainer')}
-                    icon="🗂️"
+                    icon="🗑️"
                   />
                 )}
 
@@ -263,7 +263,6 @@ const Prebook = () => {
             <div className="service-section">
               <h3 className="service-section-text">Vendor</h3>
               <div className="service-grid">
-                {hasAccess("Vendor", "Profile") && <ServiceBox label="Profile" onClick={() => navigate('/VendorProfile')} icon="🧑‍💼" />}
                 {hasAccess("Vendor", "Form") && <ServiceBox label="Form" onClick={() => navigate('/VendorOtherForm')} icon="📝" />}
                 {hasAccess("Vendor", "UpComings") && <ServiceBox label="UpComings" onClick={() => navigate('/VendorTable')} icon="🪩" />}
                 {hasAccess("Vendor", "Booked") && <ServiceBox label="Booked" onClick={() => navigate('/VendorBookedTable')} icon="🗂️" />}
@@ -295,7 +294,6 @@ const Prebook = () => {
             <div className="service-section">
               <h3 className="service-section-text">Decoration</h3>
               <div className="service-grid">
-                {hasAccess("Decoration", "Profile") && <ServiceBox label="Profile" onClick={() => navigate('/DecorationProfile')} icon="👤" />}
                 {hasAccess("Decoration", "Form") && <ServiceBox label="Form" onClick={() => navigate('/DecorationOtherForm')} icon="📝" />}
                 {hasAccess("Decoration", "UpComings") && <ServiceBox label="UpComings" onClick={() => navigate('/DecorationTable')} icon="🌸" />}
                 {hasAccess("Decoration", "Booked") && <ServiceBox label="Booked" onClick={() => navigate('/DecorationBookedTable')} icon="🗂️" />}

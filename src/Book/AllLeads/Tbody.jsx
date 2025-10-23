@@ -24,8 +24,8 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, moveLeadToDrop,
     };
 
     const canEdit = (leadId) => {
-        if (userPermissions.accessToApp === "A") {
-            return true; // Full access
+        if (["A", "D"].includes(userPermissions.accessToApp)) {
+            return true;
         }
 
         return (
@@ -1260,8 +1260,5 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, moveLeadToDrop,
         </>
     );
 };
-
-
-
 
 export default Tbody;

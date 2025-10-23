@@ -59,6 +59,7 @@ const PastLeadsTabContainer = () => {
   // Check access helper
   const hasAccess = useCallback(
     (recordType) => {
+      if (userAppType === "A") return true; 
       if (!userAppType || !panelAccess) return false;
       const arr = panelAccess[recordType] || [];
       return arr.some(a => a.toString().trim() === userAppType.toString().trim());

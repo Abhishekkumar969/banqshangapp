@@ -45,6 +45,8 @@ const LeadsTabContainer = () => {
 
     const hasAccess = useCallback(
         (recordType) => {
+            if (userAppType === "A") return true; // Full access
+
             if (!userAppType || !panelAccess) return false;
             const arr = panelAccess[recordType] || [];
             return arr.includes(userAppType);
@@ -53,21 +55,26 @@ const LeadsTabContainer = () => {
     );
 
     useEffect(() => {
-        if (!loading) {
+        if (!loading && panelAccess && userAppType) {
             const accessibleTabs = [];
-            if (hasAccess("Enquiry Record")) accessibleTabs.push("EnquiryDetails");
+
+            // Prioritize Leads and Bookings
             if (hasAccess("Lead Record")) accessibleTabs.push("booking");
             if (hasAccess("Book Record")) accessibleTabs.push("all");
+            if (hasAccess("Enquiry Record")) accessibleTabs.push("EnquiryDetails"); // last
 
             let defaultTab = null;
-            if (tabFromURL === "enquiry" && accessibleTabs.includes("EnquiryDetails")) defaultTab = "EnquiryDetails";
-            else if (tabFromURL === "leads" && accessibleTabs.includes("booking")) defaultTab = "booking";
+
+            // Respect URL param only if allowed
+            if (tabFromURL === "leads" && accessibleTabs.includes("booking")) defaultTab = "booking";
             else if (tabFromURL === "bookings" && accessibleTabs.includes("all")) defaultTab = "all";
-            else defaultTab = accessibleTabs[0] || null;
+            else if (tabFromURL === "enquiry" && accessibleTabs.includes("EnquiryDetails")) defaultTab = "EnquiryDetails";
+            else if (accessibleTabs.length > 0) defaultTab = accessibleTabs[0]; // first accessible tab
+            else defaultTab = null; // no access
 
             setActiveTab(defaultTab);
         }
-    }, [tabFromURL, hasAccess, loading]);
+    }, [tabFromURL, hasAccess, loading, panelAccess, userAppType]);
 
     const renderActiveComponent = () => {
         switch (activeTab) {
