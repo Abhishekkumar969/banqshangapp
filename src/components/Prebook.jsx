@@ -3,82 +3,97 @@ import { useNavigate } from 'react-router-dom';
 import './Prebook.css';
 import { getAuth, signOut } from 'firebase/auth';
 import CalendarPopup from '../pages/CalendarPopup';
-import { doc, getDoc } from "firebase/firestore";
+import { doc, collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import DownloadPopup from '../pages/DownloadPopup'
 import BackButton from "../components/BackButton";
 import BottomNavigationBar from './BottomNavigationBar';
+import DailyReport from "./DailyReport";
 
 const bannerImages = ["/assets/1.jpeg", "/assets/2.jpeg", "/assets/3.jpeg", "/assets/4.jpeg",];
 
 const Prebook = () => {
   const navigate = useNavigate();
   const [showCalendar, setShowCalendar] = useState(false);
-  const [userAppType, setUserAppType] = useState(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [userName, setUserName] = useState('');
   const [showDownload, setShowDownload] = useState(false);
+  const [userAppType, setUserAppType] = useState(null);
+  const [userName, setUserName] = useState('');
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [vendor, setVendor] = useState(null);
   const [decoration, setDecoration] = useState(null);
+  const [panelAccess, setPanelAccess] = useState({});
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (user) {
-        try {
-          const userRef = doc(db, 'usersAccess', user.email);
-          const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
-            const data = userSnap.data();
-            setUserAppType(data.accessToApp); // set the app type
-            if (data.accessToApp === "C") {
-              setVendor(data); // store the vendor data for app type C
-            }
-            if (data.accessToApp === "E") {
-              setDecoration(data); // store the vendor data for app type C
-            }
-          }
-        } catch (err) {
-          console.error("Error fetching user data:", err);
-        }
-      }
-    };
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user) return;
 
-    fetchUserData();
+    const userRef = doc(db, 'usersAccess', user.email);
+
+    // Listen to all user data at once
+    const unsubscribe = onSnapshot(
+      userRef,
+      (userSnap) => {
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+
+          // App type
+          setUserAppType(data.accessToApp);
+
+          // Name (fallback to email)
+          setUserName(data.name || user.email);
+
+          // Vendor / Decoration
+          setVendor(data.accessToApp === 'C' ? data : null);
+          setDecoration(data.accessToApp === 'E' ? data : null);
+        } else {
+          // Fallback if document doesn't exist
+          setUserName(user.email);
+          setUserAppType(null);
+          setVendor(null);
+          setDecoration(null);
+        }
+      },
+      (err) => console.error("Error listening to user data:", err)
+    );
+
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    const fetchUserName = async () => {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (user) {
-        try {
-          const userRef = doc(db, 'usersAccess', user.email);
-          const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
-            const data = userSnap.data();
-            // Agar usersAccess me name hai, use set karo, warna email
-            setUserName(data.name || user.email);
-          } else {
-            setUserName(user.email); // fallback
-          }
-        } catch (err) {
-          console.error("Error fetching user from usersAccess:", err);
-          setUserName(user.email);
-        }
-      }
-    };
+    const accessCollectionRef = collection(db, 'pannelAccess');
+    const unsubscribe = onSnapshot(
+      accessCollectionRef,
+      (accessSnap) => {
+        let allAccess = {};
+        accessSnap.forEach((docItem) => {
+          allAccess[docItem.id] = docItem.data();
+        });
+        setPanelAccess(allAccess);
+      },
+      (err) => console.error("Error listening to panel access:", err)
+    );
 
-    fetchUserName();
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % bannerImages.length);
-    }, 3000); // 3 second
+    }, 3500); // 3 seconds
+
     return () => clearInterval(interval);
   }, []);
+
+  const hasAccess = (section, item) => {
+    // Admin sees everything
+    if (userAppType === 'A') return true;
+
+    // For non-admins, check Firestore access
+    if (!userAppType || !panelAccess[section]) return false;
+    const allowed = panelAccess[section][item] || [];
+    return allowed.includes(userAppType);
+  };
 
   const auth = getAuth();
 
@@ -94,23 +109,29 @@ const Prebook = () => {
   };
 
   useEffect(() => {
-    const fetchUserAppType = async () => {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (user) {
-        try {
-          const userRef = doc(db, 'usersAccess', user.email);
-          const userSnap = await getDoc(userRef);
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (user) {
+      const userRef = doc(db, 'usersAccess', user.email);
+
+      // Listen for real-time updates to the user's document
+      const unsubscribe = onSnapshot(
+        userRef,
+        (userSnap) => {
           if (userSnap.exists()) {
             const data = userSnap.data();
             setUserAppType(data.accessToApp);
           }
-        } catch (err) {
-          console.error("Error fetching user app type:", err);
+        },
+        (err) => {
+          console.error("Error listening to user app type:", err);
         }
-      }
-    };
-    fetchUserAppType();
+      );
+
+      // Clean up listener on unmount
+      return () => unsubscribe();
+    }
   }, []);
 
   return (
@@ -162,81 +183,93 @@ const Prebook = () => {
 
         <div>
 
-          {/* BOOKINGS */}
-          {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
+          {/* Daily Report Section */}
+          {Object.keys(panelAccess.ReportSection || {}).some(item => hasAccess("ReportSection", item)) && (
             <>
-              {/* Booking Services */}
               <div className="service-section">
-                <h3 className="service-section-text">Bookings</h3>
-                <div className="service-grid">
-                  <ServiceBox label="Enquiry" onClick={() => navigate('/EnquiryForm')} icon="📨" />
-                  <ServiceBox label="Lead" onClick={() => navigate('/bookingLead')} icon="🚀" />
-                  <ServiceBox label="Book" onClick={() => navigate('/Booking')} icon="💒" />
-                  <ServiceBox label="Record" onClick={() => navigate('/leadstabcontainer')} icon="🗂️" />
-                  <ServiceBox label="Recycle Bin" onClick={() => navigate('/PastLeadsTabContainer')} icon="🗑️" />
-                </div>
+                <h3 className="service-section-text">Daily Report</h3>
+                {hasAccess("ReportSection", "Report") && <DailyReport />}
               </div>
             </>
+          )}
+
+          {/* BOOKINGS */}
+          {Object.keys(panelAccess.Bookings || {}).some(item => hasAccess("Bookings", item)) && (
+            <div className="service-section">
+              <h3 className="service-section-text">Bookings</h3>
+              <div className="service-grid">
+                {hasAccess("Bookings", "Enquiry") && <ServiceBox label="Enquiry" onClick={() => navigate('/EnquiryForm')} icon="📨" />}
+                {hasAccess("Bookings", "Lead") && <ServiceBox label="Lead" onClick={() => navigate('/bookingLead')} icon="🚀" />}
+                {hasAccess("Bookings", "Book") && <ServiceBox label="Book" onClick={() => navigate('/Booking')} icon="💒" />}
+
+                {(hasAccess("Bookings", "Lead Record") || hasAccess("Bookings", "Enquiry Record") || hasAccess("Bookings", "Book Record")) && (
+                  <ServiceBox
+                    label="Record"
+                    onClick={() => navigate('/leadstabcontainer')}
+                    icon="🗂️"
+                  />
+                )}
+
+                {(hasAccess("Bookings", "Past Enquiry") || hasAccess("Bookings", "Dropped Leads") || hasAccess("Bookings", "Cancelled Bookings")) && (
+                  <ServiceBox
+                    label="Past Records"
+                    onClick={() => navigate('/PastLeadsTabContainer')}
+                    icon="🗂️"
+                  />
+                )}
+
+              </div>
+            </div>
           )}
 
           {/* RECEIPTS */}
-          {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
-            <>
-              {/* Money Receipt */}
-              <div className="service-section">
-                <h3 className="service-section-text">Receipts</h3>
-                <div className="service-grid">
-                  <ServiceBox label="Receipt" onClick={() => navigate('/MoneyReceipt')} icon="🧾" />
-                  <ServiceBox label="Voucher" onClick={() => navigate('/Receipts')} icon="🎟️" />
-                  <ServiceBox label="Record" onClick={() => navigate('/MoneyReceipts')} icon="📚" />
-                  <ServiceBox label="Approve" onClick={() => navigate('/ApprovalPage')} icon="✅" />
-                </div>
+          {Object.keys(panelAccess.Receipts || {}).some(item => hasAccess("Receipts", item)) && (
+            <div className="service-section">
+              <h3 className="service-section-text">Receipts</h3>
+              <div className="service-grid">
+                {hasAccess("Receipts", "Receipt") && <ServiceBox label="Receipt" onClick={() => navigate('/MoneyReceipt')} icon="🧾" />}
+                {hasAccess("Receipts", "Voucher") && <ServiceBox label="Voucher" onClick={() => navigate('/Receipts')} icon="🎟️" />}
+                {hasAccess("Receipts", "Record") && <ServiceBox label="Record" onClick={() => navigate('/MoneyReceipts')} icon="📚" />}
+                {hasAccess("Receipts", "Approve") && <ServiceBox label="Approve" onClick={() => navigate('/ApprovalPage')} icon="✅" />}
               </div>
-            </>
+            </div>
           )}
 
           {/* ACCOUNTANT */}
-          {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
-            <>
-              {/* Vendor Section */}
-              <div className="service-section">
-                <h3 className="service-section-text">Accountant</h3>
-                <div className="service-grid">
-                  <ServiceBox label="Cashflow" onClick={() => navigate('/AccountantForm')} icon="💸" />
-                  <ServiceBox label="Record" onClick={() => navigate('/Accountant')} icon="📇" />
-                </div>
+          {Object.keys(panelAccess.Accountant || {}).some(item => hasAccess("Accountant", item)) && (
+            <div className="service-section">
+              <h3 className="service-section-text">Accountant</h3>
+              <div className="service-grid">
+                {hasAccess("Accountant", "Cashflow") && <ServiceBox label="Cashflow" onClick={() => navigate('/AccountantForm')} icon="💸" />}
+                {hasAccess("Accountant", "Record") && <ServiceBox label="Record" onClick={() => navigate('/Accountant')} icon="📇" />}
               </div>
-            </>
+            </div>
           )}
 
           {/* UTILITIES */}
-          {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
-            <>
-              {/* Utilities */}
-              <div className="service-section">
-                <h3 className="service-section-text">Utilities</h3>
-                <div className="service-grid">
-                  {/* <ServiceBox label="Profile" onClick={() => navigate('/AdminProfile')} icon="👤" /> */}
-                  <ServiceBox label="Menu" onClick={() => navigate('/MenuItems')} icon="🍽" />
-                  <ServiceBox label="Dates" onClick={() => setShowCalendar(true)} icon="📅" />
-                  <ServiceBox label="GST" onClick={() => navigate('/GSTSummary')} icon="💹" />
-                </div>
+          {Object.keys(panelAccess.Utilities || {}).some(item => hasAccess("Utilities", item)) && (
+            <div className="service-section">
+              <h3 className="service-section-text">Utilities</h3>
+              <div className="service-grid">
+                {hasAccess("Utilities", "Menu") && <ServiceBox label="Menu" onClick={() => navigate('/MenuItems')} icon="🍽" />}
+                {hasAccess("Utilities", "Dates") && <ServiceBox label="Dates" onClick={() => setShowCalendar(true)} icon="📅" />}
+                {hasAccess("Utilities", "GST") && <ServiceBox label="GST" onClick={() => navigate('/GSTSummary')} icon="💹" />}
               </div>
-            </>
+            </div>
           )}
 
           {/* VENDOR */}
-          {(userAppType === 'A' || userAppType === 'D') && (
-            <>
-              <div className="service-section">
-                <h3 className="service-section-text">Vendor</h3>
-                <div className="service-grid">
-                  <ServiceBox label="UpComing" onClick={() => navigate('/VendorTable')} icon="🪩" />
-                  <ServiceBox label="Booked" onClick={() => navigate('/VendorBookedTable')} icon="🗂️" />
-                  <ServiceBox label="Dropped" onClick={() => navigate('/VendorDeoppedTable')} icon="🗑️" />
-                </div>
+          {Object.keys(panelAccess.Vendor || {}).some(item => hasAccess("Vendor", item)) && (
+            <div className="service-section">
+              <h3 className="service-section-text">Vendor</h3>
+              <div className="service-grid">
+                {hasAccess("Vendor", "Profile") && <ServiceBox label="Profile" onClick={() => navigate('/VendorProfile')} icon="🧑‍💼" />}
+                {hasAccess("Vendor", "Form") && <ServiceBox label="Form" onClick={() => navigate('/VendorOtherForm')} icon="📝" />}
+                {hasAccess("Vendor", "UpComings") && <ServiceBox label="UpComings" onClick={() => navigate('/VendorTable')} icon="🪩" />}
+                {hasAccess("Vendor", "Booked") && <ServiceBox label="Booked" onClick={() => navigate('/VendorBookedTable')} icon="🗂️" />}
+                {hasAccess("Vendor", "Dropped") && <ServiceBox label="Dropped" onClick={() => navigate('/VendorDeoppedTable')} icon="🗑️" />}
               </div>
-            </>
+            </div>
           )}
 
           {/* VENDOR */}
@@ -258,17 +291,17 @@ const Prebook = () => {
           )}
 
           {/* DECORATION */}
-          {(userAppType === 'A' || userAppType === 'D') && (
-            <>
-              <div className="service-section">
-                <h3 className="service-section-text">Decoration</h3>
-                <div className="service-grid">
-                  <ServiceBox label="UpComings" onClick={() => navigate('/DecorationTable')} icon="🌸" />
-                  <ServiceBox label="Booked" onClick={() => navigate('/DecorationBookedTable')} icon="🗂️" />
-                  <ServiceBox label="Dropped" onClick={() => navigate('/DecorationDeoppedTable')} icon="🗑️" />
-                </div>
+          {Object.keys(panelAccess.Decoration || {}).some(item => hasAccess("Decoration", item)) && (
+            <div className="service-section">
+              <h3 className="service-section-text">Decoration</h3>
+              <div className="service-grid">
+                {hasAccess("Decoration", "Profile") && <ServiceBox label="Profile" onClick={() => navigate('/DecorationProfile')} icon="👤" />}
+                {hasAccess("Decoration", "Form") && <ServiceBox label="Form" onClick={() => navigate('/DecorationOtherForm')} icon="📝" />}
+                {hasAccess("Decoration", "UpComings") && <ServiceBox label="UpComings" onClick={() => navigate('/DecorationTable')} icon="🌸" />}
+                {hasAccess("Decoration", "Booked") && <ServiceBox label="Booked" onClick={() => navigate('/DecorationBookedTable')} icon="🗂️" />}
+                {hasAccess("Decoration", "Dropped") && <ServiceBox label="Dropped" onClick={() => navigate('/DecorationDeoppedTable')} icon="🗑️" />}
               </div>
-            </>
+            </div>
           )}
 
           {/* DECORATION */}
@@ -289,31 +322,27 @@ const Prebook = () => {
             </div>
           )}
 
-          {/* Catering */}
-          {(userAppType === 'A' || userAppType === 'D' || userAppType === 'B' || userAppType === 'F' || userAppType === 'G') && (
-            <>
-              <div className="service-section">
-                <h3 className="service-section-text">Catering</h3>
-                <div className="service-grid">
-                  <ServiceBox label="Assign" onClick={() => navigate('/CateringAssign')} icon="👨‍🍳" />
-                  <ServiceBox label="Records" onClick={() => navigate('/CateringAssigned')} icon="🗂️" />
-                </div>
+          {/* CATERING */}
+          {Object.keys(panelAccess.Catering || {}).some(item => hasAccess("Catering", item)) && (
+            <div className="service-section">
+              <h3 className="service-section-text">Catering</h3>
+              <div className="service-grid">
+                {hasAccess("Catering", "Assign") && <ServiceBox label="Assign" onClick={() => navigate('/CateringAssign')} icon="👨‍🍳" />}
+                {hasAccess("Catering", "Records") && <ServiceBox label="Records" onClick={() => navigate('/CateringAssigned')} icon="🗂️" />}
               </div>
-            </>
+            </div>
           )}
 
-          {/* Settings Sections */}
-          {(userAppType === 'A' || userAppType === 'D') && (
-            <>
-              <div className="service-section" >
-                <h3 className="service-section-text">Settings</h3>
-                <div className="service-grid">
-                  <ServiceBox label="Business" onClick={() => navigate('/StatsPage')} icon="📈" />
-                  <ServiceBox label="Access" onClick={() => navigate('/UserAccessPanel')} icon="🔐" />
-                  <ServiceBox label="Save & BackUp" onClick={() => setShowDownload(true)} icon="📇" />
-                </div>
+          {/* SETTINGS */}
+          {Object.keys(panelAccess.Settings || {}).some(item => hasAccess("Settings", item)) && (
+            <div className="service-section">
+              <h3 className="service-section-text">Settings</h3>
+              <div className="service-grid">
+                {hasAccess("Settings", "Business") && <ServiceBox label="Business" onClick={() => navigate('/StatsPage')} icon="📈" />}
+                {hasAccess("Settings", "Access") && <ServiceBox label="Access" onClick={() => navigate('/UserAccessPanel')} icon="🔐" />}
+                {hasAccess("Settings", "SaveBackup") && <ServiceBox label="Save & BackUp" onClick={() => setShowDownload(true)} icon="📇" />}
               </div>
-            </>
+            </div>
           )}
 
           <div style={{ marginBottom: "70px" }}></div>
