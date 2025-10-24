@@ -231,7 +231,7 @@ select:focus {
     select {
         width: 100%;
         font-size: 15px;
-        padding: 1px 14px;
+        padding: 7px 14px;
     }
 
     .receipt-box {

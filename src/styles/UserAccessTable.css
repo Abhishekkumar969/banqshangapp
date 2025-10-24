@@ -6,7 +6,7 @@
     gap: 40px;
     padding: 24px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f1f5f9;
+    background-color: #d6e7f8;
     min-height: 100vh;
 }
 
@@ -95,7 +95,8 @@
 }
 
 .button.enable:hover {
-    background-color: #b2f0b2;
+        box-shadow: 1px 1px 5px black;
+
 }
 
 .button.disable {
@@ -135,21 +136,20 @@
 }
 
 .button.edit-enabled {
-    background-color: #28a745;
     color: white;
 }
 
 .button.edit-enabled:hover {
-    background-color: #218838;
+    box-shadow: 1px 1px 5px black;
+
 }
 
 .button.edit-data {
-    background-color: #6c757d;
     color: white;
 }
 
 .button.edit-data:hover {
-    background-color: #5a6268;
+    box-shadow: 1px 1px 5px black;
 }
 
 
@@ -356,7 +356,7 @@
 
 .assign-title {
     margin-bottom: 10px;
-    font-size: 18px;
+    font-size: 25px;
     font-weight: 600;
 }
 
@@ -451,7 +451,7 @@
 /* Responsive */
 @media (max-width: 768px) {
     .assign-title {
-        font-size: 16px;
+        font-size: 23px;
     }
 
     .assign-table th,

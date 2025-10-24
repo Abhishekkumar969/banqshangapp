@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, getDocs, deleteDoc, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, updateDoc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import '../styles/UserAccessTable.css';
 import BackButton from "../components/BackButton";
@@ -12,6 +12,8 @@ Modal.setAppElement('#root');
 
 const UserAccessPanel = () => {
     const navigate = useNavigate();
+
+    // 🔹 State definitions
     const [approvedUsers, setApprovedUsers] = useState([]);
     const [accessRequests, setAccessRequests] = useState([]);
     const [loadingUsers, setLoadingUsers] = useState(true);
@@ -27,43 +29,109 @@ const UserAccessPanel = () => {
     const [showLockerAssign, setShowLockerAssign] = useState(false);
     const [selectedLockerUsers, setSelectedLockerUsers] = useState([]);
     const [userAppType, setUserAppType] = useState(null);
-
-    // State
     const [showAddBankModal, setShowAddBankModal] = useState(false);
-    const [bankNames, setBankNames] = useState([""]); // Start with one input
+    const [bankNames, setBankNames] = useState([""]);
 
+    // 🔹 Portal Access States
+    const [showAccessModal, setShowAccessModal] = useState(false);
+    const [selectedSection, setSelectedSection] = useState("");
+    const [selectedItem, setSelectedItem] = useState("");
+    const [selectedAccess, setSelectedAccess] = useState([]);
+    const [allAccess, setAllAccess] = useState([]);
+    const [accessCounts, setAccessCounts] = useState({});
+
+    /** ----------------------------------------------------------------
+     * 🔹 COMBINED INITIAL FETCH: bank names, users, app type, panel counts
+     * ---------------------------------------------------------------- */
     useEffect(() => {
-        const fetchBankNames = async () => {
-            try {
-                const bankDoc = await getDoc(doc(db, "accountant", "BankNames"));
-                if (bankDoc.exists()) {
-                    setBankNames(bankDoc.data().banks || []);
-                } else {
-                    console.log("No bank names found!");
+        const auth = getAuth();
+        const user = auth.currentUser;
+
+        // --- Live subscriptions array for cleanup ---
+        const unsubscribers = [];
+
+        try {
+            /** 🔸 1. Listen to accountant documents (BankNames, AssignBank, AssignLocker) */
+            const accountantRefs = [
+                doc(db, "accountant", "BankNames"),
+                doc(db, "accountant", "AssignBank"),
+                doc(db, "accountant", "AssignLocker"),
+            ];
+
+            accountantRefs.forEach((ref, index) => {
+                const unsub = onSnapshot(ref, (snap) => {
+                    if (!snap.exists()) return;
+                    const data = snap.data();
+                    if (index === 0) setBankNames(data.banks || []);
+                    if (index === 1) setSelectedBankUsers(data.users || []);
+                    if (index === 2) setSelectedLockerUsers(data.users || []);
+                });
+                unsubscribers.push(unsub);
+            });
+
+            /** 🔸 2. Listen to all usersAccess (auto-updates approved + allAccess + userAppType) */
+            const unsubUsers = onSnapshot(collection(db, "usersAccess"), (snap) => {
+                const allUsers = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+                const nonAdminUsers = allUsers.filter((u) => u.accessToApp !== "A");
+
+                setUsers(nonAdminUsers);
+                setApprovedUsers(nonAdminUsers.filter((u) => u.accessToApp && u.accessToApp !== "A"));
+                setLoadingUsers(false);
+
+                // Current logged-in user’s app type
+                if (user) {
+                    const currentUser = allUsers.find((u) => u.id === user.email);
+                    if (currentUser) setUserAppType(currentUser.accessToApp);
                 }
-            } catch (err) {
-                console.error("Error fetching bank names:", err);
-            }
-        };
-        fetchBankNames();
+
+                // Unique accessToApp values
+                const accessArr = allUsers
+                    .map((u) => u.accessToApp || [])
+                    .flat()
+                    .filter(Boolean);
+                setAllAccess([...new Set(accessArr)]);
+            });
+            unsubscribers.push(unsubUsers);
+
+            /** 🔸 3. Listen to pending access requests */
+            const unsubRequests = onSnapshot(collection(db, "accessRequests"), (snap) => {
+                const requestsData = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+                setAccessRequests(requestsData);
+                setLoadingRequests(false);
+            });
+            unsubscribers.push(unsubRequests);
+
+            /** 🔸 4. Listen to panelAccess for live access counts */
+            const unsubPanel = onSnapshot(collection(db, "pannelAccess"), (snap) => {
+                const counts = {};
+                snap.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    Object.entries(data).forEach(([key, value]) => {
+                        counts[`${docSnap.id}-${key}`] = Array.isArray(value) ? value.length : 0;
+                    });
+                });
+                setAccessCounts(counts);
+            });
+            unsubscribers.push(unsubPanel);
+        } catch (err) {
+            console.error("❌ Real-time subscription error:", err);
+        }
+
+        // 🔸 Cleanup: unsubscribe from all listeners on unmount
+        return () => unsubscribers.forEach((unsub) => unsub && unsub());
     }, []);
 
-    const handleAddBankClick = () => {
-        setShowAddBankModal(true); // just open modal, no reset
-    };
-
-    // Add / remove bank input
+    /** 🔹 Handle Add Bank Input Fields */
+    const handleAddBankClick = () => setShowAddBankModal(true);
     const addBankInput = () => setBankNames(prev => [...prev, ""]);
-    const updateBankName = (index, value) => setBankNames(prev => prev.map((b, i) => i === index ? value : b));
+    const updateBankName = (index, value) =>
+        setBankNames(prev => prev.map((b, i) => (i === index ? value : b)));
 
-    // Save banks to Firestore
+    /** 🔹 Save Banks to Firestore */
     const saveBanks = async () => {
         try {
-            const filteredBanks = bankNames.filter(b => b.trim() !== "");
-            if (filteredBanks.length === 0) {
-                alert("Add at least one bank name!");
-                return;
-            }
+            const filteredBanks = bankNames.filter(b => b.trim());
+            if (!filteredBanks.length) return alert("Add at least one bank name!");
             await setDoc(doc(db, "accountant", "BankNames"), {
                 banks: filteredBanks,
                 updatedAt: new Date().toISOString(),
@@ -72,87 +140,23 @@ const UserAccessPanel = () => {
             alert("✅ Banks saved!");
         } catch (err) {
             console.error(err);
-            alert("Error saving banks ❌");
+            alert("❌ Error saving banks");
         }
     };
 
-    useEffect(() => {
-        const fetchUserAppType = async () => {
-            const auth = getAuth();
-            const user = auth.currentUser;
-            if (user) {
-                try {
-                    const userRef = doc(db, 'usersAccess', user.email);
-                    const userSnap = await getDoc(userRef);
-                    if (userSnap.exists()) {
-                        const data = userSnap.data();
-                        setUserAppType(data.accessToApp);
-                    }
-                } catch (err) {
-                    console.error("Error fetching user app type:", err);
-                }
-            }
-        };
-        fetchUserAppType();
-    }, []);
-
-    const fetchData = async () => {
-        try {
-            const usersSnap = await getDocs(collection(db, "usersAccess"));
-            const allUsers = usersSnap.docs
-                .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
-                .filter(user => user.accessToApp !== "A");
-
-            setUsers(allUsers);
-
-        } catch (err) {
-            console.error("Error fetching data:", err);
-        }
-    };
-
-    useEffect(() => {
-        const fetchAssignedUsers = async () => {
-            try {
-                // Bank assignments
-                const bankSnap = await getDoc(doc(db, "accountant", "AssignBank"));
-                if (bankSnap.exists()) {
-                    setSelectedBankUsers(bankSnap.data().users || []);
-                }
-
-                // Locker assignments
-                const lockerSnap = await getDoc(doc(db, "accountant", "AssignLocker"));
-                if (lockerSnap.exists()) {
-                    setSelectedLockerUsers(lockerSnap.data().users || []);
-                }
-            } catch (err) {
-                console.error("Error fetching assigned users:", err);
-            }
-        };
-
-        fetchAssignedUsers();
-    }, []);
-
-    useEffect(() => {
-        fetchData();
-    }, []);
-
+    /** 🔹 Edit Permissions Popup + Save */
     const openEditPopup = async (user) => {
         setSelectedUser(user);
         setShowEditModal(true);
 
         const snapshot = await getDocs(collection(db, 'prebookings'));
-        let allPrebookings = [];
+        const allPrebookings = [];
 
         snapshot.forEach((docSnap) => {
             const monthId = docSnap.id;
             const monthData = docSnap.data();
-
             Object.entries(monthData).forEach(([bookingId, bookingData]) => {
-                allPrebookings.push({
-                    id: bookingId,
-                    monthId: monthId,
-                    ...bookingData
-                });
+                allPrebookings.push({ id: bookingId, monthId, ...bookingData });
             });
         });
 
@@ -164,37 +168,26 @@ const UserAccessPanel = () => {
         try {
             const userRef = doc(db, 'usersAccess', selectedUser.email);
 
-            if (selectedPrebookingIds.length > 0) {
-                // ✅ ENABLE: give access
-                await updateDoc(userRef, {
-                    editablePrebookings: selectedPrebookingIds,
-                    editData: "enable"
-                });
+            const now = new Date();
+            const minutes = selectedUser.editMinutes || 10;
 
-                setApprovedUsers(prev =>
-                    prev.map(user =>
-                        user.email === selectedUser.email
-                            ? { ...user, editablePrebookings: selectedPrebookingIds, editData: "enable" }
-                            : user
-                    )
-                );
-            } else {
-                // ❌ DISABLE: revoke access
-                await updateDoc(userRef, {
-                    editablePrebookings: [],
-                    editData: "disable"
-                });
+            // Set expiry timestamp in ISO format
+            const expiryTime = new Date(now.getTime() + minutes * 60 * 1000);
 
-                setApprovedUsers(prev =>
-                    prev.map(user =>
-                        user.email === selectedUser.email
-                            ? { ...user, editablePrebookings: [], editData: "disable" }
-                            : user
-                    )
-                );
-            }
+            await updateDoc(userRef, {
+                editablePrebookings: selectedPrebookingIds,
+                editData: "enable",
+                editExpiry: expiryTime.toISOString(), // <-- new field
+            });
 
-            // alert("✅ Edit permissions updated.");
+            setApprovedUsers(prev =>
+                prev.map(user =>
+                    user.email === selectedUser.email
+                        ? { ...user, editablePrebookings: selectedPrebookingIds, editData: "enable", editExpiry: expiryTime.toISOString() }
+                        : user
+                )
+            );
+
             setShowEditModal(false);
         } catch (err) {
             console.error(err);
@@ -203,37 +196,46 @@ const UserAccessPanel = () => {
     };
 
     useEffect(() => {
-        const fetchApprovedUsers = async () => {
-            setLoadingUsers(true);
-            const snapshot = await getDocs(collection(db, 'usersAccess'));
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setApprovedUsers(data.filter(user => user.accessToApp && user.accessToApp !== 'A'));
-            setLoadingUsers(false);
-        };
+        const interval = setInterval(async () => {
+            const now = new Date();
 
-        const fetchAccessRequests = async () => {
-            setLoadingRequests(true);
-            const snapshot = await getDocs(collection(db, 'accessRequests'));
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setAccessRequests(data);
-            setLoadingRequests(false);
-        };
+            approvedUsers.forEach(async (user) => {
+                if (user.editData === "enable" && user.editExpiry) {
+                    const expiry = new Date(user.editExpiry);
+                    if (now >= expiry) {
+                        // Time expired, disable access
+                        const userRef = doc(db, 'usersAccess', user.email);
+                        await updateDoc(userRef, {
+                            editablePrebookings: [],
+                            editData: "disable",
+                            editExpiry: null,
+                        });
 
-        fetchApprovedUsers();
-        fetchAccessRequests();
-    }, []);
+                        setApprovedUsers(prev =>
+                            prev.map(u =>
+                                u.email === user.email
+                                    ? { ...u, editablePrebookings: [], editData: "disable", editExpiry: null }
+                                    : u
+                            )
+                        );
+                    }
+                }
+            });
+        }, 10 * 60 * 1000); // 10 minutes
 
+        return () => clearInterval(interval);
+    }, [approvedUsers]);
+
+    /** 🔹 Toggle Access Enable/Disable */
     const toggleAccess = async (email, currentAccess) => {
         try {
             const newAccess = currentAccess === "enable" ? "disable" : "enable";
             await updateDoc(doc(db, "usersAccess", email), { access: newAccess });
-
             setApprovedUsers(prev =>
                 prev.map(u =>
                     u.email === email ? { ...u, access: newAccess } : u
                 )
             );
-            // alert(`🔁 Access ${newAccess === "enable" ? "enabled" : "disabled"} for ${email}`);
         } catch (err) {
             console.error(err);
             alert("Error toggling access.");
@@ -242,18 +244,28 @@ const UserAccessPanel = () => {
 
     const handleApprove = async (request) => {
         try {
+            // Get current UTC time
+            const now = new Date();
+
+            // Convert to IST (UTC + 5:30)
+            const istOffset = 5.5 * 60; // minutes
+            const istTime = new Date(now.getTime() + istOffset * 60 * 1000).toISOString();
+
+            // Save user access with IST timestamp
             await setDoc(doc(db, 'usersAccess', request.email), {
                 name: request.name,
                 email: request.email,
                 accessToApp: request.currentApp,
                 access: "enable",
                 editData: "disable",
-                approvedAt: new Date().toISOString()
+                approvedAt: istTime,
             });
 
+            // Delete request from accessRequests
             await deleteDoc(doc(db, 'accessRequests', request.email));
-            setAccessRequests(prev => prev.filter(r => r.email !== request.email));
 
+            // Update state
+            setAccessRequests(prev => prev.filter(r => r.email !== request.email));
             setApprovedUsers(prev => [
                 ...prev,
                 {
@@ -262,11 +274,9 @@ const UserAccessPanel = () => {
                     accessToApp: request.currentApp,
                     access: "enable",
                     editData: "disable",
-                    approvedAt: new Date().toISOString()
-                }
+                    approvedAt: istTime,
+                },
             ]);
-
-            // alert(`✅ Access granted to ${request.name}`);
         } catch (err) {
             console.error(err);
             alert("Error approving request.");
@@ -284,96 +294,49 @@ const UserAccessPanel = () => {
         }
     };
 
-    const accessMap = {
-        D: "Partner",
-        B: "Management",
-        F: "Accountant",
-        G: "User",
-        C: "Vendor",
-        E: "Decoration"
-    };
-
-    // Portal Access
-    const [showAccessModal, setShowAccessModal] = useState(false);
-    const [selectedSection, setSelectedSection] = useState(""); // e.g., "Bookings"
-    const [selectedItem, setSelectedItem] = useState(""); // e.g., "Enquiry"
-    const [selectedAccess, setSelectedAccess] = useState([]); // ["A", "B", ...]
-    const [allAccess, setAllAccess] = useState([]); // unique accessToApp
-    const [accessCounts, setAccessCounts] = useState({});
-
-    const UserAccessBtns = {
-        padding: "16px",
-        color: "white",
-        border: "none",
-        borderRadius: "6px",
-        cursor: "pointer",
-        fontWeight: "bold",
-        boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-        transition: "0.3s",
-        marginBottom: "10px",
-        marginRight: '10px'
-    };
-
-    // Fetch unique accessToApp values
-    useEffect(() => {
-        const fetchAllAccess = async () => {
-            const snap = await getDocs(collection(db, "usersAccess"));
-            const accessArr = snap.docs
-                .map(d => d.data().accessToApp || [])
-                .flat()
-                .filter(Boolean);
-            const uniqueAccess = Array.from(new Set(accessArr));
-            setAllAccess(uniqueAccess);
-        };
-        fetchAllAccess();
-    }, []);
-
-    // Open Modal and prefill selectedAccess
     const openAccessModal = async (section, item) => {
         setSelectedSection(section);
         setSelectedItem(item);
 
         const docRef = doc(db, "pannelAccess", section);
         const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            setSelectedAccess(docSnap.data()[item] || []);
-        } else {
-            setSelectedAccess([]);
-        }
-
+        setSelectedAccess(docSnap.exists() ? docSnap.data()[item] || [] : []);
         setShowAccessModal(true);
     };
 
-    // Fetch all panel access counts
-    useEffect(() => {
-        const fetchPanelAccessCounts = async () => {
-            const snap = await getDocs(collection(db, "pannelAccess"));
-            const counts = {};
+    const saveSelectedAccess = async () => {
+        try {
+            const docRef = doc(db, "pannelAccess", selectedSection);
+            const docSnap = await getDoc(docRef);
+            const currentData = docSnap.exists() ? docSnap.data() : {};
 
-            snap.forEach(docSnap => {
-                const data = docSnap.data();
-                Object.entries(data).forEach(([key, value]) => {
-                    counts[`${docSnap.id}-${key}`] = value.length; // "Bookings-Enquiry" => 3
-                });
-            });
+            await setDoc(
+                docRef,
+                { ...currentData, [selectedItem]: selectedAccess },
+                { merge: true }
+            );
 
-            setAccessCounts(counts);
-        };
-        fetchPanelAccessCounts();
-    }, []);
+            setAccessCounts(prev => ({
+                ...prev,
+                [`${selectedSection}-${selectedItem}`]: selectedAccess.length,
+            }));
 
+            setShowAccessModal(false);
+            setSelectedAccess([]);
+        } catch (err) {
+            console.error("Error saving access:", err);
+            alert("❌ Error saving access");
+        }
+    };
 
-    // Access Sections Mapping
     const getTextColor = (hex) => {
-        // Remove # and convert to RGB
         const c = hex.substring(1);
-        const rgb = parseInt(c, 16); // Convert to integer
+        const rgb = parseInt(c, 16);
         const r = (rgb >> 16) & 0xff;
         const g = (rgb >> 8) & 0xff;
         const b = rgb & 0xff;
-        // Calculate luminance
         const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-        return luminance > 180 ? "#000000" : "#ffffff"; // light bg → dark text, dark bg → light text
+        return luminance > 180 ? "#000000" : "#ffffff";
     };
 
     const accessSections = {
@@ -387,11 +350,9 @@ const UserAccessPanel = () => {
             { label: "🗂️ Enquiry Record", key: "Enquiry Record", color: "#ffb84d", textColor: getTextColor("#ffb84d") },
             { label: "🗂️ Lead Record", key: "Lead Record", color: "#ffe6b3", textColor: getTextColor("#ffe6b3") },
             { label: "🗂️ Book Record", key: "Book Record", color: "#fff2cc", textColor: getTextColor("#fff2cc") },
-
             { label: "🗑️ Past Enquiry", key: "Past Enquiry", color: "#fff9e6", textColor: getTextColor("#fff9e6") },
             { label: "🗑️ Dropped Leads", key: "Dropped Leads", color: "#fff9e6", textColor: getTextColor("#fff9e6") },
             { label: "🗑️ Cancelled Bookings", key: "Cancelled Bookings", color: "#fff9e6", textColor: getTextColor("#fff9e6") },
-
         ],
         Receipts: [
             { label: "🧾 Receipt", key: "Receipt", color: "#e33adb", textColor: getTextColor("#e33adb") },
@@ -429,36 +390,6 @@ const UserAccessPanel = () => {
         ],
     };
 
-
-    // Save selected access
-    const saveSelectedAccess = async () => {
-        try {
-            const docRef = doc(db, "pannelAccess", selectedSection);
-            const docSnap = await getDoc(docRef);
-            const currentData = docSnap.exists() ? docSnap.data() : {};
-
-            const updatedData = {
-                ...currentData,
-                [selectedItem]: selectedAccess
-            };
-
-            await setDoc(docRef, updatedData, { merge: true });
-
-            setAccessCounts(prev => ({
-                ...prev,
-                [`${selectedSection}-${selectedItem}`]: selectedAccess.length
-            }));
-
-            setShowAccessModal(false);
-            setSelectedAccess([]);
-            // alert("✅ Access saved!");
-        } catch (err) {
-            console.error("Error saving access:", err);
-            alert("❌ Error saving access");
-        }
-    };
-
-    // Map role codes to names
     const roleNames = {
         D: "🤝 Partner",
         B: "📊 Manager",
@@ -466,7 +397,20 @@ const UserAccessPanel = () => {
         F: "💰 Accountant",
         G: "👩‍💻 User",
         C: "📦 Vendor",
-        E: "🎉 Decoration"
+        E: "🎉 Decoration",
+    };
+
+    const UserAccessBtns = {
+        padding: "16px",
+        color: "white",
+        border: "none",
+        borderRadius: "6px",
+        cursor: "pointer",
+        fontWeight: "bold",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+        transition: "0.3s",
+        marginBottom: "10px",
+        marginRight: '10px'
     };
 
     return (
@@ -499,14 +443,17 @@ const UserAccessPanel = () => {
                                         <tr key={i}>
                                             <td>{r.name}</td>
                                             <td style={{ whiteSpace: 'nowrap' }}> {r.currentApp === "B" ? "Manager" : r.currentApp === "C" ? "Vendor" : r.currentApp === "D" ? "Partner" : r.currentApp === "E" ? "Decoration" : r.currentApp === "F" ? "Accountant" : r.currentApp === "G" ? "User" : r.currentApp === "H" ? "Enquiry Executive" : "Unknown"} </td>
+
                                             <td>
-                                                {new Date(r.requestedAt).toLocaleDateString()}{" "}
-                                                {new Date(r.requestedAt).toLocaleTimeString([], {
+                                                {new Date(r.requestedAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}{" "}
+                                                {new Date(r.requestedAt).toLocaleTimeString("en-IN", {
                                                     hour: "2-digit",
                                                     minute: "2-digit",
                                                     hour12: true,
+                                                    timeZone: "Asia/Kolkata",
                                                 })}
                                             </td>
+
                                             <td className="button-group">
                                                 <div>
                                                     <button
@@ -534,6 +481,7 @@ const UserAccessPanel = () => {
                     )}
                 </div>
 
+
                 {/* Approved Users */}
                 <div className="assign-container approved-users">
                     <h2 className="assign-title">✅ Approved Users</h2>
@@ -549,7 +497,8 @@ const UserAccessPanel = () => {
                                         <th>Name</th>
                                         <th>App Access</th>
                                         <th>Approved At</th>
-                                        <th>Edit Access</th>
+                                        <th>Booked Auto Edit</th>
+                                        <th>Booked Edit Access</th>
                                         <th>Actions</th>
                                         <th>Email</th>
                                     </tr>
@@ -558,48 +507,173 @@ const UserAccessPanel = () => {
                                     {approvedUsers.map((u, i) => (
                                         <tr key={i}>
                                             <td>{u.name}</td>
-                                            <td style={{ whiteSpace: 'nowrap' }}> {u.accessToApp === "B" ? "Manager" : u.accessToApp === "C" ? "Vendor" : u.accessToApp === "D" ? "Partner" : u.accessToApp === "E" ? "Decoration" : u.accessToApp === "F" ? "Accountant" : u.accessToApp === "G" ? "User" : u.accessToApp === "H" ? "Enquiry Executive" : "Unknown"} </td>
+
+                                            <td style={{ whiteSpace: 'nowrap' }}>
+                                                {u.accessToApp === "B"
+                                                    ? "Manager" : u.accessToApp === "C"
+                                                        ? "Vendor" : u.accessToApp === "D"
+                                                            ? "Partner" : u.accessToApp === "E"
+                                                                ? "Decoration" : u.accessToApp === "F"
+                                                                    ? "Accountant" : u.accessToApp === "G"
+                                                                        ? "User" : u.accessToApp === "H"
+                                                                            ? "Enquiry Executive"
+                                                                            : "Unknown"}
+                                            </td>
+
                                             <td>
-                                                {new Date(u.approvedAt).toLocaleDateString()}{" "}
-                                                {new Date(u.approvedAt).toLocaleTimeString([], {
+                                                {new Date(u.approvedAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}{" "}
+                                                {new Date(u.approvedAt).toLocaleTimeString("en-IN", {
                                                     hour: "2-digit",
                                                     minute: "2-digit",
                                                     hour12: true,
+                                                    timeZone: "Asia/Kolkata",
                                                 })}
                                             </td>
+
+
+
+
+                                            {/* 🔹 Always Edit Toggle Column */}
+                                            <td>
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "center",
+                                                        padding: "4px 0",
+
+
+                                                    }}
+                                                >
+                                                    <div
+                                                        onClick={async () => {
+                                                            try {
+                                                                const newStatus = u.alwayEdit === "On" ? "Off" : "On";
+                                                                const userRef = doc(db, "usersAccess", u.email);
+                                                                await updateDoc(userRef, { alwayEdit: newStatus });
+                                                                setApprovedUsers((prev) =>
+                                                                    prev.map((user) =>
+                                                                        user.email === u.email ? { ...user, alwayEdit: newStatus } : user
+                                                                    )
+                                                                );
+                                                            } catch (err) {
+                                                                console.error("Error updating always edit:", err);
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            position: "relative",
+                                                            width: "60px",
+                                                            height: "30px",
+                                                            backgroundColor: u.alwayEdit === "On" ? "#4CAF50" : "#ccc",
+                                                            borderRadius: "30px",
+                                                            cursor: "pointer",
+                                                            transition: "background-color 0.3s ease",
+                                                        }}
+                                                    >
+                                                        <div
+                                                            style={{
+                                                                position: "absolute",
+                                                                top: "3px",
+                                                                left: u.alwayEdit === "On" ? "32px" : "3px",
+                                                                width: "24px",
+                                                                height: "24px",
+                                                                backgroundColor: "#fff",
+                                                                borderRadius: "50%",
+                                                                transition: "left 0.3s ease",
+                                                                boxShadow: "0 0 3px rgba(0,0,0,0.3)",
+                                                            }}
+                                                        ></div>
+                                                        <span
+                                                            style={{
+                                                                position: "absolute",
+                                                                top: "50%",
+                                                                left: "8px",
+                                                                transform: "translateY(-50%)",
+                                                                fontSize: "10px",
+                                                                color: u.alwayEdit === "On" ? "transparent" : "#000",
+                                                                fontWeight: "bold",
+                                                                transition: "color 0.3s ease",
+                                                            }}
+                                                        >
+                                                            OFF
+                                                        </span>
+                                                        <span
+                                                            style={{
+                                                                position: "absolute",
+                                                                top: "50%",
+                                                                right: "8px",
+                                                                transform: "translateY(-50%)",
+                                                                fontSize: "10px",
+                                                                color: u.alwayEdit === "On" ? "#4CAF50" : "transparent",
+                                                                fontWeight: "bold",
+                                                                transition: "color 0.3s ease",
+                                                            }}
+                                                        >
+                                                            ON
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+
                                             <td>
                                                 {u.editData === "enable" ? (
-                                                    <button
+                                                    <button style={{ width: '100%' }}
                                                         className="button edit-enabled"
                                                         onClick={async () => {
-                                                            const userRef = doc(db, "usersAccess", u.email);
-                                                            await updateDoc(userRef, {
-                                                                editablePrebookings: [],
-                                                                editData: "disable",
-                                                            });
+                                                            try {
+                                                                const userRef = doc(db, "usersAccess", u.email);
 
-                                                            setApprovedUsers((prev) =>
-                                                                prev.map((user) =>
-                                                                    user.email === u.email
-                                                                        ? { ...user, editablePrebookings: [], editData: "disable" }
-                                                                        : user
-                                                                )
-                                                            );
+                                                                // Disable edit and clear expiry
+                                                                await updateDoc(userRef, {
+                                                                    editablePrebookings: [],
+                                                                    editData: "disable",
+                                                                    editExpiry: null, // <-- clear the expiry
+                                                                });
 
-                                                            alert(`🚫 Edit access disabled for ${u.name}`);
+                                                                setApprovedUsers((prev) =>
+                                                                    prev.map((user) =>
+                                                                        user.email === u.email
+                                                                            ? { ...user, editablePrebookings: [], editData: "disable", editExpiry: null }
+                                                                            : user
+                                                                    )
+                                                                );
+
+                                                                // alert(`🚫 Edit access disabled for ${u.name}`);
+                                                            } catch (err) {
+                                                                console.error(err);
+                                                                alert("Error disabling edit access.");
+                                                            }
                                                         }}
                                                     >
                                                         Editing Enabled
+
+                                                        {u.editExpiry && (
+                                                            <div style={{ marginTop: '5px', color: "red" }}>
+                                                                Edit Expiry:
+                                                                {new Date(u.editExpiry).toLocaleTimeString("en-IN", {
+                                                                    hour: "2-digit",
+                                                                    minute: "2-digit",
+                                                                    hour12: true,
+                                                                    timeZone: "Asia/Kolkata",
+                                                                })}
+                                                            </div>
+                                                        )}
+
                                                     </button>
                                                 ) : (
-                                                    <button
+                                                    <button style={{ width: '100%' }}
                                                         className="button edit-data"
                                                         onClick={() => openEditPopup(u)}
                                                     >
                                                         Grant Access
                                                     </button>
                                                 )}
+
+
                                             </td>
+
+
                                             <td>
                                                 <button
                                                     className={`button ${u.access === "enable" ? "enable" : "disable"}`}
@@ -661,55 +735,81 @@ const UserAccessPanel = () => {
                         }}
                     />
 
-                    {/* Select / Unselect Button */}
-                    <button
-                        style={{ marginBottom: "12px", padding: "6px 12px" }}
-                        onClick={() => {
-                            const filteredIds = prebookings
-                                .filter((p) => {
-                                    const name = p.name?.toLowerCase() || "";
-                                    const mobile1 = p.mobile1 || "";
-                                    const event = p.functionType?.toLowerCase() || "";
-                                    return (
-                                        name.includes(searchTerm) ||
-                                        event.includes(searchTerm) ||
-                                        mobile1.includes(searchTerm)
-                                    );
-                                })
-                                .map((p) => p.id);
 
-                            const allSelected = filteredIds.every((id) =>
-                                selectedPrebookingIds.includes(id)
-                            );
+                    <div style={{ marginBottom: "12px", display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'space-between' }}>
 
-                            setSelectedPrebookingIds((prev) =>
-                                allSelected
-                                    ? prev.filter((id) => !filteredIds.includes(id)) // unselect all filtered
-                                    : [...new Set([...prev, ...filteredIds])] // select all filtered
-                            );
-                        }}
-                    >
-                        {(() => {
-                            const filteredIds = prebookings
-                                .filter((p) => {
-                                    const name = p.name?.toLowerCase() || "";
-                                    const mobile1 = p.mobile1 || "";
-                                    const event = p.functionType?.toLowerCase() || "";
-                                    return (
-                                        name.includes(searchTerm) ||
-                                        event.includes(searchTerm) ||
-                                        mobile1.includes(searchTerm)
-                                    );
-                                })
-                                .map((p) => p.id);
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                            <label>
+                                <span> Timer: </span>
+                                <select
+                                    value={selectedUser?.editMinutes || 10} // default 10
+                                    onChange={(e) =>
+                                        setSelectedUser(prev => ({ ...prev, editMinutes: parseInt(e.target.value) }))
+                                    }
+                                    style={{ width: '80px', marginLeft: '5px', padding: '4px' }}
+                                >
+                                    {Array.from({ length: 15 }, (_, i) => (i + 1) * 10).map((minutes) => (
+                                        <option key={minutes} value={minutes}>
+                                            {minutes} min
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        </div>
 
-                            const allSelected = filteredIds.every((id) =>
-                                selectedPrebookingIds.includes(id)
-                            );
 
-                            return allSelected ? "Unselect All (Filtered)" : "Select All (Filtered)";
-                        })()}
-                    </button>
+                        {/* Select / Unselect Button */}
+                        <button
+                            style={{ padding: "6px 12px" }}
+                            onClick={() => {
+                                const filteredIds = prebookings
+                                    .filter((p) => {
+                                        const name = p.name?.toLowerCase() || "";
+                                        const mobile1 = p.mobile1 || "";
+                                        const event = p.functionType?.toLowerCase() || "";
+                                        return (
+                                            name.includes(searchTerm) ||
+                                            event.includes(searchTerm) ||
+                                            mobile1.includes(searchTerm)
+                                        );
+                                    })
+                                    .map((p) => p.id);
+
+                                const allSelected = filteredIds.every((id) =>
+                                    selectedPrebookingIds.includes(id)
+                                );
+
+                                setSelectedPrebookingIds((prev) =>
+                                    allSelected
+                                        ? prev.filter((id) => !filteredIds.includes(id)) // unselect all filtered
+                                        : [...new Set([...prev, ...filteredIds])] // select all filtered
+                                );
+                            }}
+                        >
+                            {(() => {
+                                const filteredIds = prebookings
+                                    .filter((p) => {
+                                        const name = p.name?.toLowerCase() || "";
+                                        const mobile1 = p.mobile1 || "";
+                                        const event = p.functionType?.toLowerCase() || "";
+                                        return (
+                                            name.includes(searchTerm) ||
+                                            event.includes(searchTerm) ||
+                                            mobile1.includes(searchTerm)
+                                        );
+                                    })
+                                    .map((p) => p.id);
+
+                                const allSelected = filteredIds.every((id) =>
+                                    selectedPrebookingIds.includes(id)
+                                );
+
+                                return allSelected ? "Unselect All (Filtered)" : "Select All (Filtered)";
+                            })()}
+                        </button>
+
+                    </div>
+
 
                     {/* Prebookings List */}
                     <div
@@ -765,9 +865,11 @@ const UserAccessPanel = () => {
 
                         }}
                     >
-                        <button style={{ backgroundColor: 'green' }} onClick={saveEditPermissions}>Save Access</button>
+                        <button style={{ backgroundColor: 'green', width: '100%' }} onClick={saveEditPermissions}>Save Access</button>
                     </div>
+
                 </Modal>
+
 
                 {/* Assign */}
                 <div className="assign-container access-requests">
@@ -865,11 +967,12 @@ const UserAccessPanel = () => {
                         </div>
                     ))}
                     <div style={{ display: "flex", justifyContent: "right", gap: "10px" }}>
-                        <button onClick={addBankInput} style={{ marginBottom: "10px" }}>Add Another</button>
+                        <button onClick={addBankInput} style={{ marginBottom: "10px", backgroundColor: '#3f8acbff' }}>Add Another</button>
                     </div>
+
                     <div style={{ display: "flex", justifyContent: "center", gap: "10px" }}>
-                        <button onClick={saveBanks} style={{ backgroundColor: 'green', color: 'white', padding: '6px 12px' }}>Save Banks</button>
-                        <button onClick={() => setShowAddBankModal(false)} style={{ backgroundColor: 'gray', color: 'white', padding: '6px 12px' }}>Cancel</button>
+                        <button onClick={saveBanks} style={{ backgroundColor: 'green', color: 'white' }}>Save Banks</button>
+                        <button onClick={() => setShowAddBankModal(false)} style={{ backgroundColor: 'gray', color: 'white' }}>Cancel</button>
                     </div>
                 </Modal>
 
@@ -909,7 +1012,7 @@ const UserAccessPanel = () => {
                                                 />
                                             </td>
                                             <td>{u.name}</td>
-                                            <td>{accessMap[u.accessToApp] || u.accessToApp}</td>
+                                            <td>{roleNames[u.accessToApp] || u.accessToApp}</td>
                                             <td>{u.email}</td>
                                         </tr>
                                     ))}
@@ -979,7 +1082,7 @@ const UserAccessPanel = () => {
                                             </td>
                                             <td>{u.name}</td>
                                             <td>
-                                                {accessMap[u.accessToApp] || u.accessToApp}
+                                                {roleNames[u.accessToApp] || u.accessToApp}
                                             </td>
                                             <td>{u.email}</td>
                                         </tr>
