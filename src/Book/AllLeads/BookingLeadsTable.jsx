@@ -17,7 +17,7 @@ const BookingLeadsTable = () => {
     const [toDate, setToDate] = useState('');
     const [searchTerm, setSearchTerm] = useState("");
     const [sortDirection, setSortDirection] = useState('asc');
-    const [userPermissions, setUserPermissions] = useState({ editData: "disable", editablePrebookings: [], accessToApp: '' });
+    const [userPermissions, setUserPermissions] = useState({ editData: "disable", editablePrebookings: [], accessToApp: '', alwayEdit: '' });
     const [filteredLeads, setFilteredLeads] = useState(leads);
     const [availableFY, setAvailableFY] = useState([]);
     const [filterType, setFilterType] = useState("all");
@@ -66,30 +66,30 @@ const BookingLeadsTable = () => {
     }, [leads]);
 
     useEffect(() => {
-        const fetchUserPermissions = async () => {
-            const auth = getAuth();
-            const user = auth.currentUser;
-            if (user) {
-                try {
-                    const userRef = doc(db, "usersAccess", user.email);
-                    const userSnap = await getDoc(userRef); // ✅ single fetch
-                    if (userSnap.exists()) {
-                        const data = userSnap.data();
-                        setUserPermissions({
-                            editData: data.editData || "disable",
-                            editablePrebookings: data.editablePrebookings || [],
-                            accessToApp: data.accessToApp || "",
-                        });
+        const auth = getAuth();
+        const user = auth.currentUser;
+        if (!user) return;
 
-                    }
-                } catch (err) {
-                    console.error("Error fetching user permissions:", err);
-                }
+        // Create a real-time listener
+        const userRef = doc(db, "usersAccess", user.email);
+        const unsubscribe = onSnapshot(userRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setUserPermissions({
+                    editData: data.editData || "disable",
+                    alwayEdit: data.alwayEdit || "",
+                    editablePrebookings: data.editablePrebookings || [],
+                    accessToApp: data.accessToApp || "",
+                });
             }
-        };
+        }, (err) => {
+            console.error("Error fetching user permissions:", err);
+        });
 
-        fetchUserPermissions();
+        // Cleanup listener on unmount
+        return () => unsubscribe();
     }, []);
+
 
     useEffect(() => {
         let filtered = [...leads];
@@ -2161,6 +2161,7 @@ const BookingLeadsTable = () => {
                                 userPermissions={userPermissions}
                                 sortConfig={sortConfig}
                                 requestSort={requestSort}
+                                alwayEdit={userPermissions.alwayEdit}
                             />
                         </table>
                     </div>

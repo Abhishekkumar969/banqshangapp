@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { db } from '../firebaseConfig';
-import { runTransaction, collection, getDocs, doc, updateDoc, getDoc, setDoc, arrayUnion } from 'firebase/firestore';
+import { runTransaction, collection, getDocs, doc, updateDoc, getDoc, setDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
 import '../styles/MoneyReceipt.css';
 import { useNavigate } from 'react-router-dom';
 import BackButton from "../components/BackButton";
@@ -26,6 +26,7 @@ const MoneyReceipt = () => {
     const navigate = useNavigate();
     const [assignedUsers, setAssignedUsers] = useState([]);
     const [userAppType, setUserAppType] = useState(null);
+    const [banks, setBanks] = useState([]);
 
     useEffect(() => {
         const fetchUserAppType = async () => {
@@ -74,39 +75,47 @@ const MoneyReceipt = () => {
     const [manualDate, setManualDate] = useState(getISTDateString());
 
     useEffect(() => {
-        const fetchAssignedUsers = async () => {
-            try {
-                const bankSnap = await getDoc(doc(db, "accountant", "AssignBank"));
-
-                let users = [];
-
-                if (bankSnap.exists()) {
-                    const bankUsers = bankSnap.data().users || [];
-                    users = users.concat(bankUsers.map(u => ({
+        const unsubscribeAssignBank = onSnapshot(doc(db, "accountant", "AssignBank"), (bankSnap) => {
+            let users = [];
+            if (bankSnap.exists()) {
+                const bankUsers = bankSnap.data().users || [];
+                users = users.concat(
+                    bankUsers.map(u => ({
                         name: u.name,
                         email: u.email,
                         type: "Bank"
-                    })));
-                }
-
-                // Remove duplicates based on email + type
-                const uniqueUsers = Object.values(
-                    users.reduce((acc, u) => {
-                        // Create a unique key using both email + type
-                        const key = `${u.email}-${u.type}`;
-                        acc[key] = u;
-                        return acc;
-                    }, {})
+                    }))
                 );
-
-                setAssignedUsers(uniqueUsers);
-            } catch (err) {
-                console.error("Error fetching assigned users:", err);
             }
-        };
 
-        fetchAssignedUsers();
+            // Remove duplicates based on email + type
+            const uniqueUsers = Object.values(
+                users.reduce((acc, u) => {
+                    const key = `${u.email}-${u.type}`;
+                    acc[key] = u;
+                    return acc;
+                }, {})
+            );
+
+            setAssignedUsers(uniqueUsers);
+        });
+
+        const unsubscribeBanks = onSnapshot(doc(db, "accountant", "BankNames"), (snap) => {
+            if (snap.exists()) {
+                setBanks(snap.data().banks || []);
+            } else {
+                setBanks([]);
+            }
+        });
+
+        // Cleanup on unmount
+        return () => {
+            unsubscribeAssignBank();
+            unsubscribeBanks();
+        };
     }, []);
+
+
 
     useEffect(() => {
         const fetchUserName = async () => {
@@ -210,7 +219,7 @@ const MoneyReceipt = () => {
     useEffect(() => { if (selectedCustomer && paymentFor === 'Advance') fetchNextSlNo(); }, [receiptType, selectedCustomer, fetchNextSlNo, paymentFor]);
 
     const handleSubmit = async () => {
-        if (!selectedCustomer || !amount || !mode || (paymentFor === 'Advance' && !receiver) || !description) {
+        if (!selectedCustomer || !amount || !mode || (paymentFor === 'Advance' && !receiver)) {
             alert('Please fill all fields');
             return;
         }
@@ -412,8 +421,8 @@ const MoneyReceipt = () => {
                                 {/* Mode Selection */}
                                 {paymentFor === 'Advance' && (
                                     <div className="mode-group">
-                                        {['BOI', 'SBI', 'Card', 'Cheque', 'Cash'].map(m => (
-                                            <button key={m} className={`mode-button ${mode === m ? 'active' : ''}`} onClick={() => { setMode(m); setReceiptType(m === 'Cash' ? 'Cash' : 'Money Receipt'); }}>{m === 'Card' ? 'Credit Card' : m}</button>
+                                        {[...banks, 'Card', 'Cheque', 'Cash'].map(m => (
+                                            <button style={{ whiteSpace: 'nowrap' }} key={m} className={`mode-button ${mode === m ? 'active' : ''}`} onClick={() => { setMode(m); setReceiptType(m === 'Cash' ? 'Cash' : 'Money Receipt'); }}>{m === 'Card' ? 'Credit Card' : m}</button>
                                         ))}
                                     </div>
                                 )}
@@ -452,7 +461,7 @@ const MoneyReceipt = () => {
 
                                 <div className="input-row">
                                     <label>Description</label>
-                                    <input type="text" value={description} placeholder="Enter description" onChange={e => setDescription(e.target.value)} />
+                                    <input type="text" value={description} onChange={e => setDescription(e.target.value)} />
                                 </div>
 
                                 <div className="input-row">

@@ -22,6 +22,7 @@ const Prebook = () => {
   const [vendor, setVendor] = useState(null);
   const [decoration, setDecoration] = useState(null);
   const [panelAccess, setPanelAccess] = useState({});
+  const [showDailyReport, setShowDailyReport] = useState(false);
 
   useEffect(() => {
     const auth = getAuth();
@@ -187,8 +188,26 @@ const Prebook = () => {
           {Object.keys(panelAccess.ReportSection || {}).some(item => hasAccess("ReportSection", item)) && (
             <>
               <div className="service-section">
-                <h3 className="service-section-text">Daily Report</h3>
-                {hasAccess("ReportSection", "Report") && <DailyReport />}
+                <h3 className="service-section-text">
+                  Daily Report
+                  <button
+                    onClick={() => setShowDailyReport(prev => !prev)}
+                    style={{
+                      marginLeft: "15px",
+                      padding: "4px 10px",
+                      fontSize: "12px",
+                      cursor: "pointer",
+                      borderRadius: "6px",
+                      border: "1px solid #ccc",
+                      background: showDailyReport ? "#4caf50" : "#f44336",
+                      color: "#fff"
+                    }}
+                  >
+                    {showDailyReport ? "Hide" : "Show"}
+                  </button>
+                </h3>
+
+                {showDailyReport && hasAccess("ReportSection", "Report") && <DailyReport />}
               </div>
             </>
           )}

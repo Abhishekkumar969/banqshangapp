@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LogPopupCell from './LogPopupCell';
 
-const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, moveLeadToDrop, sendToPrint, sendToWhatsApp, userPermissions, sortConfig, requestSort }) => {
+const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, alwayEdit, moveLeadToDrop, sendToPrint, sendToWhatsApp, userPermissions, sortConfig, requestSort }) => {
     const [localValue, setLocalValue] = useState({});
     const navigate = useNavigate();
     const [selectedAdvances, setSelectedAdvances] = useState(null);
@@ -24,7 +24,11 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, moveLeadToDrop,
     };
 
     const canEdit = (leadId) => {
-        if (["A", "D"].includes(userPermissions.accessToApp)) {
+        if (["A"].includes(userPermissions.accessToApp)) {
+            return true;
+        }
+
+        if (userPermissions.alwayEdit === "On") {
             return true;
         }
 
@@ -33,6 +37,7 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, moveLeadToDrop,
             userPermissions.editablePrebookings.includes(leadId)
         );
     };
+
 
     const getLocalValue = (leadId, field, fallback) => {
         return localValue[leadId]?.[field] !== undefined ? localValue[leadId][field] : fallback;

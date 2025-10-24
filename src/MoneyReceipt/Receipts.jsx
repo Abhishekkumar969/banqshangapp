@@ -23,6 +23,7 @@ const Receipts = () => {
   const [assignedUsers, setAssignedUsers] = useState([]);
   const [cashTo, setCashTo] = useState('');
   const [userAppType, setUserAppType] = useState(null);
+  const [banks, setBanks] = useState([]);
 
   useEffect(() => {
     const fetchUserAppType = async () => {
@@ -43,6 +44,21 @@ const Receipts = () => {
     };
     fetchUserAppType();
   }, []);
+
+  useEffect(() => {
+    const fetchBanks = async () => {
+      try {
+        const bankSnap = await getDoc(doc(db, "accountant", "BankNames"));
+        if (bankSnap.exists()) setBanks(bankSnap.data().banks || []);
+        else setBanks([]);
+      } catch (err) {
+        console.error("Error fetching banks:", err);
+        setBanks([]);
+      }
+    };
+    fetchBanks();
+  }, []);
+
 
   // --- IST helper functions ---
   const getISTDate = (date = new Date()) => {
@@ -265,12 +281,14 @@ const Receipts = () => {
           <div className="input-row">
             <label>Payment Mode</label>
             <select value={mode} onChange={e => setMode(e.target.value)}>
+              {banks.map(bank => (
+                <option key={bank} value={bank}>{bank}</option>
+              ))}
               <option value="Cash">Cash</option>
-              <option value="BOI">BOI</option>
-              <option value="SBI">SBI</option>
               <option value="Card">Card</option>
               <option value="Cheque">Cheque</option>
             </select>
+
           </div>
 
           {mode === 'Cash' && (

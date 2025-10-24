@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { getAuth } from "firebase/auth"; // <-- import auth
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
-import EnquiryDetails from '../../Enquiry/EnquiryDetails';
-import BookingLeadsTable from './BookingLeadsTable';
-import AllBookings from '../../Book/AllLeads/BookingLeadsTable';
-import '../../styles/LeadsTabContainer.css';
+import EnquiryDetails from "../../Enquiry/EnquiryDetails";
+import BookingLeadsTable from "./BookingLeadsTable";
+import AllBookings from "../../Book/AllLeads/BookingLeadsTable";
+import "../../styles/LeadsTabContainer.css";
 import BackButton from "../../components/BackButton";
 
 const LeadsTabContainer = () => {
@@ -19,108 +19,141 @@ const LeadsTabContainer = () => {
     const [userAppType, setUserAppType] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    // ✅ Wait for auth user before loading access data
     useEffect(() => {
         const auth = getAuth();
-        const user = auth.currentUser;
-        if (!user) return; // user not logged in
-
-        const userRef = doc(db, 'usersAccess', user.email);
-        const unsubscribeUser = onSnapshot(userRef, (snap) => {
-            if (snap.exists()) setUserAppType(snap.data().accessToApp);
-        });
-
-        const accessRef = doc(db, "pannelAccess", "Bookings");
-        const unsubscribeAccess = onSnapshot(accessRef, (snap) => {
-            if (snap.exists()) {
-                setPanelAccess(snap.data());
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            if (!user) {
                 setLoading(false);
+                return;
             }
+
+            const userRef = doc(db, "usersAccess", user.email);
+            const unsubscribeUser = onSnapshot(userRef, (snap) => {
+                if (snap.exists()) setUserAppType(snap.data().accessToApp);
+            });
+
+            const accessRef = doc(db, "pannelAccess", "Bookings");
+            const unsubscribeAccess = onSnapshot(accessRef, (snap) => {
+                if (snap.exists()) {
+                    setPanelAccess(snap.data());
+                    setLoading(false);
+                }
+            });
+
+            return () => {
+                unsubscribeUser();
+                unsubscribeAccess();
+            };
         });
 
-        return () => {
-            unsubscribeUser();
-            unsubscribeAccess();
-        };
+        return () => unsubscribeAuth();
     }, []);
 
     const hasAccess = useCallback(
         (recordType) => {
-            if (userAppType === "A") return true; // Full access
-
+            if (userAppType === "A") return true; // Admin full access
             if (!userAppType || !panelAccess) return false;
             const arr = panelAccess[recordType] || [];
-            return arr.includes(userAppType);
+            return Array.isArray(arr) && arr.includes(userAppType);
         },
         [userAppType, panelAccess]
     );
 
+    // ✅ Once data is loaded, pick the default tab properly
     useEffect(() => {
-        if (!loading && panelAccess && userAppType) {
-            const accessibleTabs = [];
+        if (loading) return;
+        if (!userAppType || Object.keys(panelAccess).length === 0) return;
 
-            // Prioritize Leads and Bookings
-            if (hasAccess("Lead Record")) accessibleTabs.push("booking");
-            if (hasAccess("Book Record")) accessibleTabs.push("all");
-            if (hasAccess("Enquiry Record")) accessibleTabs.push("EnquiryDetails"); // last
+        const accessibleTabs = [];
 
-            let defaultTab = null;
+        if (hasAccess("Lead Record")) accessibleTabs.push("booking");
+        if (hasAccess("Book Record")) accessibleTabs.push("all");
+        if (hasAccess("Enquiry Record")) accessibleTabs.push("EnquiryDetails");
 
-            // Respect URL param only if allowed
-            if (tabFromURL === "leads" && accessibleTabs.includes("booking")) defaultTab = "booking";
-            else if (tabFromURL === "bookings" && accessibleTabs.includes("all")) defaultTab = "all";
-            else if (tabFromURL === "enquiry" && accessibleTabs.includes("EnquiryDetails")) defaultTab = "EnquiryDetails";
-            else if (accessibleTabs.length > 0) defaultTab = accessibleTabs[0]; // first accessible tab
-            else defaultTab = null; // no access
-
-            setActiveTab(defaultTab);
+        if (accessibleTabs.length === 0) {
+            setActiveTab(null);
+            return;
         }
-    }, [tabFromURL, hasAccess, loading, panelAccess, userAppType]);
+
+        let defaultTab = null;
+
+        if (tabFromURL === "leads" && hasAccess("Lead Record")) defaultTab = "booking";
+        else if (tabFromURL === "bookings" && hasAccess("Book Record")) defaultTab = "all";
+        else if (tabFromURL === "enquiry" && hasAccess("Enquiry Record")) defaultTab = "EnquiryDetails";
+        else defaultTab = accessibleTabs[0]; // fallback to first allowed
+
+        // Avoid wrong default
+        if (defaultTab === "EnquiryDetails" && !hasAccess("Enquiry Record")) {
+            defaultTab = accessibleTabs.find((tab) => tab !== "EnquiryDetails") || null;
+        }
+
+        if (!activeTab || !accessibleTabs.includes(activeTab)) {
+            setActiveTab(defaultTab);
+            const urlParam =
+                defaultTab === "booking"
+                    ? "leads"
+                    : defaultTab === "all"
+                        ? "bookings"
+                        : defaultTab === "EnquiryDetails"
+                            ? "enquiry"
+                            : "";
+            if (urlParam) window.history.replaceState(null, "", `?tab=${urlParam}`);
+        }
+    }, [activeTab, tabFromURL, hasAccess, loading, panelAccess, userAppType]);
+
 
     const renderActiveComponent = () => {
+        if (!activeTab) return <p style={{ textAlign: "center" }}>No access to any tabs</p>;
+
         switch (activeTab) {
-            case 'EnquiryDetails': return <EnquiryDetails />;
-            case 'booking': return <BookingLeadsTable />;
-            case 'all': return <AllBookings />;
-            default: return <p>No access to any tabs</p>;
+            case "EnquiryDetails":
+                return hasAccess("Enquiry Record") ? <EnquiryDetails /> : <p>No access to Enquiry</p>;
+            case "booking":
+                return hasAccess("Lead Record") ? <BookingLeadsTable /> : <p>No access to Leads</p>;
+            case "all":
+                return hasAccess("Book Record") ? <AllBookings /> : <p>No access to Bookings</p>;
+            default:
+                return <p>No access to any tabs</p>;
         }
     };
 
     const handleTabClick = (tabKey, urlParam) => {
+        if (activeTab === tabKey) return;
         setActiveTab(tabKey);
         window.history.replaceState(null, "", `?tab=${urlParam}`);
     };
 
-    if (loading) return <p>Loading...</p>;
+    if (loading) return <p style={{ textAlign: "center" }}>Loading...</p>;
 
     return (
         <div className="leads-tab-wrapper">
             <BackButton setActiveTab={setActiveTab} />
-
             <div>{renderActiveComponent()}</div>
 
             <div className="tab-buttons">
                 {hasAccess("Enquiry Record") && (
                     <button
-                        onClick={() => handleTabClick('EnquiryDetails', 'enquiry')}
-                        className={activeTab === 'EnquiryDetails' ? 'active' : ''}
+                        onClick={() => handleTabClick("EnquiryDetails", "enquiry")}
+                        className={activeTab === "EnquiryDetails" ? "active" : ""}
                     >
-                        <span>Enquiry</span>
+                        Enquiry
                     </button>
                 )}
                 {hasAccess("Lead Record") && (
                     <button
-                        onClick={() => handleTabClick('booking', 'leads')}
-                        className={activeTab === 'booking' ? 'active' : ''}
+                        onClick={() => handleTabClick("booking", "leads")}
+                        className={activeTab === "booking" ? "active" : ""}
                     >
-                        <span>Leads</span>
+                        Leads
                     </button>
                 )}
                 {hasAccess("Book Record") && (
                     <button
-                        onClick={() => handleTabClick('all', 'bookings')}
-                        className={activeTab === 'all' ? 'active' : ''}
+                        onClick={() => handleTabClick("all", "bookings")}
+                        className={activeTab === "all" ? "active" : ""}
                     >
-                        <span>Bookings</span>
+                        Bookings
                     </button>
                 )}
             </div>
