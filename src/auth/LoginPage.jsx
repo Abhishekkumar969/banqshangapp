@@ -16,6 +16,7 @@ export default function MoonSunLogin() {
     const [errorCode, setErrorCode] = useState("");
     const [accessStatus, setAccessStatus] = useState("");
     const [appType, setAppType] = useState(" ");
+    const [showPassword, setShowPassword] = useState(false);
 
     const currentApp = appType;
 
@@ -194,7 +195,7 @@ export default function MoonSunLogin() {
 
                     <div>
                         <button type="button" onClick={toggleMode} style={{
-                            background: isDay ? "#007bff" : "#001b38ff",
+                            background: isDay ? "#007bff" : "#4892e1ff",
                             border: "none",
                             color: isDay ? "#ffffffff" : "#ffffffff",
                             cursor: "pointer",
@@ -206,7 +207,7 @@ export default function MoonSunLogin() {
                             borderRadius: "6px",
                             transition: "all 0.3s ease",
                         }}>
-                            {isNewUser ? "Login" : "SignUp"}
+                            {isNewUser ? "Old User ? Login" : "New User ? SignUp"}
                         </button>
                     </div>
 
@@ -219,7 +220,7 @@ export default function MoonSunLogin() {
                                 appearance: "none",
                                 WebkitAppearance: "none",
                                 MozAppearance: "none",
-                                backgroundColor: isDay ? "rgba(255,255,255,0.8)" : "rgba(66, 66, 66, 0.4)",
+                                backgroundColor: isDay ? "#ffffffcc" : "#42424266",
                                 padding: "14px",
                                 borderRadius: "12px",
                                 color: isDay ? "#222" : "#fff",
@@ -269,9 +270,32 @@ export default function MoonSunLogin() {
                         onChange={(e) => setEmail(e.target.value)} required
                         style={inputStyle(isDay)} />
 
-                    <input type="password" placeholder="Password" value={password}
-                        onChange={(e) => setPassword(e.target.value)} required
-                        style={inputStyle(isDay)} />
+                    <div style={{ position: "relative", width: "100%" }}>
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            style={{ ...inputStyle(isDay), width: '100%' }}
+                        />
+                        <span
+                            onClick={() => setShowPassword(!showPassword)}
+                            style={{
+                                position: "absolute",
+                                right: "16px",
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                cursor: "pointer",
+                                fontSize: "25px",
+                                color: isDay ? "#333" : "#fff",
+                                userSelect: "none",
+                            }}
+                        >
+                            {showPassword ? "🙈" : "🫣"}
+                        </span>
+                    </div>
+
 
                     <button type="submit" style={buttonStyle(isDay)}>
                         {isNewUser ? "✨ Create Account" : "🚀 Login"}
@@ -343,13 +367,13 @@ const inputStyle = (isDay) => ({
     padding: '16px 20px',
     border: 'none',
     borderRadius: '14px',
-    background: isDay ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
+    background: isDay ? '#ffffff99' : '#ffffff1a',
     color: isDay ? '#333' : '#fff',
     fontSize: '16px',
     outline: 'none',
     boxShadow: isDay
-        ? 'inset 1px 1px 6px rgba(0,0,0,0.1), inset -1px -1px 6px rgba(255,255,255,0.7)'
-        : 'inset 1px 1px 8px rgba(255,255,255,0.1), inset -1px -1px 8px rgba(0,0,0,0.4)',
+        ? 'inset 1px 1px 6px #0000001a, inset -1px -1px 6px #ffffffb3'
+        : 'inset 1px 1px 8px #ffffff1a, inset -1px -1px 8px #00000066',
     transition: 'all 0.4s ease'
 });
 

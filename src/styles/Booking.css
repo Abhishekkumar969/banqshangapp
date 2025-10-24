@@ -394,8 +394,10 @@ body {
     input[type="email"],
     input[type="tel"],
     input[type="time"],
+    input[type="text"],
+    input[type="password"],
     select {
-        padding: 7px 10px !important;
+        padding: 10px !important;
     }
 
     .summary-section {
