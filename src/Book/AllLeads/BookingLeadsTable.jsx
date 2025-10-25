@@ -8,6 +8,8 @@ import { getAuth } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 
+
+
 const BookingLeadsTable = () => {
     const navigate = useNavigate();
     const [leads, setLeads] = useState([]);
@@ -24,6 +26,7 @@ const BookingLeadsTable = () => {
     const [venueFilter, setVenueFilter] = useState("all");
     const [sortConfig, setSortConfig] = useState({ key: 'functionDate', direction: 'desc' });
     const [financialYear, setFinancialYear] = useState("");
+
 
     const requestSort = (key) => {
         let direction = 'asc';
@@ -710,6 +713,7 @@ const BookingLeadsTable = () => {
             }
         };
 
+
         // Payment Rows from advancePayments
         const paymentRows = (lead.advancePayments || []).map((p, i) => `
     <tr>
@@ -817,23 +821,28 @@ const BookingLeadsTable = () => {
         const panCounter = Number(lead.panCounter || 0);        // optional, default 0
         const jaimala = Number(lead.jaimala || 0);              // optional, default 0
 
-        // --- Dinner calculation from selectedMenus ---
-        let dinnerRate = 0;
-        let dinnerTotal = 0;
 
+        
+        // --- Dinner calculation from selectedMenus ---
         const selectedMenus = lead.selectedMenus || {};
-        const dinnerMenuKey = Object.keys(selectedMenus).find(k => k.toLowerCase().includes("diamond non-veg"));
 
         let noOfPlates = 0;
         let extraPlates = 0;
+        let dinnerRate = 0;
+        let dinnerTotal = 0;
 
-        if (dinnerMenuKey) {
-            const dinnerMenu = selectedMenus[dinnerMenuKey];
+        // Pick the first menu dynamically (no need to hardcode names)
+        const firstMenuKey = Object.keys(selectedMenus)[0];
+
+        if (firstMenuKey) {
+            const dinnerMenu = selectedMenus[firstMenuKey];
             noOfPlates = Number(dinnerMenu.noOfPlates || 0);
             extraPlates = Number(dinnerMenu.extraPlates || 0);
             dinnerRate = Number(dinnerMenu.rate || 0);
             dinnerTotal = (noOfPlates + extraPlates) * dinnerRate;
         }
+
+
 
 
         const paymentCalculationRows = `
@@ -872,48 +881,43 @@ const BookingLeadsTable = () => {
   <head>
     <title>Total Payment Settlement - ${lead.eventDate}</title>
     <style>
-      body { font-family: Calibri, Arial, sans-serif; font-size: 13px; padding: 10px; margin: 0; }
-      table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
-      th, td { border: 1px solid #000; padding: 4px 6px; text-align: left; vertical-align: top;}
-      th { background: #f4f4f4; text-align: center; }
-      .title { text-align: center; background: #ffff00; font-weight: bold; padding: 6px; border: 2px solid black; margin-bottom: 10px; font-size: 15px; }
-      .section { background: #ffec8b; font-weight: bold; padding: 6px; }
-      .highlight-red { background: #ff5050; color: white; font-weight: bold; text-align: center; }
-      .highlight-green { background: #ccffcc; font-weight: bold; text-align: center; }
-      .no-border td { border: none; }
-      .mini-table { border: none; margin-bottom: 2px;}
-      .mini-table td, .mini-table th { border: none; padding: 2px 4px; }
-      .mini-table td:nth-child(2n-1) { font-weight: bold; width: 15%;} /* Labels */
-      .mini-table td:nth-child(2n) { width: 35%;} /* Values */
-      .mini-table td.full-width { width: 85%; }
-      
-      .table-header { border: 1px solid black; padding: 5px 8px; font-weight: bold; background: #ffec8b; }
-      .table-header.center { text-align: center; }
-      
-      .pc-table th, .pc-table td { width: 25%; } /* Payment Calculation column widths */
-      .pc-table td:nth-child(2), .pc-table td:nth-child(3), .pc-table td:nth-child(4) { text-align: right; }
-      .vendor-table td:nth-child(3) { text-align: right; }
-      
-      .gross-income-box { 
-          border: 1px solid black; 
-          float: right; 
-          margin-top: -100px; /* Adjust as needed */
-          margin-right: 0px; 
-          padding: 5px; 
-          width: 350px; /* To match screenshot column structure */
-          text-align: right;
-      }
-      .gross-income-box .highlight-green {
-          display: flex;
-          justify-content: space-between;
-          padding: 8px;
-          margin: 0;
-          font-size: 14px;
-      }
-      .grand-total-row td:nth-child(1) { text-align: center; }
-      .grand-total-row td:nth-child(2) { text-align: right; }
-      
-    </style>
+  body { font-family: Calibri, Arial, sans-serif; font-size: 13px; padding: 10px; margin: 0; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+  th, td { border: 1px solid #000; padding: 4px 6px; text-align: left; vertical-align: top; }
+  th { background-color: #f4f4f4; text-align: center; }
+  .title { text-align: center; background-color: #ffff00; font-weight: bold; padding: 6px; border: 2px solid black; margin-bottom: 10px; font-size: 15px; }
+  .section { background-color: #ffec8b; font-weight: bold; padding: 6px; }
+  .highlight-red { background-color: #ff5050; color: white; font-weight: bold; text-align: center; }
+  .highlight-green { background-color: #ccffcc; font-weight: bold; text-align: center; }
+
+  .no-border td { border: none; }
+  .mini-table { border: none; margin-bottom: 2px; }
+  .mini-table td, .mini-table th { border: none; padding: 2px 4px; }
+  .mini-table td:nth-child(2n-1) { font-weight: bold; width: 15%; } /* Labels */
+  .mini-table td:nth-child(2n) { width: 35%; } /* Values */
+  .mini-table td.full-width { width: 85%; }
+
+  .table-header { border: 1px solid black; padding: 5px 8px; font-weight: bold; background-color: #ffec8b; }
+  .table-header.center { text-align: center; }
+
+  .pc-table th, .pc-table td { width: 25%; }
+  .pc-table td:nth-child(2), .pc-table td:nth-child(3), .pc-table td:nth-child(4) { text-align: right; }
+  .vendor-table td:nth-child(3) { text-align: right; }
+
+  .gross-income-box { border: 1px solid black; float: right; margin-top: -100px; margin-right: 0px; padding: 5px; width: 350px; text-align: right; }
+  .gross-income-box .highlight-green { display: flex; justify-content: space-between; padding: 8px; margin: 0; font-size: 14px; }
+
+  .grand-total-row td:nth-child(1) { text-align: center; }
+  .grand-total-row td:nth-child(2) { text-align: right; }
+
+  @media print {
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+  }
+</style>
+
   </head>
   <body>
 
@@ -1002,37 +1006,38 @@ const BookingLeadsTable = () => {
     
     <br style="clear: both;">
     
-    <table style="width: 48%; float: left; margin-right: 2%; margin-top: 10px;">
+    <table style=" float: left; margin-right: 2%; margin-top: 10px;">
         <tr class="grand-total-row">
-            <td colspan="2" class="section" style="width: 40%; text-align: center;">Grand Total</td>
+            <td colspan="2" class="section" style="width: 80%; text-align: center;">Grand Total</td>
             <td colspan="2" style="width: 60%; text-align: right; font-weight: bold;">${(lead.grandTotal || 0).toLocaleString('en-IN')}</td>
         </tr>
     </table>
     
-    <div style="width: 48%; float: right; margin-top: 10px;">
-        <table style="width: 100%;">
-            <tr style="border: none;">
-                <td style="border: none; padding: 0;">
-                    <table style="width: 100%; margin-bottom: 5px;">
-                        <tr>
-                            <td style="border: none; font-weight: bold;">Total Business from event</td>
-                            <td style="border: none; text-align: right;">${(lead.grandTotal || 0).toLocaleString('en-IN')}</td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr style="border: none;">
-                <td style="border: none; padding: 0;">
-                    <table style="width: 100%; border: 3px solid #ccffcc; border-collapse: separate;">
-                        <tr class="highlight-green">
-                            <td style="width: 70%; text-align: left; border: none; padding: 8px;">Gross Income from event</td>
-                            <td style="width: 30%; text-align: right; border: none; padding: 8px;">₹ ${(lead.grossIncome || 0).toLocaleString('en-IN')}</td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
-    </div>
+<div style="width: 48%; float: right; margin-top: 10px; display: none;">
+    <table style="width: 100%;">
+        <tr style="border: none;">
+            <td style="border: none; padding: 0;">
+                <table style="width: 100%; margin-bottom: 5px;">
+                    <tr>
+                        <td style="border: none; font-weight: bold;">Total Business from event</td>
+                        <td style="border: none; text-align: right;">${(lead.grandTotal || 0).toLocaleString('en-IN')}</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr style="border: none;">
+            <td style="border: none; padding: 0;">
+                <table style="width: 100%; border: 3px solid #ccffcc; border-collapse: separate;">
+                    <tr class="highlight-green">
+                        <td style="width: 70%; text-align: left; border: none; padding: 8px;">Gross Income from event</td>
+                        <td style="width: 30%; text-align: right; border: none; padding: 8px;">₹ ${(lead.grossIncome || 0).toLocaleString('en-IN')}</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</div>
+
     
     <br style="clear: both;">
 
@@ -2648,8 +2653,11 @@ const BookingLeadsTable = () => {
             </div>
 
             <div style={{ marginBottom: '50px' }}></div>
+
         </div>
+
     );
+
 };
 
 export default BookingLeadsTable; 

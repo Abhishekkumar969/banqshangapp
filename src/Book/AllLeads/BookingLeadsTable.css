@@ -356,3 +356,13 @@
     }
 
 }
+
+@media print {
+    * {
+        -webkit-print-color-adjust: exact !important;
+        /* Chrome/Safari */
+        print-color-adjust: exact !important;
+        /* Firefox */
+    }
+}
+
