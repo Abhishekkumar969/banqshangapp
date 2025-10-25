@@ -1,10 +1,13 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import CalendarInput from '../pages/CalendarInput';
 import FunctionTypeSelector from './FunctionTypeSelector';
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../firebaseConfig"; // adjust path if your firebaseConfig is elsewhere
 
 const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
     const [showCalendar, setShowCalendar] = useState(false);
     const [errors, setErrors] = useState({});
+    const [venueOptions, setVenueOptions] = useState([]);
 
     // ✅ Helper to get today's date in IST format (YYYY-MM-DD)
     const getTodayIST = () => {
@@ -53,32 +56,31 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
         }
     }, [form.strikeHallCharges, setForm]);
 
+    useEffect(() => {
+        const fetchVenueTypes = async () => {
+            try {
+                const q = query(
+                    collection(db, "usersAccess"),
+                    where("accessToApp", "==", "A")
+                );
+
+                const snapshot = await getDocs(q);
+                if (!snapshot.empty) {
+                    // assuming you only want the first admin with access "A"
+                    const adminData = snapshot.docs[0].data();
+                    setVenueOptions(adminData.venueTypes || []);
+                }
+            } catch (error) {
+                console.error("Error fetching venue types:", error);
+            }
+        };
+
+        fetchVenueTypes();
+    }, []);
+
+
     return (
         <>
-
-            {/* Enquiry Date
-            <div style={{ marginTop: "0px", display: 'flex', justifyContent: 'space-between' }}>
-                <div></div>
-                <div className="BookedOn">
-                    <label
-                        style={{
-                            fontWeight: 600,
-                            fontSize: "14px",
-                            color: "#333",
-                            whiteSpace: "nowrap",
-                        }}
-                    >
-                        Booking on:
-                    </label>
-                    <input
-                        type="date"
-                        name="enquiryDate"
-                        value={form.enquiryDate}
-                        onChange={handleChange}
-                        style={{ color: 'red', width: '150px' }}
-                    />
-                </div>
-            </div> */}
 
             {/* Customer Name */}
             <div className="form-group">
@@ -166,14 +168,21 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
             {/* Venue Type */}
             <div className="form-group">
                 <label>Venue Type</label>
-                <select name="venueType" onChange={handleChange} value={form.venueType || ''}>
+                <select
+                    name="venueType"
+                    onChange={handleChange}
+                    value={form.venueType || ""}
+                >
                     <option value=""></option>
-                    <option value="Hall with Front Lawn">Hall with Front Lawn</option>
-                    <option value="Hall with Front & Back Lawn">Hall with Front & Back Lawn</option>
-                    <option value="Pool Side">Pool Side</option>
+                    {venueOptions.map((venue) => (
+                        <option key={venue.value || venue} value={venue.value || venue}>
+                            {venue.value || venue}
+                        </option>
+                    ))}
                 </select>
                 {errors.venueType && <span className="error">Required</span>}
             </div>
+
 
             {/* Function Type */}
             <div className="form-group">

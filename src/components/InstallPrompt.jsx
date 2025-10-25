@@ -55,6 +55,18 @@ export default function InstallPrompt() {
                 boxShadow: '0 0 10px rgba(0,0,0,0.2)',
                 zIndex: 9999,
                 textAlign: 'center',
+                // 
+                // 
+                // 
+                // 
+                // 
+                // 
+                display: 'none'
+                // 
+                // 
+                // 
+                // 
+                // 
             }}
         >
             {/* Close Button */}

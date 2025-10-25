@@ -1242,6 +1242,12 @@ const MoneyReceipts = () => {
           </button>
         </div>
 
+
+
+
+
+
+
         <div
           style={{
             margin: "10px 0",
@@ -1254,70 +1260,85 @@ const MoneyReceipts = () => {
           }}
         >
           {(() => {
-            // Group by eventType + particularNature (case-insensitive, trimmed)
             const grouped = {};
-            const displayNames = {}; // to preserve first-seen display name
+            const displayNames = {};
 
-            filteredReceipts.forEach(r => {
+            filteredReceipts.forEach((r) => {
+              const eventType = (r.eventType || "").trim();
+              const particularNature = (r.particularNature || "").trim();
+
+              // 🔍 Search filter
               if (
-                r.particularNature?.toLowerCase().includes(search.toLowerCase()) ||
-                r.eventType?.toLowerCase().includes(search.toLowerCase())
+                eventType.toLowerCase().includes(search.toLowerCase()) ||
+                particularNature.toLowerCase().includes(search.toLowerCase())
               ) {
-                const key =
-                  (r.eventType?.trim().toLowerCase() || "No Event") +
-                  "|" +
-                  (r.particularNature?.trim().toLowerCase() || "No Particular");
+                // ✅ If eventType exists, group by eventType only
+                // otherwise, group by particularNature
+                const key = eventType
+                  ? eventType.toLowerCase()
+                  : particularNature.toLowerCase() || "no-particular";
 
                 if (!grouped[key]) {
                   grouped[key] = { credit: 0, debit: 0 };
-                  displayNames[key] = {
-                    eventType: r.eventType?.trim() || "",
-                    particularNature: r.particularNature?.trim() || "",
-                  };
+                  displayNames[key] = eventType
+                    ? { display: eventType }
+                    : { display: particularNature || "No Particular" };
                 }
 
-                if (r.paymentFor === "Credit") {
-                  grouped[key].credit += Number(r.amount || 0);
-                } else if (r.paymentFor === "Debit") {
-                  grouped[key].debit += Number(r.amount || 0);
-                }
+                const amount = Number(r.amount || 0);
+                if (r.paymentFor === "Credit") grouped[key].credit += amount;
+                else if (r.paymentFor === "Debit") grouped[key].debit += amount;
               }
             });
 
-            return Object.keys(grouped).length > 0 ? (
-              Object.entries(grouped).map(([key, totals]) => (
-                <div
-                  key={key}
-                  style={{
-                    display: "inline-block",
-                    minWidth: "240px",
-                    padding: "12px",
-                    marginRight: "12px",
-                    borderRadius: "8px",
-                    background: "#fff",
-                    boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
-                    textAlign: "center",
-                  }}
-                >
-                  <h4 style={{ marginBottom: "4px", color: "#2e6999" }}>
-                    {displayNames[key].eventType
-                      ? displayNames[key].eventType
-                      : displayNames[key].particularNature}
-                  </h4>
+            const keys = Object.keys(grouped);
 
-                  {/* ✅ Only show if > 0 */}
-                  {totals.credit > 0 && (
-                    <p style={{ margin: "4px 0", color: "green", fontWeight: "600" }}>
-                      Credit: ₹{totals.credit.toLocaleString("en-IN")}
-                    </p>
-                  )}
-                  {totals.debit > 0 && (
-                    <p style={{ margin: "4px 0", color: "red", fontWeight: "600" }}>
-                      Debit: ₹{totals.debit.toLocaleString("en-IN")}
-                    </p>
-                  )}
-                </div>
-              ))
+            return keys.length > 0 ? (
+              keys.map((key) => {
+                const { credit, debit } = grouped[key];
+                const { display } = displayNames[key];
+
+                return (
+                  <div
+                    key={key}
+                    style={{
+                      display: "inline-block",
+                      minWidth: "240px",
+                      padding: "12px",
+                      marginRight: "12px",
+                      borderRadius: "8px",
+                      background: "#fff",
+                      boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+                      textAlign: "center",
+                    }}
+                  >
+                    <h4 style={{ marginBottom: "4px", color: "#2e6999" }}>{display}</h4>
+
+                    {credit > 0 && (
+                      <p
+                        style={{
+                          margin: "4px 0",
+                          color: "green",
+                          fontWeight: "600",
+                        }}
+                      >
+                        Credit: ₹{credit.toLocaleString("en-IN")}
+                      </p>
+                    )}
+                    {debit > 0 && (
+                      <p
+                        style={{
+                          margin: "4px 0",
+                          color: "red",
+                          fontWeight: "600",
+                        }}
+                      >
+                        Debit: ₹{debit.toLocaleString("en-IN")}
+                      </p>
+                    )}
+                  </div>
+                );
+              })
             ) : (
               <p style={{ padding: "8px", color: "#888" }}>
                 No Particular Nature or Event Type matched.
@@ -1325,6 +1346,12 @@ const MoneyReceipts = () => {
             );
           })()}
         </div>
+
+
+
+
+
+
 
         {showFilters && (
           <>

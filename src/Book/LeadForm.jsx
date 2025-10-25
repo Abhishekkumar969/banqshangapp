@@ -9,6 +9,7 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
     const [showCalendar, setShowCalendar] = useState(false);
     const [errors, setErrors] = useState({});
     const auth = getAuth();
+    const [venueOptions, setVenueOptions] = useState([]);
 
     // ---------------------- IST Helpers ----------------------
     const getTodayIST = () => {
@@ -53,6 +54,28 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
             finishTime: prev.finishTime || '21:00', // 09:00 PM
         }));
     }, [setForm]);
+
+    useEffect(() => {
+        const fetchVenueTypes = async () => {
+            try {
+                const q = query(
+                    collection(db, "usersAccess"),
+                    where("accessToApp", "==", "A")
+                );
+
+                const snapshot = await getDocs(q);
+                if (!snapshot.empty) {
+                    // assuming you only want the first admin with access "A"
+                    const adminData = snapshot.docs[0].data();
+                    setVenueOptions(adminData.venueTypes || []);
+                }
+            } catch (error) {
+                console.error("Error fetching venue types:", error);
+            }
+        };
+
+        fetchVenueTypes();
+    }, []);
 
     // ---------------------- Form Validation ----------------------
     useImperativeHandle(ref, () => ({
@@ -161,14 +184,21 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
             {/* Venue & Function Type */}
             <div className="form-group">
                 <label>Venue Type</label>
-                <select name="venueType" value={form.venueType || ''} onChange={handleChange}>
+                <select
+                    name="venueType"
+                    onChange={handleChange}
+                    value={form.venueType || ""}
+                >
                     <option value=""></option>
-                    <option value="Hall with Front Lawn">Hall with Front Lawn</option>
-                    <option value="Hall with Front & Pool Side">Hall with Front & Pool Side</option>
-                    <option value="Pool Side">Pool Side</option>
+                    {venueOptions.map((venue) => (
+                        <option key={venue.value || venue} value={venue.value || venue}>
+                            {venue.value || venue}
+                        </option>
+                    ))}
                 </select>
                 {errors.venueType && <span className="error">Required</span>}
             </div>
+
 
             <div className="form-group">
                 <label>Function Type</label>

@@ -24,6 +24,29 @@ const Prebook = () => {
   const [panelAccess, setPanelAccess] = useState({});
   const [showDailyReport, setShowDailyReport] = useState(false);
 
+
+
+
+  // 🔒 AUTO LOGOUT WHEN TAB IS CLOSED OR REFRESHED
+  // useEffect(() => {
+  //   const auth = getAuth();
+
+  //   const handleBeforeUnload = () => {
+  //     const user = auth.currentUser;
+  //     if (user) {
+  //       // Immediately sign out user when tab/window closes
+  //       signOut(auth).catch((err) => console.error("Auto logout failed:", err));
+  //     }
+  //   };
+
+  //   window.addEventListener("beforeunload", handleBeforeUnload);
+  //   return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  // }, []);
+
+
+
+
+
   useEffect(() => {
     const auth = getAuth();
     const user = auth.currentUser;
@@ -207,7 +230,9 @@ const Prebook = () => {
                   </button>
                 </h3>
 
-                {showDailyReport && hasAccess("ReportSection", "Report") && <DailyReport />}
+                <div>
+                  {showDailyReport && hasAccess("ReportSection", "Report") && <DailyReport />}
+                </div>
               </div>
             </>
           )}

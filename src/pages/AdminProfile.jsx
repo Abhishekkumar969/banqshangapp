@@ -29,6 +29,10 @@ const AdminProfile = () => {
   const [amenities, setAmenities] = useState([]);
   const [amenitiesMenuOpen, setAmenitiesMenuOpen] = useState(false);
   const [hasAmenitiesChanges, setHasAmenitiesChanges] = useState(false);
+
+  const [venueTypeColors, setVenueTypeColors] = useState({});
+  const [hasVenueColorChanges, setHasVenueColorChanges] = useState(false);
+
   const defaultAmenityOptions = [
     "Welcome flex",
     "DJ with Floor",
@@ -45,7 +49,6 @@ const AdminProfile = () => {
     "6 Nos. Luxury Rooms",
     "9 Nos. Luxury Rooms"
   ];
-
 
   const [addons, setAddons] = useState([]);
   const [addonsMenuOpen, setAddonsMenuOpen] = useState(false);
@@ -66,6 +69,8 @@ const AdminProfile = () => {
     "Salad Bar",
     "Soft Drinks / Mocktails"
   ];
+
+
 
 
   useEffect(() => {
@@ -112,11 +117,14 @@ const AdminProfile = () => {
               const data = docSnap.data();
               setAdminProfile({ id: docSnap.id, ...data });
               setFunctionTypes(data.functionTypes || []);
-              setVenueTypes(data.venueTypes || []);
               setAmenities(data.amenities || []);
               setAddons(data.addons || []);
               setMenuItems(data.menuItems || []);
               setToAddAmenitiesValues(data.toAddAmenities || []);
+
+              setVenueTypes(data.venueTypes || []);
+              setVenueTypeColors(data.venueTypeColors || {}); // fetch saved colors
+
             } else {
               console.warn("❌ No Admin Profile record found for this user.");
             }
@@ -149,6 +157,10 @@ const AdminProfile = () => {
       console.error("Error updating field:", error);
     }
   };
+
+
+
+
 
   return (
     <>
@@ -358,71 +370,109 @@ const AdminProfile = () => {
                   <label className={styles.subHeading}>{section.title}:</label>
                   <button
                     type="button"
-                    className={`${styles.toggleButton} ${section.open ? styles.activeToggle : ""
-                      }`}
+                    className={`${styles.toggleButton} ${section.open ? styles.activeToggle : ""}`}
                     onClick={() => section.setOpen((p) => !p)}
                   >
                     {section.open ? "x" : ">"}
                   </button>
                 </div>
 
+                {/* Display badges */}
                 <div className={styles.tagList}>
                   {adminProfile?.[section.profileKey]?.length > 0 ? (
                     adminProfile[section.profileKey].map((val) => (
-                      <span
-                        key={val}
-                        className={styles.badge}
-                        style={{ backgroundColor: section.color }}
-                      >
+                      <span key={val} className={styles.badge} style={{ backgroundColor: section.color }}>
                         {val}
                       </span>
                     ))
                   ) : (
-                    <span className={styles.emptyText}>
-                      No items saved yet.
-                    </span>
+                    <span className={styles.emptyText}>No items saved yet.</span>
                   )}
                 </div>
 
+                {/* Venue Colors Section */}
+                {section.title === "Venue Types" && section.values.length > 0 && (
+                  <div className={styles.colorSection}>
+                    <h4>Assign Color to Each Venue:</h4>
+                    {section.values.map((venue) => (
+                      <div key={venue} className={styles.colorRow}>
+                        <span>{venue}</span>
+                        <input
+                          type="color"
+                          style={{ width: "10%", marginLeft: "10px" }}
+                          value={venueTypeColors[venue] || "#0ac3dbff"} // default color
+                          onChange={(e) => {
+                            setVenueTypeColors((prev) => ({ ...prev, [venue]: e.target.value }));
+                            setHasVenueColorChanges(true);
+                          }}
+                        />
+                      </div>
+                    ))}
+                    {hasVenueColorChanges && (
+                      <button
+                        type="button"
+                        className={styles.saveButtonPrimary}
+                        onClick={async () => {
+                          if (!adminProfile) return;
+                          const ref = doc(db, "usersAccess", adminProfile.id);
+                          await updateDoc(ref, { venueTypeColors });
+                          setHasVenueColorChanges(false);
+                        }}
+                      >
+                        Save Colors
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Dropdown Section */}
                 {section.open && (
                   <div className={styles.dropdownSection}>
                     <CreatableSelect
                       isMulti
                       components={{ ...animatedComponents, ClearIndicator: () => null }}
                       options={[
-                        ...section.defaultOptions.map((opt) => ({
-                          value: opt,
-                          label: opt,
-                        })),
+                        ...section.defaultOptions.map((opt) => ({ value: opt, label: opt })),
                         ...(section.values
                           ?.filter((v) => !section.defaultOptions.includes(v))
                           ?.map((v) => ({ value: v, label: v })) || []),
                       ]}
                       className={styles.selectBox}
                       placeholder={`Select or add ${section.title.toLowerCase()}...`}
+                      value={section.values.map((v) => ({ value: v, label: v }))}
                       onChange={(selected) => {
                         const vals = selected ? selected.map((s) => s.value) : [];
+
+                        if (section.title === "Venue Types") {
+                          // remove colors for deleted venues
+                          const updatedColors = { ...venueTypeColors };
+                          Object.keys(updatedColors).forEach((key) => {
+                            if (!vals.includes(key)) delete updatedColors[key];
+                          });
+
+                          // add default color for new venues
+                          vals.forEach((v) => {
+                            if (!updatedColors[v]) updatedColors[v] = "#0ac3dbff";
+                          });
+
+                          setVenueTypeColors(updatedColors);
+                        }
+
                         section.setValues(vals);
                         section.setHasChanges(
-                          JSON.stringify(vals) !==
-                          JSON.stringify(adminProfile?.[section.profileKey] || [])
+                          JSON.stringify(vals) !== JSON.stringify(adminProfile?.[section.profileKey] || [])
                         );
                       }}
                       onCreateOption={(inputValue) => {
                         const val = inputValue.trim();
-                        if (
-                          !val ||
-                          section.values.includes(val) ||
-                          section.defaultOptions.includes(val)
-                        )
-                          return;
+                        if (!val || section.values.includes(val) || section.defaultOptions.includes(val)) return;
+
                         section.setValues([...section.values, val]);
+                        if (section.title === "Venue Types") {
+                          setVenueTypeColors((prev) => ({ ...prev, [val]: "#0ac3dbff" }));
+                        }
                         section.setHasChanges(true);
                       }}
-                      value={section.values.map((v) => ({
-                        value: v,
-                        label: v,
-                      }))}
                       isSearchable
                       closeMenuOnSelect={false}
                       styles={{
@@ -443,7 +493,10 @@ const AdminProfile = () => {
                         onClick={async () => {
                           if (!adminProfile) return;
                           const ref = doc(db, "usersAccess", adminProfile.id);
-                          await updateDoc(ref, { [section.profileKey]: section.values });
+                          const updateData = { [section.profileKey]: section.values };
+                          // also update colors if it's Venue Types
+                          if (section.title === "Venue Types") updateData.venueTypeColors = venueTypeColors;
+                          await updateDoc(ref, updateData);
                           section.setHasChanges(false);
                           section.setOpen(false);
                         }}

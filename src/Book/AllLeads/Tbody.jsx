@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LogPopupCell from './LogPopupCell';
 
-const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, alwayEdit, moveLeadToDrop, sendToPrint, sendToWhatsApp, userPermissions, sortConfig, requestSort }) => {
+const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPayment, moveLeadToDrop, sendToPrint, sendToWhatsApp, userPermissions, sortConfig, requestSort }) => {
     const [localValue, setLocalValue] = useState({});
     const navigate = useNavigate();
     const [selectedAdvances, setSelectedAdvances] = useState(null);
@@ -74,8 +74,6 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, alwayEdit, move
             });
         }
     };
-
-    const maxAdvanceCount = Math.max(...leads.map(lead => lead.advancePayments?.length || 0));
 
     const sendToBookings = (lead) => {
         const updatedLead = { ...lead };
@@ -166,14 +164,7 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, alwayEdit, move
                     <td style={{ color: 'black', backgroundColor: '#ff7272ff', fontSize: '15px', fontWeight: '800', whiteSpace: 'nowrap' }}>
                         Total Dues
                     </td>
-
-                    <td colSpan={3} style={{ backgroundColor: 'white' }}  ></td>
-
-                    {Array.from({ length: maxAdvanceCount }).map((_, i) => (
-                        <td key={`Advance_Payment_${i + 1}`} style={{ backgroundColor: 'white' }}></td>
-                    ))}
-
-                    <td style={{ backgroundColor: 'white' }} colSpan={7} ></td>
+                    <td style={{ backgroundColor: 'white' }} colSpan={16} ></td>
                 </tr>
             </thead>
 
@@ -243,7 +234,7 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, alwayEdit, move
                         </button>
                     </th>
 
-                    {['Note...'].map(header => (
+                    {['Print Settlement', 'Note...'].map(header => (
                         <th key={header}>{header}</th>
                     ))}
 
@@ -265,17 +256,9 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, alwayEdit, move
                         key={lead.id}
                         style={{
                             whiteSpace: "nowrap",
-                            backgroundColor:
-                                lead.venueType === "Hall with Front Lawn"
-                                    ? "lightgreen"
-                                    : lead.venueType === "Pool Side"
-                                        ? "#f7ff62ff"
-                                        : lead.venueType === "Hall with Front & Back Lawn"
-                                            ? "#bce1ffff"
-                                            : "white",
+                            backgroundColor: userPermissions.venueTypeColors?.[lead.venueType] || "white",
                             transition: "all 0.3s ease",
                         }}
-
                     >
                         <td className="sticky sticky-1" style={{ fontWeight: 'bold' }}>{leads.length - index}.</td>
 
@@ -899,6 +882,32 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, alwayEdit, move
 
                         <LogPopupCell lead={lead} />
 
+                        <td>
+                            {(() => {
+                                // Convert functionDate to IST
+                                const funcDate = new Date(
+                                    new Date(lead.functionDate).toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+                                );
+
+                                // Get today's date in IST
+                                const today = new Date(
+                                    new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+                                );
+
+                                // Next day after functionDate in IST
+                                const nextDay = new Date(funcDate);
+                                nextDay.setDate(funcDate.getDate() + 1);
+
+                                // Show button if today is same as or after nextDay (in IST)
+                                const showButton = today >= nextDay;
+
+                                return showButton ? (
+                                    <button onClick={() => sendToPrintPayment(lead)}>Print Settlement</button>
+                                ) : null;
+                            })()}
+                        </td>
+
+
                         {['note'].map(field => (
                             <td key={`${lead.id}-${field}`}
                                 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }}
@@ -1072,7 +1081,7 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, alwayEdit, move
                             </td>
                         ))}
 
-                        {/* <td>{lead.id}</td> */}
+                  
 
                         {/* Drop Button */}
                         <td>
@@ -1091,6 +1100,8 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, alwayEdit, move
                                 Drop
                             </button>
                         </td>
+
+                              <td>{lead.id}</td>
 
                     </tr >
                 ))}

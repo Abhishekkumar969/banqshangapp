@@ -346,80 +346,159 @@ const AccountantDetails = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {Object.keys(totals.userTotals || {}).map((user) => {
-                                if (user.includes("Cash")) return null; // Skip Cash
-
-                                let type = "Bank";
-                                if (user.includes("Locker")) type = "Locker";
-
-                                const color = type === "Locker" ? "#d35400" : "#2c3e50";
-
-                                return (
+                            {/* BANK ACCOUNTS */}
+                            {Object.keys(totals.userTotals || {})
+                                .filter((user) => !user.includes("Cash") && !user.includes("Locker"))
+                                .map((user) => (
                                     <tr key={user}>
-                                        <td style={{ padding: "8px", color, textAlign: "left" }}>{user}</td>
-                                        <td style={{ padding: "8px", textAlign: "right", color }}>
+                                        <td style={{ padding: "8px", textAlign: "left", color: "#2c3e50" }}>{user}</td>
+                                        <td style={{ padding: "8px", textAlign: "right", color: "#2c3e50" }}>
                                             ₹{totals.userTotals[user].toLocaleString()}
                                         </td>
                                     </tr>
-                                );
-                            })}
+                                ))}
 
-                            {(() => {
-                                let lockerTotal = 0;
-                                let bankTotal = 0;
+                            {/* BANK TOTAL */}
+                            <tr style={{ fontWeight: "bold", background: "#ecececff" }}>
+                                <td style={{ padding: "8px", textAlign: "left", color: "#2c3e50" }}>Bank Total</td>
+                                <td style={{ padding: "8px", textAlign: "right", color: "#2c3e50" }}>
+                                    ₹{Object.keys(totals.userTotals || {})
+                                        .filter((user) => !user.includes("Cash") && !user.includes("Locker"))
+                                        .reduce((sum, user) => sum + totals.userTotals[user], 0)
+                                        .toLocaleString()}
+                                </td>
+                            </tr>
 
-                                Object.keys(totals.userTotals || {}).forEach((user) => {
-                                    if (user.includes("Locker")) {
-                                        lockerTotal += totals.userTotals[user];
-                                    } else if (!user.includes("Cash")) {
-                                        bankTotal += totals.userTotals[user];
-                                    }
-                                });
+                            {/* LOCKER ACCOUNTS */}
+                            {Object.keys(totals.userTotals || {})
+                                .filter((user) => user.includes("Locker"))
+                                .map((user) => (
+                                    <tr key={user}>
+                                        <td style={{ padding: "8px", textAlign: "left", color: "#d35400" }}>{user}</td>
+                                        <td style={{ padding: "8px", textAlign: "right", color: "#d35400" }}>
+                                            ₹{totals.userTotals[user].toLocaleString()}
+                                        </td>
+                                    </tr>
+                                ))}
 
-                                const TotalDistributed = lockerTotal + bankTotal;
+                            {/* LOCKER TOTAL */}
+                            <tr style={{ fontWeight: "bold", background: "#f3f2f2ff" }}>
+                                <td style={{ padding: "8px", textAlign: "left", color: "#d35400" }}>Locker Total</td>
+                                <td style={{ padding: "8px", textAlign: "right", color: "#d35400" }}>
+                                    ₹{Object.keys(totals.userTotals || {})
+                                        .filter((user) => user.includes("Locker"))
+                                        .reduce((sum, user) => sum + totals.userTotals[user], 0)
+                                        .toLocaleString()}
+                                </td>
+                            </tr>
 
-                                return (
-                                    <>
-                                        <tr style={{ fontWeight: "bold", background: "#f3f2f2ff" }}>
-                                            <td style={{ padding: "8px", textAlign: "left", color: "#d35400" }}>
-                                                Locker Total
-                                            </td>
-                                            <td style={{ padding: "8px", textAlign: "right", color: "#d35400" }}>
-                                                ₹{lockerTotal.toLocaleString()}
-                                            </td>
-                                        </tr>
-                                        <tr style={{ fontWeight: "bold", background: "#ecececff" }}>
-                                            <td style={{ padding: "8px", textAlign: "left", color: "#2c3e50" }}>
-                                                Bank Total
-                                            </td>
-                                            <td style={{ padding: "8px", textAlign: "right", color: "#2c3e50" }}>
-                                                ₹{bankTotal.toLocaleString()}
-                                            </td>
-                                        </tr>
-                                        <tr style={{ fontWeight: "bold", background: "#dcdcdcff" }}>
-                                            <td style={{ padding: "8px", textAlign: "left", fontSize: '15px' }}>Cash Total</td>
-                                            <td style={{ padding: "8px", textAlign: "right", fontSize: '15px' }}>
-                                                ₹{totalCash.toLocaleString()}
-                                            </td>
-                                        </tr>
-                                        <tr style={{ fontWeight: "bold", background: "#d0d0d0ff" }}>
-                                            <td style={{ padding: "8px", textAlign: "left", fontSize: '15px' }}>Cash Distributed</td>
-                                            <td style={{ padding: "8px", textAlign: "right", fontSize: '15px' }}>
-                                                ₹{TotalDistributed.toLocaleString()}
-                                            </td>
-                                        </tr>
-                                        <tr style={{ fontWeight: "bold", background: "#d0d0d0ff" }}>
-                                            <td style={{ padding: "8px", textAlign: "left", fontSize: '15px' }}>Cash In Hand</td>
-                                            <td style={{ padding: "8px", textAlign: "right", fontSize: '15px' }}>
-                                                ₹{totalCash.toLocaleString() - TotalDistributed.toLocaleString()}
-                                            </td>
-                                        </tr>
-                                    </>
-                                );
-                            })()}
-
+                            {/* CASH DETAILS */}
+                            <tr style={{ fontWeight: "bold", background: "#dcdcdcff" }}>
+                                <td style={{ padding: "8px", textAlign: "left", fontSize: "15px" }}>Cash Total</td>
+                                <td style={{ padding: "8px", textAlign: "right", fontSize: "15px" }}>₹{totalCash.toLocaleString()}</td>
+                            </tr>
+                            <tr style={{ fontWeight: "bold", background: "#d0d0d0ff" }}>
+                                <td style={{ padding: "8px", textAlign: "left", fontSize: "15px" }}>Cash Distributed</td>
+                                <td style={{ padding: "8px", textAlign: "right", fontSize: "15px" }}>
+                                    ₹{(
+                                        Object.keys(totals.userTotals || {})
+                                            .filter((user) => !user.includes("Cash"))
+                                            .reduce((sum, user) => sum + totals.userTotals[user], 0)
+                                    ).toLocaleString()}
+                                </td>
+                            </tr>
+                            <tr style={{ fontWeight: "bold", background: "#d0d0d0ff" }}>
+                                <td style={{ padding: "8px", textAlign: "left", fontSize: "15px" }}>Cash In Hand</td>
+                                <td style={{ padding: "8px", textAlign: "right", fontSize: "15px" }}>
+                                    ₹{(totalCash - Object.keys(totals.userTotals || {})
+                                        .filter((user) => !user.includes("Cash"))
+                                        .reduce((sum, user) => sum + totals.userTotals[user], 0)
+                                    ).toLocaleString()}
+                                </td>
+                            </tr>
                         </tbody>
+                    </table>
+                </div>
+                <div style={{ marginBottom: "15px", overflowX: "auto" }}>
+                    <table style={{ borderCollapse: "collapse", width: "100%" }}>
+                        <thead>
+                            <tr>
+                                <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid #ccc" }}>Account</th>
+                                <th style={{ textAlign: "right", padding: "8px", borderBottom: "1px solid #ccc" }}>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {/* BANK ACCOUNTS */}
+                            {Object.keys(totals.userTotals || {})
+                                .filter((user) => !user.includes("Cash") && !user.includes("Locker"))
+                                .map((user) => (
+                                    <tr key={user}>
+                                        <td style={{ padding: "8px", textAlign: "left", color: "#2c3e50" }}>{user}</td>
+                                        <td style={{ padding: "8px", textAlign: "right", color: "#2c3e50" }}>
+                                            ₹{totals.userTotals[user].toLocaleString()}
+                                        </td>
+                                    </tr>
+                                ))}
 
+                            {/* BANK TOTAL */}
+                            <tr style={{ fontWeight: "bold", background: "#ecececff" }}>
+                                <td style={{ padding: "8px", textAlign: "left", color: "#2c3e50" }}>Bank Total</td>
+                                <td style={{ padding: "8px", textAlign: "right", color: "#2c3e50" }}>
+                                    ₹{Object.keys(totals.userTotals || {})
+                                        .filter((user) => !user.includes("Cash") && !user.includes("Locker"))
+                                        .reduce((sum, user) => sum + totals.userTotals[user], 0)
+                                        .toLocaleString()}
+                                </td>
+                            </tr>
+
+                            {/* LOCKER ACCOUNTS */}
+                            {Object.keys(totals.userTotals || {})
+                                .filter((user) => user.includes("Locker"))
+                                .map((user) => (
+                                    <tr key={user}>
+                                        <td style={{ padding: "8px", textAlign: "left", color: "#d35400" }}>{user}</td>
+                                        <td style={{ padding: "8px", textAlign: "right", color: "#d35400" }}>
+                                            ₹{totals.userTotals[user].toLocaleString()}
+                                        </td>
+                                    </tr>
+                                ))}
+
+                            {/* LOCKER TOTAL */}
+                            <tr style={{ fontWeight: "bold", background: "#f3f2f2ff" }}>
+                                <td style={{ padding: "8px", textAlign: "left", color: "#d35400" }}>Locker Total</td>
+                                <td style={{ padding: "8px", textAlign: "right", color: "#d35400" }}>
+                                    ₹{Object.keys(totals.userTotals || {})
+                                        .filter((user) => user.includes("Locker"))
+                                        .reduce((sum, user) => sum + totals.userTotals[user], 0)
+                                        .toLocaleString()}
+                                </td>
+                            </tr>
+
+                            {/* CASH DETAILS */}
+                            <tr style={{ fontWeight: "bold", background: "#dcdcdcff" }}>
+                                <td style={{ padding: "8px", textAlign: "left", fontSize: "15px" }}>Cash Total</td>
+                                <td style={{ padding: "8px", textAlign: "right", fontSize: "15px" }}>₹{totalCash.toLocaleString()}</td>
+                            </tr>
+                            <tr style={{ fontWeight: "bold", background: "#d0d0d0ff" }}>
+                                <td style={{ padding: "8px", textAlign: "left", fontSize: "15px" }}>Cash Distributed</td>
+                                <td style={{ padding: "8px", textAlign: "right", fontSize: "15px" }}>
+                                    ₹{(
+                                        Object.keys(totals.userTotals || {})
+                                            .filter((user) => !user.includes("Cash"))
+                                            .reduce((sum, user) => sum + totals.userTotals[user], 0)
+                                    ).toLocaleString()}
+                                </td>
+                            </tr>
+                            <tr style={{ fontWeight: "bold", background: "#d0d0d0ff" }}>
+                                <td style={{ padding: "8px", textAlign: "left", fontSize: "15px" }}>Cash In Hand</td>
+                                <td style={{ padding: "8px", textAlign: "right", fontSize: "15px" }}>
+                                    ₹{(totalCash - Object.keys(totals.userTotals || {})
+                                        .filter((user) => !user.includes("Cash"))
+                                        .reduce((sum, user) => sum + totals.userTotals[user], 0)
+                                    ).toLocaleString()}
+                                </td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
 

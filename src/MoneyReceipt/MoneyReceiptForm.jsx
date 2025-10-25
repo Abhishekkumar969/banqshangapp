@@ -49,28 +49,18 @@ const MoneyReceipt = () => {
     }, []);
 
     // Convert a JS Date to IST date string (yyyy-mm-dd)
+    // Get current date in IST as YYYY-MM-DD
     const getISTDateString = (date = new Date()) => {
-        const istOffset = 5.5 * 60; // IST = UTC+5:30 in minutes
-        const localTime = date.getTime();
-        const localOffset = date.getTimezoneOffset() * 60000;
-        const istTime = new Date(localTime + localOffset + istOffset * 60000);
-        const yyyy = istTime.getFullYear();
-        const mm = String(istTime.getMonth() + 1).padStart(2, '0');
-        const dd = String(istTime.getDate()).padStart(2, '0');
-        return `${yyyy}-${mm}-${dd}`;
+        return date.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
     };
 
-    // Format date string in DD-MM-YYYY IST
+    // Format any date string/object in IST as DD-MM-YYYY
     const formatISTDate = (dateStr) => {
         if (!dateStr) return '';
         const d = new Date(dateStr);
-        const istOffset = 5.5 * 60 * 60000;
-        const istDate = new Date(d.getTime() + istOffset);
-        const dd = String(istDate.getDate()).padStart(2, '0');
-        const mm = String(istDate.getMonth() + 1).padStart(2, '0');
-        const yyyy = istDate.getFullYear();
-        return `${dd}-${mm}-${yyyy}`;
+        return d.toLocaleDateString('en-GB', { timeZone: 'Asia/Kolkata' });
     };
+
 
     const [manualDate, setManualDate] = useState(getISTDateString());
 
@@ -506,9 +496,10 @@ const MoneyReceipt = () => {
                                 >
                                     {cust.name} - {cust.mobile1} - (
                                     {new Date(cust.functionDate)
-                                        .toLocaleDateString("en-GB")
+                                        .toLocaleDateString("en-GB", { timeZone: "Asia/Kolkata" })
                                         .replace(/\//g, "-")}
-                                    ) {cust.functionType ? `(${cust.functionType})` : ""}
+                                    {cust.functionType ? ` (${cust.functionType})` : ""}
+
                                 </div>
                             ))}
                     </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { collection, onSnapshot, doc, updateDoc, deleteField, getDoc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteField, getDoc, setDoc, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import './BookingLeadsTable.css';
 import Tbody from './Tbody';
@@ -658,6 +658,408 @@ const BookingLeadsTable = () => {
         iframe.contentWindow.print();
     };
 
+
+
+
+
+    const getCateringAmount = async (lead) => {
+        try {
+            // Step 1: Get all docs under "catering"
+            const cateringColRef = collection(db, "catering");
+            const cateringSnap = await getDocs(cateringColRef);
+
+            if (cateringSnap.empty) {
+                console.log("⚠️ No documents inside 'catering' collection");
+                return [];
+            }
+
+            // Step 2: Use the first document (whatever its name is)
+            const firstDoc = cateringSnap.docs[0];
+            const cateringMap = firstDoc.data();
+
+            // Step 3: Access your lead ID key
+            const cateringData = cateringMap[lead.id];
+
+            if (!cateringData) {
+                console.log("⚠️ No catering data found for lead:", lead.id);
+                return [];
+            }
+
+            console.log("✅ Catering fetched for lead:", lead.id, cateringData);
+            return [cateringData];
+        } catch (error) {
+            console.error("❌ Error fetching catering:", error);
+            return [];
+        }
+    };
+
+    // -------------------------------------------------------------
+    // 🧾 PRINT FUNCTION (cleaned + fixed catering section)
+    // -------------------------------------------------------------
+
+    const sendToPrintPayment = async (lead) => {
+
+        // --- Payment Details Rows ---
+        const fmtDateIST = (dateString) => {
+            if (!dateString) return 'N/A';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Kolkata' });
+            } catch (err) {
+                return 'N/A';
+            }
+        };
+
+        // Payment Rows from advancePayments
+        const paymentRows = (lead.advancePayments || []).map((p, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${fmtDateIST(p.addedAt || p.receiptDate)}</td>
+      <td>${p.slNo || ''}</td>
+      <td>${p.mode || ''}</td>
+      <td style="text-align: right;">${p.amount?.toLocaleString('en-IN') || ''}</td>
+      <td>${p.description || ''}</td>
+    </tr>
+`).join('');
+
+        const totalReceived = (lead.advancePayments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+
+
+
+
+
+        // --- FETCH CATERING DATA ---
+        const caterings = await getCateringAmount(lead); // ✅ call the function
+
+
+        const cateringRows = (caterings || [])
+            .map((c, i) => {
+                let rowHtml = "";
+                const assignedMenus = c.assignedMenus || {};
+
+                let menuIndex = 1;
+                let grandTotalc = 0;
+
+                for (const [, menu] of Object.entries(assignedMenus)) {
+                    const qty = Number(menu.qty || 0);
+                    const extQty = Number(menu.extQty || 0);
+                    const rate = Number(menu.rate || 0);
+                    const total = (qty + extQty) * rate;
+                    grandTotalc += total;
+
+                    rowHtml += `
+        <tr>
+          <td>${menuIndex}</td>
+          <td>${c.CateringAssignName || ""}</td>
+        
+          <td style="text-align: right;">${total.toLocaleString("en-IN")}</td>
+        </tr>
+      `;
+                    menuIndex++;
+                }
+
+                // Add a grand total row per catering assignment
+                rowHtml += `
+      <tr style="font-weight: bold; background: #f0f0f0;">
+        <td colspan="2"  class="table-header" style="text-align: left;">Catering Total</td>
+        <td style="text-align: right;">${grandTotalc.toLocaleString("en-IN")}</td>
+      </tr>
+    `;
+
+
+                return rowHtml;
+            })
+            .join("");
+
+
+
+
+
+
+        // --- Vendor/Expense Rows from customItems ---
+        const selectedItems = (lead.customItems || []).filter(item => item.selected);
+
+        const vendorRows = selectedItems
+            .map((item, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${item.name || ''}</td>
+      <td style="text-align: right;">${item.total?.toLocaleString('en-IN') || 0}</td>
+    </tr>
+  `)
+            .join('');
+
+        // --- Calculate Net Exp dynamically ---
+        const netExp = selectedItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+
+
+
+
+        // --- Payment Calculation Rows ---
+        const hallCharges = Number(lead.hallCharges || 0); // from lead.hallCharges (string)
+        const gst = Number(lead.gstAmount || 0);           // from lead.gstAmount
+        // --- Calculate Breakfast & Lunch total dynamically from meals ---
+        const getMealTotal = (mealType) => {
+            let total = 0;
+            const dayMeals = lead.meals || {};
+            for (const dayKey of Object.keys(dayMeals)) {
+                const meal = dayMeals[dayKey][mealType];
+                if (meal && meal.total) {
+                    total += Number(meal.total);
+                }
+            }
+            return total;
+        };
+
+        const breakfastLunch = getMealTotal('Breakfast') + getMealTotal('Lunch');
+
+        const panCounter = Number(lead.panCounter || 0);        // optional, default 0
+        const jaimala = Number(lead.jaimala || 0);              // optional, default 0
+
+        // --- Dinner calculation from selectedMenus ---
+        let dinnerRate = 0;
+        let dinnerTotal = 0;
+
+        const selectedMenus = lead.selectedMenus || {};
+        const dinnerMenuKey = Object.keys(selectedMenus).find(k => k.toLowerCase().includes("diamond non-veg"));
+
+        let noOfPlates = 0;
+        let extraPlates = 0;
+
+        if (dinnerMenuKey) {
+            const dinnerMenu = selectedMenus[dinnerMenuKey];
+            noOfPlates = Number(dinnerMenu.noOfPlates || 0);
+            extraPlates = Number(dinnerMenu.extraPlates || 0);
+            dinnerRate = Number(dinnerMenu.rate || 0);
+            dinnerTotal = (noOfPlates + extraPlates) * dinnerRate;
+        }
+
+
+        const paymentCalculationRows = `
+            <tr><td>Hall Charges & Others</td><td></td><td></td><td style="text-align: right;">${hallCharges.toLocaleString('en-IN')}</td></tr>
+            <tr><td>GST</td><td></td><td></td><td style="text-align: right;">${gst.toLocaleString('en-IN')}</td></tr>
+            <tr>
+              <td>Breakfast & Lunch</td>
+              <td></td>
+              <td></td>
+              <td style="text-align: right;">${breakfastLunch.toLocaleString('en-IN')}</td>
+            </tr>
+            
+            <tr><td>Pan Counter</td><td></td><td></td><td style="text-align: right;">${panCounter.toLocaleString('en-IN')}</td></tr>
+            <tr><td>Jaimala</td><td></td><td></td><td style="text-align: right;">${jaimala.toLocaleString('en-IN')}</td></tr>
+            <tr>
+              <td>Dinner</td>
+         
+  <td>${noOfPlates.toLocaleString('en-IN')} + ${extraPlates.toLocaleString('en-IN')}</td>
+                            
+
+              <td>${dinnerRate.toLocaleString('en-IN')}</td>
+              <td style="text-align: right;">${dinnerTotal.toLocaleString('en-IN')}</td>
+            </tr>
+`;
+
+
+        // --- Calculate totals dynamically ---
+        const grandTotal = Number(lead.grandTotal || 0);
+        const discount = Number(lead.discount || 0);
+        const outstandingAmount = grandTotal - totalReceived - discount;
+
+
+        // --- HTML Generation ---
+        const printHTML = `
+  <html>
+  <head>
+    <title>Total Payment Settlement - ${lead.eventDate}</title>
+    <style>
+      body { font-family: Calibri, Arial, sans-serif; font-size: 13px; padding: 10px; margin: 0; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+      th, td { border: 1px solid #000; padding: 4px 6px; text-align: left; vertical-align: top;}
+      th { background: #f4f4f4; text-align: center; }
+      .title { text-align: center; background: #ffff00; font-weight: bold; padding: 6px; border: 2px solid black; margin-bottom: 10px; font-size: 15px; }
+      .section { background: #ffec8b; font-weight: bold; padding: 6px; }
+      .highlight-red { background: #ff5050; color: white; font-weight: bold; text-align: center; }
+      .highlight-green { background: #ccffcc; font-weight: bold; text-align: center; }
+      .no-border td { border: none; }
+      .mini-table { border: none; margin-bottom: 2px;}
+      .mini-table td, .mini-table th { border: none; padding: 2px 4px; }
+      .mini-table td:nth-child(2n-1) { font-weight: bold; width: 15%;} /* Labels */
+      .mini-table td:nth-child(2n) { width: 35%;} /* Values */
+      .mini-table td.full-width { width: 85%; }
+      
+      .table-header { border: 1px solid black; padding: 5px 8px; font-weight: bold; background: #ffec8b; }
+      .table-header.center { text-align: center; }
+      
+      .pc-table th, .pc-table td { width: 25%; } /* Payment Calculation column widths */
+      .pc-table td:nth-child(2), .pc-table td:nth-child(3), .pc-table td:nth-child(4) { text-align: right; }
+      .vendor-table td:nth-child(3) { text-align: right; }
+      
+      .gross-income-box { 
+          border: 1px solid black; 
+          float: right; 
+          margin-top: -100px; /* Adjust as needed */
+          margin-right: 0px; 
+          padding: 5px; 
+          width: 350px; /* To match screenshot column structure */
+          text-align: right;
+      }
+      .gross-income-box .highlight-green {
+          display: flex;
+          justify-content: space-between;
+          padding: 8px;
+          margin: 0;
+          font-size: 14px;
+      }
+      .grand-total-row td:nth-child(1) { text-align: center; }
+      .grand-total-row td:nth-child(2) { text-align: right; }
+      
+    </style>
+  </head>
+  <body>
+
+    <div class="title">Event Date: <td>${lead.functionDate ? new Date(lead.functionDate).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Kolkata' }) : 'N/A'}</td> - Total Payment Settlement</div>
+    
+    <table class="mini-table" style="margin-bottom:10px; width: 60%; float: left;">
+        <tr>
+            <td>Customer Name:</td><td>${lead.name || ''}</td>
+        </tr>
+    
+        <tr>
+            <td>Contact No.:</td><td>${lead.mobile1 || ''}</td>
+        </tr>
+    
+        <tr>
+            <td>Event Type:</td><td>${lead.functionType || ''}</td>
+        </tr>
+    
+        <tr>
+            <td>Event Date:</td><td>${lead.functionDate ? new Date(lead.functionDate).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Kolkata' }) : 'N/A'}</td>
+        </tr>
+    
+        <tr>
+            <td>Food Menu:</td> <td>${Object.keys(lead.selectedMenus || {}).length ? Object.keys(lead.selectedMenus).join(", ") : ''}</td>
+        </tr>
+    
+        </table>
+        <br style="clear: both;">
+    
+       <table>
+      <tr><td colspan="7" class="section">Payment Details</td></tr>
+      <tr>
+        <th>Sl</th><th>Payment Date</th><th>Receipt No.</th><th>Payment Mode</th>
+        <th>Amount</th><th>Remark</th>
+      </tr>
+      ${paymentRows}
+    </table>
+
+    <table style="width: 48%; float: left; margin-right: 2%;">
+      <tr><td colspan="4" class="table-header center">Payment Calculation</td></tr>
+      <tr>
+        <th style="width: 40%;">Particulars</th><th style="width: 20%;">Qty.</th>
+        <th style="width: 20%;">Rate</th><th style="width: 20%;">Total</th>
+      </tr>
+      ${paymentCalculationRows}
+
+      <tr>
+        <td colspan="3" class="table-header">Total</td>
+        <td style="text-align: right;">
+          ${((Number(lead.grandTotal) || 0) + Number(lead.discount) || 0).toLocaleString('en-IN')}
+        </td>
+      </tr>
+
+ <tr>
+    <td colspan="3">Received Amount</td>
+    <td style="text-align: right;">${totalReceived.toLocaleString('en-IN')}</td>
+  </tr>
+      
+      <tr>
+        <td colspan="3">Discount</td>
+        <td style="text-align: right;">
+          ${Number(lead.discount || 0).toLocaleString('en-IN')}
+        </td>
+      </tr>
+<tr class="highlight-red">
+  <td colspan="3">Outstanding Amount</td>
+  <td style="text-align: right;">${outstandingAmount.toLocaleString('en-IN')}</td>
+</tr>    </table>
+
+    <table style="width: 48%; float: right;">
+  <tr><td colspan="3" class="table-header center">List of Exp. (Vendor)</td></tr>
+  <tr><th>Sl</th><th>Vendor</th><th>Amount</th></tr>
+  ${vendorRows}
+  <tr>
+    <td colspan="2" class="table-header">Net Exp.</td>
+    <td style="text-align: right;">${netExp.toLocaleString('en-IN')}</td>
+  </tr>
+</table>
+
+     <table style="width: 48%; float: right;">
+      <tr><td colspan="3" class="table-header center">Catering Assignments</td></tr>
+      <tr><th>Sl</th><th>Catering Name</th><th>Amount</th></tr>
+       ${cateringRows}
+    </table>
+    
+    
+    <br style="clear: both;">
+    
+    <table style="width: 48%; float: left; margin-right: 2%; margin-top: 10px;">
+        <tr class="grand-total-row">
+            <td colspan="2" class="section" style="width: 40%; text-align: center;">Grand Total</td>
+            <td colspan="2" style="width: 60%; text-align: right; font-weight: bold;">${(lead.grandTotal || 0).toLocaleString('en-IN')}</td>
+        </tr>
+    </table>
+    
+    <div style="width: 48%; float: right; margin-top: 10px;">
+        <table style="width: 100%;">
+            <tr style="border: none;">
+                <td style="border: none; padding: 0;">
+                    <table style="width: 100%; margin-bottom: 5px;">
+                        <tr>
+                            <td style="border: none; font-weight: bold;">Total Business from event</td>
+                            <td style="border: none; text-align: right;">${(lead.grandTotal || 0).toLocaleString('en-IN')}</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr style="border: none;">
+                <td style="border: none; padding: 0;">
+                    <table style="width: 100%; border: 3px solid #ccffcc; border-collapse: separate;">
+                        <tr class="highlight-green">
+                            <td style="width: 70%; text-align: left; border: none; padding: 8px;">Gross Income from event</td>
+                            <td style="width: 30%; text-align: right; border: none; padding: 8px;">₹ ${(lead.grossIncome || 0).toLocaleString('en-IN')}</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    <br style="clear: both;">
+
+  </body>
+  </html>`;
+
+        // Standard printing logic (no change needed here)
+        const iframe = document.createElement("iframe");
+        iframe.style.position = "fixed";
+        iframe.style.right = "0";
+        iframe.style.bottom = "0";
+        iframe.style.width = "0";
+        iframe.style.height = "0";
+        iframe.style.border = "0";
+        document.body.appendChild(iframe);
+
+        iframe.contentDocument.open();
+        iframe.contentDocument.write(printHTML);
+        iframe.contentDocument.close();
+
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+    };
+
+
+
+
     useEffect(() => {
         const term = searchTerm.toLowerCase().replace(/\//g, "-").trim();
 
@@ -882,6 +1284,27 @@ const BookingLeadsTable = () => {
         return `${month}${year}`;
     };
 
+    useEffect(() => {
+        const unsubscribe = onSnapshot(collection(db, "usersAccess"), (querySnapshot) => {
+            const mergedVenueColors = {};
+
+            querySnapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                const colors = data.venueTypeColors || {};
+                Object.assign(mergedVenueColors, colors); // merge all users' colors
+            });
+
+            setUserPermissions(prev => ({
+                ...prev,
+                venueTypeColors: mergedVenueColors
+            }));
+        }, (err) => console.error("Error fetching usersAccess:", err));
+
+        return () => unsubscribe();
+    }, []);
+
+
+
     return (
         <div className="leads-table-container">
             <div style={{ marginBottom: '30px' }}> <BackButton /> </div>
@@ -921,47 +1344,61 @@ const BookingLeadsTable = () => {
                 </button>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'start', gap: '15px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-start', gap: '30px', flexWrap: 'wrap' }}>
+                {/* Venue Type Legend */}
                 <div style={{ textAlign: 'left' }} className="win-prob-legend">
-                    <ul style={{ display: 'inline-block', listStyle: 'none', padding: 0 }}>
-                        <strong>🎯 Venue Type :</strong>
-                        {["Hall with Front Lawn", "Hall with Front & Back Lawn", "Pool Side", "All Venues"].map((type, idx) => (
-                            <li
-                                key={type}
-                                onClick={() => setVenueFilter(type === "All Venues" ? "all" : type)}
-                                style={{
-                                    cursor: "pointer",
-                                    padding: "5px 10px",
-                                    borderRadius: "6px",
-                                    backgroundColor: venueFilter === (type === "All Venues" ? "all" : type) ? "#007BFF" : "#f0f0f0",
-                                    color: venueFilter === (type === "All Venues" ? "all" : type) ? "#fff" : "#000",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "5px",
-                                }}
-                            >
-                                {type !== "All Venues" && (
-                                    <span
-                                        className={`legend-box ${["Pool Side", "Lawn", "Back Lawn"].includes(type)
-                                            ? "high-prob"
-                                            : type === "Hall with Front & Back Lawn"
-                                                ? "front-lawn"
-                                                : "very-high-prob"
-                                            }`}
-                                    />
-                                )}
-                                {type}
-                            </li>
-                        ))}
+                    <ul style={{ display: 'inline-block', listStyle: 'none', padding: 0, margin: 0 }}>
+                        <li style={{ fontWeight: 'bold', marginBottom: '8px' }}>🎯 Venue Type :</li>
+                        {[...Object.keys(userPermissions.venueTypeColors || {})].sort().concat("All Venues").map((type) => {
+                            const isAll = type === "All Venues";
+
+                            const currentColor = !isAll
+                                ? userPermissions.venueTypeColors[type] || "#007BFF"
+                                : "#3977a7ff"; // Gray for "All Venues"
+
+                            return (
+                                <li
+                                    key={type}
+                                    onClick={() => setVenueFilter(isAll ? "all" : type)}
+                                    style={{
+                                        cursor: "pointer",
+                                        padding: "5px 12px",
+                                        borderRadius: "6px",
+                                        marginBottom: "6px",
+                                        backgroundColor: venueFilter === (isAll ? "all" : type) ? currentColor : "#f0f0f0",
+                                        color: venueFilter === (isAll ? "all" : type) ? "#fff" : "#000",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                        fontSize: "0.9rem",
+                                    }}
+                                >
+                                    {!isAll && (
+                                        <span
+                                            className="legend-box"
+                                            style={{
+                                                display: "inline-block",
+                                                width: "12px",
+                                                height: "12px",
+                                                backgroundColor: currentColor,
+                                                borderRadius: "3px",
+                                            }}
+                                        />
+                                    )}
+                                    {type}
+                                </li>
+                            );
+                        })}
                     </ul>
                 </div>
 
+                {/* Event Summary Table */}
                 <div className='event-summary-container'>
                     <table style={{ borderCollapse: 'collapse', width: '100%', maxWidth: '400px' }}>
                         <thead>
                             <tr>
-                                <th style={{ border: '1px solid #ccc', padding: '0px 2px', textAlign: 'center' }}>Event</th>
-                                <th style={{ border: '1px solid #ccc', padding: '0px 2px', textAlign: 'center' }}>Cnt.</th>
+                                <th style={{ border: '1px solid #ccc', padding: '4px 6px', textAlign: 'center' }}>Event</th>
+                                <th style={{ border: '1px solid #ccc', padding: '4px 6px', textAlign: 'center' }}>Cnt.</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -969,21 +1406,20 @@ const BookingLeadsTable = () => {
                                 .sort((a, b) => b[1] - a[1])
                                 .map(([event, count]) => (
                                     <tr key={event}>
-                                        <td style={{ border: '1px solid #ccc', padding: '0px 2px', textAlign: 'left' }}>{event}</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '0px 2px', textAlign: 'center' }}>{count}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '4px 6px', textAlign: 'left' }}>{event}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '4px 6px', textAlign: 'center' }}>{count}</td>
                                     </tr>
                                 ))
                             }
                             <tr>
-                                <td style={{ border: '1px solid #ccc', padding: '0px 2px', fontWeight: 'bold', color: 'red' }}>Total Events</td>
-                                <td style={{ border: '1px solid #ccc', padding: '0px 2px', textAlign: 'center', fontWeight: 'bold', color: 'red' }}>
+                                <td style={{ border: '1px solid #ccc', padding: '4px 6px', fontWeight: 'bold', color: 'red' }}>Total Events</td>
+                                <td style={{ border: '1px solid #ccc', padding: '4px 6px', textAlign: 'center', fontWeight: 'bold', color: 'red' }}>
                                     {totalEvents}
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-
             </div>
 
             <div style={{ display: 'none' }}><button onClick={() => setSortDirection('asc')}></button><button onClick={() => setSortDirection('desc')}></button> </div>
@@ -1118,20 +1554,11 @@ const BookingLeadsTable = () => {
                                         key={lead.id}
                                         style={{
                                             whiteSpace: "nowrap",
-
-                                            backgroundColor:
-                                                lead.venueType === "Hall with Front Lawn"
-                                                    ? "lightgreen"
-                                                    : lead.venueType === "Pool Side"
-                                                        ? "#f7ff62ff"
-                                                        : lead.venueType === "Hall with Front & Back Lawn"
-                                                            ? "#bce1ffff"
-                                                            : "white",
-
-
+                                            backgroundColor: userPermissions.venueTypeColors?.[lead.venueType] || "white",
                                             transition: "all 0.3s ease",
                                         }}
                                     >
+
                                         {['functionDate'].map((field) => (
                                             <td
                                                 key={`${lead.id}-${field}`}
@@ -2158,10 +2585,12 @@ const BookingLeadsTable = () => {
                                 startEdit={startEdit}
                                 moveLeadToDrop={moveLeadToDrop}
                                 sendToPrint={sendToPrint}
+                                sendToPrintPayment={sendToPrintPayment}
                                 userPermissions={userPermissions}
                                 sortConfig={sortConfig}
                                 requestSort={requestSort}
                                 alwayEdit={userPermissions.alwayEdit}
+
                             />
                         </table>
                     </div>
