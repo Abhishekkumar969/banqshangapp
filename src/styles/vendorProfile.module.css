@@ -306,3 +306,18 @@
     padding: 3px 6px;
   }
 }
+
+.colorSection {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #eae9e9;
+  border-radius: 8px;
+
+}
+
+.colorRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 5px;
+}
