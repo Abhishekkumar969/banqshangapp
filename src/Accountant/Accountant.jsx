@@ -419,7 +419,8 @@ const AccountantDetails = () => {
                         </tbody>
                     </table>
                 </div>
-                <div style={{ marginBottom: "15px", overflowX: "auto" }}>
+
+                {/* <div style={{ marginBottom: "15px", overflowX: "auto" }}>
                     <table style={{ borderCollapse: "collapse", width: "100%" }}>
                         <thead>
                             <tr>
@@ -428,7 +429,6 @@ const AccountantDetails = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {/* BANK ACCOUNTS */}
                             {Object.keys(totals.userTotals || {})
                                 .filter((user) => !user.includes("Cash") && !user.includes("Locker"))
                                 .map((user) => (
@@ -440,7 +440,6 @@ const AccountantDetails = () => {
                                     </tr>
                                 ))}
 
-                            {/* BANK TOTAL */}
                             <tr style={{ fontWeight: "bold", background: "#ecececff" }}>
                                 <td style={{ padding: "8px", textAlign: "left", color: "#2c3e50" }}>Bank Total</td>
                                 <td style={{ padding: "8px", textAlign: "right", color: "#2c3e50" }}>
@@ -451,7 +450,6 @@ const AccountantDetails = () => {
                                 </td>
                             </tr>
 
-                            {/* LOCKER ACCOUNTS */}
                             {Object.keys(totals.userTotals || {})
                                 .filter((user) => user.includes("Locker"))
                                 .map((user) => (
@@ -463,7 +461,6 @@ const AccountantDetails = () => {
                                     </tr>
                                 ))}
 
-                            {/* LOCKER TOTAL */}
                             <tr style={{ fontWeight: "bold", background: "#f3f2f2ff" }}>
                                 <td style={{ padding: "8px", textAlign: "left", color: "#d35400" }}>Locker Total</td>
                                 <td style={{ padding: "8px", textAlign: "right", color: "#d35400" }}>
@@ -474,7 +471,6 @@ const AccountantDetails = () => {
                                 </td>
                             </tr>
 
-                            {/* CASH DETAILS */}
                             <tr style={{ fontWeight: "bold", background: "#dcdcdcff" }}>
                                 <td style={{ padding: "8px", textAlign: "left", fontSize: "15px" }}>Cash Total</td>
                                 <td style={{ padding: "8px", textAlign: "right", fontSize: "15px" }}>₹{totalCash.toLocaleString()}</td>
@@ -500,7 +496,7 @@ const AccountantDetails = () => {
                             </tr>
                         </tbody>
                     </table>
-                </div>
+                </div> */}
 
                 <div style={{ overflowY: "auto", overflowX: "auto", maxHeight: "70vh" }}>
                     <table className={styles.table}>
@@ -599,6 +595,8 @@ const AccountantDetails = () => {
                     </table>
                 </div>
             </div>
+
+            <div style={{ marginBottom: '50px' }}></div>
             <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
         </>
     );

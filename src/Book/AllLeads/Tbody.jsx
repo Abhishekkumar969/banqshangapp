@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LogPopupCell from './LogPopupCell';
 
-const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPayment, moveLeadToDrop, sendToPrint, sendToWhatsApp, userPermissions, sortConfig, requestSort }) => {
+const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPayment, moveLeadToDrop, sendToPrint, sendToWhatsApp, userPermissions, sortConfig, requestSort, openExpenseModal }) => {
     const [localValue, setLocalValue] = useState({});
     const navigate = useNavigate();
     const [selectedAdvances, setSelectedAdvances] = useState(null);
@@ -908,6 +908,14 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                         </td>
 
 
+                        <td>
+                            <button onClick={() => openExpenseModal(lead.id)} className="btn-add-expense" style={{ backgroundColor: "red", borderRadius: "4px", display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                <div>Add Expense</div>
+                            </button>
+                        </td>
+
+
+
                         {['note'].map(field => (
                             <td key={`${lead.id}-${field}`}
                                 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }}
@@ -1081,7 +1089,7 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                             </td>
                         ))}
 
-                  
+
 
                         {/* Drop Button */}
                         <td>
@@ -1101,7 +1109,7 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                             </button>
                         </td>
 
-                              <td>{lead.id}</td>
+                        <td>{lead.id}</td>
 
                     </tr >
                 ))}
