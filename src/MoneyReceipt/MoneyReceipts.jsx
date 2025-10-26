@@ -1724,6 +1724,8 @@ const MoneyReceipts = () => {
                     </button>
                   </th>
                   <th>Name</th>
+                  <th></th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -1769,6 +1771,41 @@ const MoneyReceipts = () => {
 
                         <td style={{ padding: '14px 0px' }}>{r.receiptDate ? formatDate(r.receiptDate) : ''}</td>
                         <td>{r.customerName || r.partyName}</td>
+
+                        <td>
+                          {r.slNo?.toString().startsWith("C") ? (
+                            <button
+                              style={{
+                                background: "transparent",
+                                color: "#c2434306",
+                                padding: "5px 10px",
+                                border: "none",
+                                borderRadius: "4px",
+                              }}
+                            >
+                              Print
+                            </button>
+                          ) : (
+                            <button
+                              style={{
+                                background: "transparent",
+                                color: "#07070702",
+                                padding: "5px 10px",
+                                border: "none",
+                                borderRadius: "4px",
+                              }}
+                            >
+                              Print
+                            </button>
+                          )}
+                        </td>
+
+                        <td>
+                          <button style={{ background: "transparent", color: "#07070702", }}
+                          >Edit</button>
+                        </td>
+
+
 
                       </tr>
                     );
