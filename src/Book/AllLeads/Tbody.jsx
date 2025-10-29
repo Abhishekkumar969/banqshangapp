@@ -164,7 +164,7 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                     <td style={{ color: 'black', backgroundColor: '#ff7272ff', fontSize: '15px', fontWeight: '800', whiteSpace: 'nowrap' }}>
                         Total Dues
                     </td>
-                    <td style={{ backgroundColor: 'white' }} colSpan={16} ></td>
+                    <td style={{ backgroundColor: 'white' }} colSpan={17} ></td>
                 </tr>
             </thead>
 
@@ -234,7 +234,7 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                         </button>
                     </th>
 
-                    {['Print Settlement', 'Note...'].map(header => (
+                    {['Add Expense', 'Print Settlement', 'Note...'].map(header => (
                         <th key={header}>{header}</th>
                     ))}
 
@@ -883,6 +883,12 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                         <LogPopupCell lead={lead} />
 
                         <td>
+                            <button onClick={() => openExpenseModal(lead.id)} className="btn-add-expense" style={{ backgroundColor: "red", borderRadius: "4px", display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                <div>Add Expense</div>
+                            </button>
+                        </td>
+
+                        <td>
                             {(() => {
                                 // Convert functionDate to IST
                                 const funcDate = new Date(
@@ -906,15 +912,6 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                                 ) : null;
                             })()}
                         </td>
-
-
-                        <td>
-                            <button onClick={() => openExpenseModal(lead.id)} className="btn-add-expense" style={{ backgroundColor: "red", borderRadius: "4px", display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                <div>Add Expense</div>
-                            </button>
-                        </td>
-
-
 
                         {['note'].map(field => (
                             <td key={`${lead.id}-${field}`}
@@ -1088,8 +1085,6 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                                 )}
                             </td>
                         ))}
-
-
 
                         {/* Drop Button */}
                         <td>

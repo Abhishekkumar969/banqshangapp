@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
 import debounce from 'lodash.debounce';
-import { doc, getDoc } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getDocs, where, query, collection } from 'firebase/firestore';
+// import { getAuth } from 'firebase/auth';
 import { db } from '../firebaseConfig';
 import '../styles/CustomChargeItems.css';
 
@@ -42,18 +42,26 @@ const CustomChargeItems = forwardRef(({ customItems, setCustomItems }, ref) => {
     useEffect(() => {
         const fetchAddons = async () => {
             try {
-                const auth = getAuth();
-                const user = auth.currentUser;
-                if (!user) return;
+                const q = query(collection(db, "usersAccess"), where("accessToApp", "==", "A"));
+                const snap = await getDocs(q);
 
-                const userRef = doc(db, 'usersAccess', user.email);
-                const userSnap = await getDoc(userRef);
-                if (!userSnap.exists()) return;
+                if (snap.empty) {
+                    console.warn("No usersAccess doc found with accessToApp: 'A'");
+                    return;
+                }
 
-                const data = userSnap.data();
-                if (data.accessToApp !== 'A' || !Array.isArray(data.addons)) return;
+                const allAddons = [];
 
-                const items = data.addons.map((addon, idx) => ({
+                snap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (data.addons && Array.isArray(data.addons)) {
+                        allAddons.push(...data.addons);
+                    }
+                });
+
+                const uniqueAddons = [...new Set(allAddons)];
+
+                const items = uniqueAddons.map((addon, idx) => ({
                     id: idx + 1,
                     name: addon || '',
                     qty: '',
@@ -62,10 +70,12 @@ const CustomChargeItems = forwardRef(({ customItems, setCustomItems }, ref) => {
                 }));
 
                 setDbItems(items);
+
             } catch (err) {
-                console.error('Error fetching addons:', err);
+                console.error("Error fetching addons:", err);
             }
         };
+
         fetchAddons();
     }, []);
 

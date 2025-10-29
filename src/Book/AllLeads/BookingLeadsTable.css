@@ -366,38 +366,347 @@
     }
 }
 
+/* ============ Expense Modal ============ */
 .expense-modal {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.4);
+    background: rgba(0, 0, 0, 0.45);
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
     z-index: 999;
+    backdrop-filter: blur(2px);
 }
+
 .expense-modal-content {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    width: 300px;
+    background: #ffffff;
+    padding: 24px 28px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.expense-modal-content h3 {
+    margin-top: 0;
+    font-size: 1.4rem;
+    text-align: center;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+/* Expense List */
+.expense-list {
+    max-height: 250px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+}
+
+.expense-item {
     display: flex;
-    flex-direction: column;
     gap: 10px;
+    margin-bottom: 10px;
 }
-.expense-modal-content input {
-    padding: 5px 8px;
-    font-size: 14px;
+
+.expense-item input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s ease;
 }
+
+.expense-item input:focus {
+    border-color: #007bff;
+}
+
+/* Add Row Button */
+.expense-modal-content button {
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-size: 0.95rem;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.expense-modal-content>button {
+    background-color: #f3f4f6;
+    color: #333;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.expense-modal-content>button:hover {
+    background-color: #e5e7eb;
+    transform: translateY(-1px);
+}
+
+/* Action Buttons */
 .expense-modal-buttons {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     gap: 10px;
 }
-.btn-add-expense {
-    padding: 3px 6px;
-    font-size: 12px;
+
+.expense-modal-buttons button {
+    flex: 1;
+    font-weight: 500;
+}
+
+.expense-modal-buttons button:first-child {
+    background-color: #007bff;
+    color: white;
+}
+
+.expense-modal-buttons button:first-child:hover {
+    background-color: #0056b3;
+}
+
+.expense-modal-buttons button:last-child {
+    background-color: #f87171;
+    color: white;
+}
+
+.expense-modal-buttons button:last-child:hover {
+    background-color: #dc2626;
+}
+
+/* ============ Animation ============ */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* ============ Responsive ============ */
+@media (max-width: 480px) {
+    .expense-modal-content {
+        width: 95%;
+        padding: 20px;
+    }
+
+    .expense-item {
+        flex-direction: column;
+    }
+}
+
+.expense-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.expense-modal-content {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 480px;
+    animation: slideUp 0.35s ease-out;
+}
+
+.expense-modal-content h3 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: #333;
+}
+
+.expense-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+}
+
+.expense-item {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.expense-item input {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    transition: 0.2s;
+    font-size: 0.95rem;
+}
+
+.expense-item input:focus {
+    outline: none;
+    border-color: #6c63ff;
+    box-shadow: 0 0 4px rgba(108, 99, 255, 0.4);
+}
+
+.remove-btn {
+    border: none;
+    background: #ff4d4d;
+    color: #fff;
+    border-radius: 8px;
+    padding: 6px 10px;
     cursor: pointer;
+    font-size: 0.9rem;
+    transition: 0.2s;
+}
+
+.remove-btn:hover {
+    background: #ff3333;
+}
+
+.add-row-btn {
+    display: block;
+    width: 100%;
+    background: #95ffec !important;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px;
+    margin: 10px 0;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: 0.2s;
+}
+
+.add-row-btn:hover {
+    background: #5a54e5;
+}
+
+.expense-modal-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.save-btn,
+.cancel-btn {
+    flex: 1;
+    margin: 0 5px;
+    border: none;
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: 0.25s;
+}
+
+.save-btn {
+    background: #28a745;
+    color: white;
+}
+
+.save-btn:hover {
+    background: #218838;
+}
+
+.cancel-btn {
+    background: #ddd;
+    color: #333;
+}
+
+.cancel-btn:hover {
+    background: #ccc;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+
+/* Header Row */
+.expense-header {
+    display: flex;
+    justify-content: space-around;
+    font-weight: 600;
+    color: #444;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+    padding: 0 4px;
+}
+
+/* Expense Row */
+.expense-item {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    background: #fafafa;
+    padding: 10px;
+    border-radius: 10px;
+    transition: 0.2s;
+}
+
+.expense-item:hover {
+    background: #f1f1ff;
+}
+
+/* Input Group (Label + Input) */
+.input-group {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.input-group label {
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.input-group input {
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: 0.2s;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #6c63ff;
+    box-shadow: 0 0 5px rgba(108, 99, 255, 0.3);
 }

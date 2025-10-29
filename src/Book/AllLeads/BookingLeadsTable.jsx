@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { collection, onSnapshot, doc, updateDoc, deleteField, getDoc, setDoc, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteField, getDoc, setDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import './BookingLeadsTable.css';
 import Tbody from './Tbody';
@@ -7,8 +7,6 @@ import BackButton from "../../components/BackButton";
 import { getAuth } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-
-
 
 const BookingLeadsTable = () => {
     const navigate = useNavigate();
@@ -26,33 +24,80 @@ const BookingLeadsTable = () => {
     const [venueFilter, setVenueFilter] = useState("all");
     const [sortConfig, setSortConfig] = useState({ key: 'functionDate', direction: 'desc' });
     const [financialYear, setFinancialYear] = useState("");
-
-
     const [expenseModalOpen, setExpenseModalOpen] = useState(false);
-    const [expenseData, setExpenseData] = useState({ title: "", amount: "" });
     const [selectedLeadId, setSelectedLeadId] = useState(null);
-
-    const openExpenseModal = (leadId) => {
-        setSelectedLeadId(leadId);
-        setExpenseData({ title: "", amount: "" });
-        setExpenseModalOpen(true);
-    };
+    const [eventExpenses, setEventExpenses] = useState([]);
 
     const closeExpenseModal = () => {
         setSelectedLeadId(null);
-        setExpenseData({ title: "", amount: "" });
         setExpenseModalOpen(false);
     };
 
-
-    const handleExpenseChange = (field, value) => {
-        setExpenseData(prev => ({ ...prev, [field]: value }));
+    const fetchAdminEventExpenses = async () => {
+        try {
+            const querySnapshot = await getDocs(collection(db, "usersAccess"));
+            let adminExpenses = [];
+            querySnapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                if (data.accessToApp === "A" && Array.isArray(data.eventExpenses)) {
+                    adminExpenses = data.eventExpenses;
+                }
+            });
+            return adminExpenses;
+        } catch (err) {
+            console.error("Error fetching admin event expenses:", err);
+            return [];
+        }
     };
 
+    const openExpenseModal = async (leadId) => {
+        setSelectedLeadId(leadId);
+
+        try {
+            const lead = leads.find(l => l.id === leadId);
+            if (!lead) return;
+
+            const monthYear = lead.monthYear || formatMonthYear(lead.functionDate);
+            const leadRef = doc(db, "prebookings", monthYear);
+            const leadSnap = await getDoc(leadRef);
+
+            let expensesToLoad = [];
+
+            // ✅ Step 1: Check if prebookings already have eventExpenses
+            if (leadSnap.exists()) {
+                const data = leadSnap.data();
+                const leadData = data[leadId];
+                if (leadData && Array.isArray(leadData.eventExpenses) && leadData.eventExpenses.length > 0) {
+                    expensesToLoad = leadData.eventExpenses;
+                    console.log("Loaded eventExpenses from prebookings");
+                }
+            }
+
+            // ✅ Step 2: If no eventExpenses found in prebookings → fetch from admin
+            if (expensesToLoad.length === 0) {
+                const adminExpenses = await fetchAdminEventExpenses();
+                if (adminExpenses.length > 0) {
+                    expensesToLoad = adminExpenses.map(exp => ({
+                        item: exp.item || "",
+                        rate: exp.rate || ""
+                    }));
+                    console.log("Loaded default eventExpenses from usersAccess");
+                } else {
+                    expensesToLoad = [{ item: "", rate: "" }];
+                    console.log("No eventExpenses found in admin");
+                }
+            }
+
+            setEventExpenses(expensesToLoad);
+            setExpenseModalOpen(true);
+
+        } catch (err) {
+            console.error("Error opening expense modal:", err);
+        }
+    };
 
     const saveExpense = async () => {
-        if (!selectedLeadId || !expenseData.title || !expenseData.amount) return;
-
+        if (!selectedLeadId) return;
         try {
             const lead = leads.find(l => l.id === selectedLeadId);
             if (!lead) return;
@@ -60,25 +105,17 @@ const BookingLeadsTable = () => {
             const monthYear = lead.monthYear || formatMonthYear(lead.functionDate);
             const leadRef = doc(db, "prebookings", monthYear);
 
-            const expense = {
-                id: Date.now().toString(),
-                title: expenseData.title,
-                amount: Number(expenseData.amount),
-                createdAt: new Date()
-            };
-
+            // ✅ Save the eventExpenses array back to Firestore
             await updateDoc(leadRef, {
-                [`${selectedLeadId}.expenses`]: [...(lead.expenses || []), expense]
+                [`${selectedLeadId}.eventExpenses`]: eventExpenses
             });
 
             closeExpenseModal();
-            console.log("Expense added!");
+            console.log("Event expenses saved successfully!");
         } catch (err) {
-            console.error("Error adding expense:", err);
+            console.error("Error saving event expenses:", err);
         }
     };
-
-
 
     const requestSort = (key) => {
         let direction = 'asc';
@@ -713,10 +750,6 @@ const BookingLeadsTable = () => {
         iframe.contentWindow.print();
     };
 
-
-
-
-
     const getCateringAmount = async (lead) => {
         try {
             // Step 1: Get all docs under "catering"
@@ -748,7 +781,6 @@ const BookingLeadsTable = () => {
         }
     };
 
-    //  settelment sheet 
     const sendToPrintPayment = async (lead) => {
 
         // --- Payment Details Rows ---
@@ -830,24 +862,59 @@ const BookingLeadsTable = () => {
 
 
 
-        // --- Vendor/Expense Rows from customItems ---
-        const selectedItems = (lead.customItems || []).filter(item => item.selected);
+        // --- Vendor/Expense Rows (Dynamic Source: prebookings OR usersAccess) ---
+        let eventExpenses = [];
 
-        const vendorRows = selectedItems
-            .map((item, i) => `
-            <tr>
-              <td>${i + 1}</td>
-              <td>${item.name || ''}</td>
-              <td style="text-align: right;">${item.total?.toLocaleString('en-IN') || 0}</td>
-            </tr>
-          `)
-            .join('');
+        try {
+            // 1️⃣ Correct reference to month document in prebookings
+            const monthYear = lead.monthYear || (() => {
+                const d = new Date(lead.functionDate);
+                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                return `${monthNames[d.getMonth()]}${d.getFullYear()}`;
+            })();
 
+            const prebookingRef = doc(db, "prebookings", monthYear);
+            const prebookingSnap = await getDoc(prebookingRef);
 
+            if (prebookingSnap.exists()) {
+                const monthData = prebookingSnap.data();
+                const leadData = monthData[lead.id];
 
-        // --- Calculate Net Exp dynamically ---
-        const netExp = selectedItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+                if (leadData && Array.isArray(leadData.eventExpenses) && leadData.eventExpenses.length > 0) {
+                    eventExpenses = leadData.eventExpenses;
+                    console.log("✅ Using eventExpenses from prebookings:", monthYear);
+                }
+            }
 
+            // 2️⃣ Otherwise, fallback to usersAccess where accessToApp === "A"
+            if (eventExpenses.length === 0) {
+                const accessQuery = query(collection(db, "usersAccess"), where("accessToApp", "==", "A"));
+                const accessSnap = await getDocs(accessQuery);
+                if (!accessSnap.empty) {
+                    const firstAdmin = accessSnap.docs[0].data();
+                    if (Array.isArray(firstAdmin.eventExpenses)) {
+                        eventExpenses = firstAdmin.eventExpenses;
+                        console.log("✅ Using eventExpenses from usersAccess");
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Error fetching eventExpenses:", err);
+        }
+
+        // Convert eventExpenses into vendorRows
+        const vendorRows = (eventExpenses || [])
+            .map((exp, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${exp.item || ""}</td>
+      <td style="text-align: right;">${Number(exp.rate || 0).toLocaleString("en-IN")}</td>
+    </tr>
+  `)
+            .join("");
+
+        // Calculate total
+        const netExp = (eventExpenses || []).reduce((sum, exp) => sum + (Number(exp.rate) || 0), 0);
 
 
 
@@ -1144,10 +1211,6 @@ const BookingLeadsTable = () => {
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
     };
-
-
-
-
 
     useEffect(() => {
         const term = searchTerm.toLowerCase().replace(/\//g, "-").trim();
@@ -2677,35 +2740,77 @@ const BookingLeadsTable = () => {
                                 sortConfig={sortConfig}
                                 requestSort={requestSort}
                                 alwayEdit={userPermissions.alwayEdit}
-                                openExpenseModal={openExpenseModal} // <-- pass function to Tbody
-
-
-
+                                openExpenseModal={openExpenseModal}
                             />
                         </table>
                     </div>
-
                 </div>
 
                 {expenseModalOpen && (
                     <div className="expense-modal">
                         <div className="expense-modal-content">
-                            <h3>Add Expense</h3>
-                            <input
-                                type="text"
-                                placeholder="Expense Title"
-                                value={expenseData.title}
-                                onChange={(e) => handleExpenseChange("title", e.target.value)}
-                            />
-                            <input
-                                type="number"
-                                placeholder="Amount"
-                                value={expenseData.amount}
-                                onChange={(e) => handleExpenseChange("amount", e.target.value)}
-                            />
+                            <h3>💰 Add Event Expenses</h3>
+
+                            <div className="expense-header">
+                                <span>Item</span>
+                                <span>Rate (₹)</span>
+                            </div>
+
+                            <div className="expense-list">
+                                {eventExpenses.map((exp, i) => (
+                                    <div key={i} className="expense-item">
+                                        <div className="input-group">
+                                            <label>Item</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. Decoration"
+                                                value={exp.item}
+                                                onChange={(e) => {
+                                                    const updated = [...eventExpenses];
+                                                    updated[i].item = e.target.value;
+                                                    setEventExpenses(updated);
+                                                }}
+                                            />
+                                        </div>
+
+                                        <div className="input-group">
+                                            <label>Rate</label>
+                                            <input
+                                                type="number"
+                                                placeholder="e.g. 5000"
+                                                value={exp.rate}
+                                                onWheel={(e) => e.target.blur()} // ✅ Prevent scroll value change
+                                                onChange={(e) => {
+                                                    const updated = [...eventExpenses];
+                                                    updated[i].rate = e.target.value;
+                                                    setEventExpenses(updated);
+                                                }}
+                                            />
+                                        </div>
+
+                                        <button
+                                            className="remove-btn"
+                                            onClick={() => {
+                                                const updated = eventExpenses.filter((_, idx) => idx !== i);
+                                                setEventExpenses(updated);
+                                            }}
+                                        >
+                                            ✖
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <button
+                                className="add-row-btn"
+                                onClick={() => setEventExpenses([...eventExpenses, { item: "", rate: "" }])}
+                            >
+                                + Add Row
+                            </button>
+
                             <div className="expense-modal-buttons">
-                                <button onClick={saveExpense}>Save</button>
-                                <button onClick={closeExpenseModal}>Cancel</button>
+                                <button className="save-btn" onClick={saveExpense}>Save</button>
+                                <button className="cancel-btn" onClick={closeExpenseModal}>Cancel</button>
                             </div>
                         </div>
                     </div>

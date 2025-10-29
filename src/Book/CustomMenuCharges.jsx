@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
 import debounce from 'lodash.debounce';
-import { doc, getDoc } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getDocs, where, query, collection } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import '../styles/CustomChargeItems.css';
 
@@ -36,36 +35,45 @@ const CustomMenuCharges = forwardRef(({ menuCharges, setMenuCharges }, ref) => {
     const [errors, setErrors] = useState({});
 
     // Fetch user's Menu Items from Firestore
-    useEffect(() => {
-        const fetchMenuItems = async () => {
-            try {
-                const auth = getAuth();
-                const user = auth.currentUser;
-                if (!user) return;
+useEffect(() => {
+    const fetchMenuItems = async () => {
+        try {
+            const q = query(collection(db, "usersAccess"), where("accessToApp", "==", "A"));
+            const snap = await getDocs(q);
 
-                const userRef = doc(db, 'usersAccess', user.email);
-                const userSnap = await getDoc(userRef);
-                if (!userSnap.exists()) return;
-
-                const data = userSnap.data();
-                if (data.accessToApp !== 'A' || !Array.isArray(data.menuItems)) return;
-
-                // menuItems is array of strings
-                const items = data.menuItems.map((menu, idx) => ({
-                    id: idx + 1,
-                    name: menu || '',
-                    qty: '',
-                    rate: '',
-                    selected: false
-                }));
-
-                setDbItems(items);
-            } catch (err) {
-                console.error('Error fetching menuItems:', err);
+            if (snap.empty) {
+                console.warn("No usersAccess document found with accessToApp: 'A'");
+                return;
             }
-        };
-        fetchMenuItems();
-    }, []);
+
+            const allMenus = [];
+
+            snap.forEach(docSnap => {
+                const data = docSnap.data();
+                if (data.menuItems && Array.isArray(data.menuItems)) {
+                    allMenus.push(...data.menuItems);
+                }
+            });
+
+            const uniqueMenus = [...new Set(allMenus)];
+
+            const items = uniqueMenus.map((menu, idx) => ({
+                id: idx + 1,
+                name: menu || '',
+                qty: '',
+                rate: '',
+                selected: false
+            }));
+
+            setDbItems(items);
+        } catch (err) {
+            console.error("Error fetching menuItems:", err);
+        }
+    };
+
+    fetchMenuItems();
+}, []);
+
 
     // Merge selected items whenever dbItems or menuCharges change
     useEffect(() => {
