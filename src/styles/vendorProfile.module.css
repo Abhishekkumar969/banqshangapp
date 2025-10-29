@@ -65,12 +65,15 @@
 .valueText {
   color: #555;
   text-transform: capitalize;
+  font-size: 0.9rem;
+  font-weight: 400;
 }
 
 .termsText {
   color: #555;
   white-space: pre-line;
   font-size: 0.9rem;
+  font-weight: 400;
 }
 
 /* ---------- Buttons ---------- */
@@ -86,7 +89,7 @@
 }
 
 .editButton {
-  background: #2563eb;
+  background: #2e6999;
   color: #fff;
   border: none;
   padding: 6px 14px;
@@ -320,4 +323,42 @@
   align-items: center;
   gap: 10px;
   margin-bottom: 5px;
+}
+
+.expenseTable {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.expenseRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.expenseInput {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.addButton {
+  margin-top: 10px;
+  background-color: #028a41;
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.deleteButton {
+  background-color: #ef5350;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 15px;
+  cursor: pointer;
 }
