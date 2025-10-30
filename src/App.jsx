@@ -12,6 +12,8 @@ import BookingLeadsTable from './Lead/AllLeads/BookingLeadsTable';
 import DroppedLeads from './Lead/AllLeads/LeadsTabs/DroppedLeads';
 
 import Booking from './Book/Booking';
+
+
 import BookingTable from './Book/AllLeads/BookingLeadsTable';
 
 import GSTSummary from './GSTSummary/GSTSummary';
@@ -20,6 +22,7 @@ import MoneyReceipts from './MoneyReceipt/MoneyReceipts';
 import Receipts from './MoneyReceipt/Receipts';
 import LeadsTabContainer from './Lead/AllLeads/LeadsTabContainer';
 import PastLeadsTabContainer from './Lead/AllLeads/PastLeadsTabContainer';
+
 
 import PrivateRoute from "./auth/PrivateRoute";
 import ReceiverCollectionsPage from './pages/ReceiverCollectionsPage';
@@ -103,6 +106,7 @@ function AppRoutes() {
         <Route path="/DroppedLeads" element={<PrivateRoute><DroppedLeads /></PrivateRoute>} />
 
         <Route path="/Booking" element={<PrivateRoute><Booking /></PrivateRoute>} />
+
         <Route path="/BookingTable" element={<PrivateRoute><BookingTable /></PrivateRoute>} />
 
         <Route path="/Accountant" element={<PrivateRoute><Accountant /></PrivateRoute>} />

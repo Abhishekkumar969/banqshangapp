@@ -52,9 +52,15 @@ const Vendor = () => {
     }, []);
 
     const toISTDate = (dateInput) => {
-        if (!dateInput) return new Date();
+        if (!dateInput) return null;
+
         const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
-        return new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
+        if (isNaN(date)) return null;
+
+        // Convert UTC → IST manually (safe math-based conversion)
+        const istOffset = 5.5 * 60 * 60 * 1000;
+        const utcTime = date.getTime() + (date.getTimezoneOffset() * 60 * 1000);
+        return new Date(utcTime + istOffset);
     };
 
     const formatDateIST = useCallback((dateInput) => {
@@ -335,8 +341,8 @@ const Vendor = () => {
             // ✅ Add user email to the vendorData
             const vendorData = {
                 ...form,
-                bookedOn: toISTDate(form.bookedOn).toISOString(),
-                date: toISTDate(form.date).toISOString(),
+                bookedOn: formatDateIST(form.bookedOn || new Date()),
+                date: formatDateIST(form.date || new Date()),
                 eventType: customEvent.trim() || form.typeOfEvent,
                 services: filteredServicesToSave,
                 summary: summaryFields,
