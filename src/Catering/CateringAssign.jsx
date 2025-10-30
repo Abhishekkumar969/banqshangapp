@@ -416,7 +416,6 @@ const CateringAssign = () => {
                                 </div>
                             </div>
 
-
                             {/* ✅ Name + Number */}
                             <div className="menu-block">
                                 <h2 className="modal-title">🍽 Assign Catering</h2>
@@ -459,7 +458,7 @@ const CateringAssign = () => {
                                                     e.target.value
                                                 )
                                             }
-                                            onWheel={(e) => e.target.blur()} // ✅ prevent scroll
+                                            onWheel={(e) => e.target.blur()}
                                         />
                                     </div>
                                 </div>
@@ -468,22 +467,18 @@ const CateringAssign = () => {
                             {/* Selected Menus */}
                             {popupBooking.selectedMenus && Object.keys(popupBooking.selectedMenus).length > 0 && (
                                 <div className="menus-container">
-
-
                                     {showSubitems && (
                                         <div className="subitems-popup-overlay" onClick={() => setShowSubitems(null)}>
                                             <div
                                                 className="subitems-popup"
-                                                onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside
+                                                onClick={(e) => e.stopPropagation()}
                                             >
                                                 <h3>{showSubitems.menuName}</h3>
-
                                                 <ul>
                                                     {showSubitems.items.map((item, i) => (
                                                         <li key={i}>{item}</li>
                                                     ))}
                                                 </ul>
-
                                                 <button className="close-btn" onClick={() => setShowSubitems(null)}>
                                                     Close
                                                 </button>
@@ -531,7 +526,7 @@ const CateringAssign = () => {
                                                                             : Number(e.target.value)
                                                                     )
                                                                 }
-                                                                onWheel={(e) => e.target.blur()} // ✅ prevent scroll
+                                                                onWheel={(e) => e.target.blur()}
                                                             />
                                                         </div>
                                                         <div className="field">
@@ -655,8 +650,6 @@ const CateringAssign = () => {
                             {/* ✅ Custom Meals */}
                             {popupBooking.meals && Object.keys(popupBooking.meals).length > 0 && (
                                 <div className="menus-container">
-
-
                                     {/* ✅ Only one popup */}
                                     {showSubitems && (
                                         <div
@@ -696,7 +689,13 @@ const CateringAssign = () => {
                                                 {/* Meals for that day */}
                                                 {Object.entries(dayMeals)
                                                     .filter(([mealName]) => mealName !== "date")
+                                                    // sort in fixed order Breakfast → Lunch → Dinner
+                                                    .sort(([a], [b]) => {
+                                                        const order = ["Breakfast", "Lunch", "Dinner"];
+                                                        return order.indexOf(a) - order.indexOf(b);
+                                                    })
                                                     .map(([mealName, mealDetails], mealIdx) => {
+
                                                         const assigned =
                                                             assignments[popupBooking.id]?.[`${dayName}-${mealName}`] || {};
 

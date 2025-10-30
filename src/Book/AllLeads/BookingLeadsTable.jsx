@@ -319,7 +319,6 @@ const BookingLeadsTable = () => {
         return () => unsubscribe();
     }, [sortDirection]);
 
-
     useEffect(() => {
         const today = new Date();
         let filtered = [...leads];
@@ -750,6 +749,10 @@ const BookingLeadsTable = () => {
         iframe.contentWindow.print();
     };
 
+
+
+
+
     const getCateringAmount = async (lead) => {
         try {
             // Step 1: Get all docs under "catering"
@@ -781,92 +784,108 @@ const BookingLeadsTable = () => {
         }
     };
 
+    const getVendorRoyalties = async (lead) => {
+        try {
+            const collections = ["vendor", "decoration"];
+            const royalties = [];
+
+            for (const col of collections) {
+                const colRef = collection(db, col);
+                const snap = await getDocs(colRef);
+
+                if (snap.empty) continue;
+
+                const firstDoc = snap.docs[0];
+                const dataMap = firstDoc.data();
+                const leadData = dataMap[lead.id];
+
+                if (!leadData) continue;
+
+                // Sum royaltyAmount from all services
+                const totalRoyalty = (leadData.services || []).reduce(
+                    (sum, srv) => sum + (Number(srv.royaltyAmount) || 0),
+                    0
+                );
+
+                if (totalRoyalty > 0) {
+                    royalties.push({
+                        from: col === "vendor" ? "Vendor" : "Decoration",
+                        totalRoyalty,
+                    });
+                }
+            }
+
+            console.log("✅ Grouped royalties:", royalties);
+            return royalties;
+        } catch (error) {
+            console.error("❌ Error fetching royalties:", error);
+            return [];
+        }
+    };
+
     const sendToPrintPayment = async (lead) => {
 
-        // --- Payment Details Rows ---
         const fmtDateIST = (dateString) => {
             if (!dateString) return 'N/A';
             try {
                 const date = new Date(dateString);
-                return date.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Kolkata' });
-            } catch (err) {
+                return date.toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    timeZone: 'Asia/Kolkata'
+                });
+            } catch {
                 return 'N/A';
             }
         };
 
-
-        // Payment Rows from advancePayments
+        // --- Payment Rows from advancePayments ---
         const paymentRows = (lead.advancePayments || []).map((p, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${fmtDateIST(p.addedAt || p.receiptDate)}</td>
-      <td>${p.slNo || ''}</td>
-      <td>${p.mode || ''}</td>
-      <td style="text-align: right;">${p.amount?.toLocaleString('en-IN') || ''}</td>
-      <td>${p.description || ''}</td>
-    </tr>
-`).join('');
+        <tr>
+            <td>${i + 1}</td>
+            <td>${fmtDateIST(p.addedAt || p.receiptDate)}</td>
+            <td>${p.slNo || ''}</td>
+            <td>${p.mode || ''}</td>
+            <td style="text-align: right;">${p.amount?.toLocaleString('en-IN') || ''}</td>
+            <td>${p.description || ''}</td>
+        </tr>
+    `).join('');
 
         const totalReceived = (lead.advancePayments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
-
-
-
-
+        // --- Define key monetary values early ---
+        const hallCharges = Number(lead.hallCharges || 0);
+        const gst = Number(lead.gstAmount || 0);
+        const grandTotal = Number(lead.grandTotal || 0);
+        const discount = Number(lead.discount || 0);
 
         // --- FETCH CATERING DATA ---
-        const caterings = await getCateringAmount(lead); // ✅ call the function
+        const caterings = await getCateringAmount(lead);
+        let cateringExpenseRows = [];
 
-
-        const cateringRows = (caterings || [])
-            .map((c, i) => {
-                let rowHtml = "";
+        if (caterings && caterings.length > 0) {
+            cateringExpenseRows = caterings.map((c) => {
                 const assignedMenus = c.assignedMenus || {};
-
-                let menuIndex = 1;
                 let grandTotalc = 0;
-
                 for (const [, menu] of Object.entries(assignedMenus)) {
                     const qty = Number(menu.qty || 0);
                     const extQty = Number(menu.extQty || 0);
                     const rate = Number(menu.rate || 0);
                     const total = (qty + extQty) * rate;
                     grandTotalc += total;
-
-                    rowHtml += `
-        <tr>
-          <td>${menuIndex}</td>
-          <td>${c.CateringAssignName || ""}</td>
-        
-          <td style="text-align: right;">${total.toLocaleString("en-IN")}</td>
-        </tr>
-      `;
-                    menuIndex++;
                 }
+                return {
+                    item: c.CateringAssignName || "Unnamed Catering",
+                    rate: grandTotalc || 0
+                };
+            });
+        }
 
-                // Add a grand total row per catering assignment
-                rowHtml += `
-      <tr style="font-weight: bold; background: #f0f0f0;">
-        <td colspan="2"  class="table-header" style="text-align: left;">Catering Total</td>
-        <td style="text-align: right;">${grandTotalc.toLocaleString("en-IN")}</td>
-      </tr>
-    `;
-
-
-                return rowHtml;
-            })
-            .join("");
-
-
-
-
-
-
-        // --- Vendor/Expense Rows (Dynamic Source: prebookings OR usersAccess) ---
+        // --- FETCH EVENT EXPENSES ---
         let eventExpenses = [];
 
         try {
-            // 1️⃣ Correct reference to month document in prebookings
             const monthYear = lead.monthYear || (() => {
                 const d = new Date(lead.functionDate);
                 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -879,14 +898,12 @@ const BookingLeadsTable = () => {
             if (prebookingSnap.exists()) {
                 const monthData = prebookingSnap.data();
                 const leadData = monthData[lead.id];
-
                 if (leadData && Array.isArray(leadData.eventExpenses) && leadData.eventExpenses.length > 0) {
                     eventExpenses = leadData.eventExpenses;
                     console.log("✅ Using eventExpenses from prebookings:", monthYear);
                 }
             }
 
-            // 2️⃣ Otherwise, fallback to usersAccess where accessToApp === "A"
             if (eventExpenses.length === 0) {
                 const accessQuery = query(collection(db, "usersAccess"), where("accessToApp", "==", "A"));
                 const accessSnap = await getDocs(accessQuery);
@@ -902,35 +919,49 @@ const BookingLeadsTable = () => {
             console.error("Error fetching eventExpenses:", err);
         }
 
-        // Convert eventExpenses into vendorRows
-        const vendorRows = (eventExpenses || [])
-            .map((exp, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${exp.item || ""}</td>
-      <td style="text-align: right;">${Number(exp.rate || 0).toLocaleString("en-IN")}</td>
-    </tr>
-  `)
+        // --- MERGE EXPENSES + CATERING + GST ---
+        const gstExpenseRow = gst > 0 ? [{ item: "GST", rate: gst }] : [];
+        const allExpenses = [...eventExpenses, ...cateringExpenseRows, ...gstExpenseRow];
+
+        const vendorRows = (allExpenses || []).map(
+            (exp, i) => `
+            <tr>
+                <td>${i + 1}</td>
+                <td>${exp.item || ""}</td>
+                <td style="text-align: right;">${Number(exp.rate || 0).toLocaleString("en-IN")}</td>
+            </tr>
+        `
+        ).join("");
+
+        // --- FETCH VENDOR ROYALTIES ---
+        const royalties = await getVendorRoyalties(lead);
+
+        // Make sure no undefined numbers break printing
+        const royaltyRows = (royalties || [])
+            .map((r, i) => {
+                const amount = Number(r.totalRoyalty || 0);
+                return `
+            <tr>
+                <td>${i + 1}</td>
+                <td>${r.from}</td>
+                <td style="text-align:right;">${amount.toLocaleString('en-IN')}</td>
+            </tr>
+            `;
+            })
             .join("");
 
-        // Calculate total
-        const netExp = (eventExpenses || []).reduce((sum, exp) => sum + (Number(exp.rate) || 0), 0);
+        const totalRoyalty = (royalties || []).reduce(
+            (sum, r) => sum + (Number(r.totalRoyalty) || 0),
+            0
+        );
 
-
-
-        // --- Payment Calculation Rows ---
-        const hallCharges = Number(lead.hallCharges || 0);
-        const gst = Number(lead.gstAmount || 0);
-
-        // --- Calculate Breakfast & Lunch total dynamically from meals ---
+        // --- Calculate Meal Totals ---
         const getMealTotal = (mealType) => {
             let total = 0;
             const dayMeals = lead.meals || {};
             for (const dayKey of Object.keys(dayMeals)) {
                 const meal = dayMeals[dayKey][mealType];
-                if (meal && meal.total) {
-                    total += Number(meal.total);
-                }
+                if (meal && meal.total) total += Number(meal.total);
             }
             return total;
         };
@@ -938,16 +969,10 @@ const BookingLeadsTable = () => {
         const breakfastLunch = getMealTotal("Breakfast") + getMealTotal("Lunch");
         const panCounter = Number(lead.panCounter || 0);
 
-        // --- Dinner calculation from selectedMenus ---
+        // --- Dinner Calculation ---
         const selectedMenus = lead.selectedMenus || {};
-
-        let noOfPlates = 0;
-        let extraPlates = 0;
-        let dinnerRate = 0;
-        let dinnerTotal = 0;
-
+        let noOfPlates = 0, extraPlates = 0, dinnerRate = 0, dinnerTotal = 0;
         const firstMenuKey = Object.keys(selectedMenus)[0];
-
         if (firstMenuKey) {
             const dinnerMenu = selectedMenus[firstMenuKey];
             noOfPlates = Number(dinnerMenu.noOfPlates || 0);
@@ -956,245 +981,123 @@ const BookingLeadsTable = () => {
             dinnerTotal = (noOfPlates + extraPlates) * dinnerRate;
         }
 
-        // --- Payment Calculation Rows (with customItems included) ---
-        const selectedCustomItems = (lead.customItems || [])
-            .filter(item => item.selected && Number(item.total) > 0); // ✅ only include non-zero totals
+        // --- Custom Items ---
+        const selectedCustomItems = (lead.customItems || []).filter(item => item.selected && Number(item.total) > 0);
+        const customItemsRows = selectedCustomItems.map(item => {
+            let shortName = /jaimala/i.test(item.name || "") ? "Jaimala" : (item.name || "");
+            return `
+            <tr>
+                <td>${shortName}</td>
+                <td>${item.qty || ""}</td>
+                <td>${item.rate?.toLocaleString("en-IN") || ""}</td>
+                <td style="text-align: right;">${item.total?.toLocaleString("en-IN") || ""}</td>
+            </tr>
+        `;
+        }).join("");
 
-        const customItemsRows = selectedCustomItems
-            .map(item => {
-                let shortName = item.name || "";
-
-                // 🔹 Simplify long Jaimala-related names
-                if (/jaimala/i.test(shortName)) {
-                    shortName = "Jaimala";
-                }
-
-                return `
-      <tr>
-        <td>${shortName}</td>
-        <td>${item.qty || ""}</td>
-        <td>${item.rate?.toLocaleString("en-IN") || ""}</td>
-        <td style="text-align: right;">${item.total?.toLocaleString("en-IN") || ""}</td>
-      </tr>
-    `;
-            })
-            .join("");
-
-        // --- Build rows dynamically only if total > 0 ---
+        // --- Payment Calculation Rows ---
         let paymentCalculationRows = "";
-
         const addRow = (label, value, qty = "", rate = "") => {
             if (Number(value) > 0) {
                 paymentCalculationRows += `
-      <tr>
-        <td>${label}</td>
-        <td>${qty}</td>
-        <td>${rate}</td>
-        <td style="text-align: right;">${Number(value).toLocaleString("en-IN")}</td>
-      </tr>
-    `;
+                <tr>
+                    <td>${label}</td>
+                    <td>${qty}</td>
+                    <td>${rate}</td>
+                    <td style="text-align: right;">${Number(value).toLocaleString("en-IN")}</td>
+                </tr>
+            `;
             }
         };
 
-        // ✅ Add rows only when total > 0
         addRow("Hall Charges & Others", hallCharges);
         addRow("GST", gst);
         addRow("Breakfast & Lunch", breakfastLunch);
         addRow("Pan Counter", panCounter);
-        if (dinnerTotal > 0) {
+        if (dinnerTotal > 0)
             addRow("Dinner", dinnerTotal, `${noOfPlates.toLocaleString("en-IN")} + ${extraPlates.toLocaleString("en-IN")}`, dinnerRate.toLocaleString("en-IN"));
-        }
 
-        // ✅ Finally, append custom items
         paymentCalculationRows += customItemsRows;
 
+        // --- Totals ---
+        const outstandingAmount = grandTotal - totalReceived;
+        const netExp = (allExpenses || []).reduce((sum, exp) => sum + (Number(exp.rate) || 0), 0);
+        const totalBusiness = grandTotal - netExp + totalRoyalty;
 
-
-
-        // --- Calculate totals dynamically ---
-        const grandTotal = Number(lead.grandTotal || 0);
-        const discount = Number(lead.discount || 0);
-        const outstandingAmount = grandTotal - totalReceived - discount;
-
-
-        // --- HTML Generation ---
+        // --- HTML ---
         const printHTML = `
-  <html>
-  <head>
-    <title>Total Payment Settlement - ${lead.eventDate}</title>
-    <style>
-  body { font-family: Calibri, Arial, sans-serif; font-size: 13px; padding: 10px; margin: 0; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
-  th, td { border: 1px solid #000; padding: 4px 6px; text-align: left; vertical-align: top; }
-  th { background-color: #f4f4f4; text-align: center; }
-  .title { text-align: center; background-color: #ffff00; font-weight: bold; padding: 6px; border: 2px solid black; margin-bottom: 10px; font-size: 15px; }
-  .section { background-color: #ffec8b; font-weight: bold; padding: 6px; }
-  .highlight-red { background-color: #ff5050; color: white; font-weight: bold; text-align: center; }
-  .highlight-green { background-color: #ccffcc; font-weight: bold; text-align: center; }
+            <html>
+            <head>
+                <title>Total Payment Settlement - ${lead.eventDate}</title>
+                <style>
+                    body { font-family: Calibri, Arial, sans-serif; font-size: 15px; padding: 7px; margin: 0; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+                    th, td { border: 1px solid #000; padding: 3px 6px; text-align: left; vertical-align: top; font-size: 14px }
+                    th { background-color: #f4f4f4; text-align: center; }
+                    .section { background-color: #ffec8b; font-weight: bold; padding: 5px; }
+                    .highlight-red { background-color: #ff5050; color: white; font-weight: bold; text-align: center; }
+                    .highlight-green { background-color: #ccffcc; font-weight: bold; text-align: center; }
+                    @media print { * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+                </style>
+            </head>
+            <body>
+        
+                <table>
+                    <tr><td colspan="2" class="section" style="text-align:center;">Total Payment Settlement</td></tr>
+                    <tr><td>Customer Name</td><td>${lead.name || ''}</td></tr>
+                    <tr><td>Contact No.</td><td>${lead.mobile1 || ''}</td></tr>
+                    <tr><td>Event Type</td><td>${lead.functionType || ''}</td></tr>
+                    <tr><td>Event Date</td><td>${fmtDateIST(lead.functionDate)}</td></tr>
+                    <tr><td>Food Menu</td><td>${Object.keys(lead.selectedMenus || {}).join(', ')}</td></tr>
+                </table>
+        
+                <table>
+                    <tr><td colspan="7" class="section" style="text-align:center;">Payment Details</td></tr>
+                    <tr><th>Sl</th><th>Payment Date</th><th>Receipt No.</th><th>Payment Mode</th><th>Amount</th><th>Remark</th></tr>
+                    ${paymentRows}
+                </table>
+        
+                <table style="float:left; width:100%;">
+                    <tr><td colspan="4" class="section" style="text-align:center;">Payment Calculation</td></tr>
+                    <tr><th>Particulars</th><th>Qty</th><th>Rate</th><th>Total</th></tr>${paymentCalculationRows}
+                    <tr><td colspan="3" class="section">Total</td><td class="section" style="text-align:right;">${(grandTotal + discount).toLocaleString('en-IN')}</td></tr>
+                    <tr><td colspan="3">Discount</td><td style="text-align:right;">${discount.toLocaleString('en-IN')}</td></tr>
+                    <tr><td colspan="3" class="section">Grand Total</td><td class="section" style="text-align:right;">${(grandTotal).toLocaleString('en-IN')}</td></tr>
+                    <tr><td colspan="3">Received Amount</td><td style="text-align:right;">${totalReceived.toLocaleString('en-IN')}</td></tr>
+                    <tr class="highlight-red"><td colspan="3">Outstanding Amount</td><td style="text-align:right;">${outstandingAmount.toLocaleString('en-IN')}</td></tr>
+                </table>
+        
 
-  .no-border td { border: none; }
-  .mini-table { border: none; margin-bottom: 2px; }
-  .mini-table td, .mini-table th { border: none; padding: 2px 4px; }
-  .mini-table td:nth-child(2n-1) { font-weight: bold; width: 15%; } /* Labels */
-  .mini-table td:nth-child(2n) { width: 35%; } /* Values */
-  .mini-table td.full-width { width: 85%; }
 
-  .table-header { border: 1px solid black; padding: 5px 8px; font-weight: bold; background-color: #ffec8b; }
-  .table-header.center { text-align: center; }
-
-  .pc-table th, .pc-table td { width: 25%; }
-  .pc-table td:nth-child(2), .pc-table td:nth-child(3), .pc-table td:nth-child(4) { text-align: right; }
-  .vendor-table td:nth-child(3) { text-align: right; }
-
-  .gross-income-box { border: 1px solid black; float: right; margin-top: -100px; margin-right: 0px; padding: 5px; width: 350px; text-align: right; }
-  .gross-income-box .highlight-green { display: flex; justify-content: space-between; padding: 8px; margin: 0; font-size: 14px; }
-
-  .grand-total-row td:nth-child(1) { text-align: center; }
-  .grand-total-row td:nth-child(2) { text-align: right; }
-
-  @media print {
-    * {
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-  }
-</style>
-
-  </head>
-  <body>
-
-    <div class="title">Event Date: <td>${lead.functionDate ? new Date(lead.functionDate).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Kolkata' }) : 'N/A'}</td> - Total Payment Settlement</div>
-    
-    <table float: left;">
-          <tr>
-            <td colspan="2" class="table-header center">Customer & Event Details</td>
-          </tr>
-          <tr>
-            <td>Customer Name</td>
-            <td>${lead.name || ''}</td>
-          </tr>
-          <tr>
-            <td>Contact No.</td>
-            <td>${lead.mobile1 || ''}</td>
-          </tr>
-          <tr>
-            <td>Event Type</td>
-            <td>${lead.functionType || ''}</td>
-          </tr>
-          <tr>
-            <td>Event Date</td>
-            <td>${lead.functionDate ? new Date(lead.functionDate).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Kolkata' }) : 'N/A'}</td>
-          </tr>
-          <tr>
-          <td>Food Menu</td>
-          <td>
-            ${Object.keys(lead.selectedMenus || {})
-                .map(menu => menu.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '))
-                .join(", ")}
-          </td>
-        </tr>
-    </table>
-    
-       <table>
-      <tr><td colspan="7" class="section">Payment Details</td></tr>
-      <tr>
-        <th>Sl</th><th>Payment Date</th><th>Receipt No.</th><th>Payment Mode</th>
-        <th>Amount</th><th>Remark</th>
-      </tr>
-      ${paymentRows}
-    </table>
-
-    <table style=" float: left; margin-right: 2%;">
-      <tr><td colspan="4" class="table-header center">Payment Calculation</td></tr>
-      <tr>
-        <th style="width: 40%;">Particulars</th><th style="width: 20%;">Qty.</th>
-        <th style="width: 20%;">Rate</th><th style="width: 20%;">Total</th>
-      </tr>
-      ${paymentCalculationRows}
-
-      <tr>
-        <td colspan="3" class="table-header">Total</td>
-        <td style="text-align: right;"  class="table-header">
-          ${((Number(lead.grandTotal) || 0) + Number(lead.discount) || 0).toLocaleString('en-IN')}
-        </td>
-      </tr>
-
-    <tr>
-        <td colspan="3">Received Amount</td>
-        <td style="text-align: right;">${totalReceived.toLocaleString('en-IN')}</td>
-    </tr>
-          
-    <tr>
-      <td colspan="3">Discount</td>
-      <td style="text-align: right;">
-        ${Number(lead.discount || 0).toLocaleString('en-IN')}
-      </td>
-    </tr>
-    <tr class="highlight-red">
-      <td colspan="3">Outstanding Amount</td>
-      <td style="text-align: right;">${outstandingAmount.toLocaleString('en-IN')}</td>
-    </tr>   
-    </table>
+                <table style="width:49.5%; float:left;">
+                    <tr><td colspan="3" class="section" style="text-align:center;">List of Expenses</td></tr>
+                    <tr><th>Sl</th><th>Particulars </th><th>Amount</th></tr>
+                    ${vendorRows}
+                    <tr><td colspan="2" class="section">Net Exp.</td><td class="section" style="text-align:right;">${netExp.toLocaleString('en-IN')}</td></tr>
+                </table>
 
 
 
-    <table style="width: 49.5%; float: left;">
-      <tr><td colspan="3" class="table-header center">List of Exp. (Vendor)</td></tr>
-      <tr><th>Sl</th><th>Vendor</th><th>Amount</th></tr>
-      ${vendorRows}
-      <tr>
-        <td colspan="2" class="table-header">Net Exp.</td>
-        <td style="text-align: right;">${netExp.toLocaleString('en-IN')}</td>
-      </tr>
-    </table>
+                <table style="width:49.5%; float:right;">
+                    <tr><td colspan="3" class="section" style="text-align:center;">List of Royalties</td></tr>
+                    <tr><th>Sl</th><th>From</th><th>Amount</th></tr>
+                    ${royaltyRows || '<tr><td colspan="3" style="text-align:center;">No Royalties Found</td></tr>'}
+                    <tr>
+                        <td colspan="2" class="section">Total Royalty</td>
+                        <td class="section" style="text-align:right;">${totalRoyalty.toLocaleString('en-IN')}</td>
+                    </tr>
+                </table>
 
-    <table style="width: 49.5%; float: right;">
-      <tr><td colspan="3" class="table-header center">Catering Assignments</td></tr>
-      <tr><th>Sl</th><th>Catering Name</th><th>Amount</th></tr>
-       ${cateringRows}
-    </table>
-    
-    
-    <br style="clear: both;">
-    
-    <table style="width: 48%; float: left; margin-right: 2%; margin-top: 10px;">
-        <tr class="grand-total-row">
-            <td colspan="2" class="section" style="width: 80%; text-align: center;">Grand Total</td>
-            <td colspan="2" style="width: 60%; text-align: right; font-weight: bold;">${(lead.grandTotal || 0).toLocaleString('en-IN')}</td>
-        </tr>
-    </table>
-    
-    <div style="width: 48%; float: right; margin-top: 10px">
-        <table style="width: 100%;">
-            <tr style="border: none;">
-                <td style="border: none; padding: 0;">
-                    <table style="width: 100%; margin-bottom: 5px;">
-                        <tr>
-                            <td style="border: none; font-weight: bold;">Total Business from event</td>
-                            <td style="border: none; text-align: right;">${(lead.grandTotal || 0).toLocaleString('en-IN')}</td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr style="border: none;">
-                <td style="border: none; padding: 0;">
-                    <table style="width: 100%; border: 3px solid #ccffcc; border-collapse: separate;">
-                        <tr class="highlight-green">
-                            <td style="width: 70%; text-align: left; border: none; padding: 8px;">Gross Income from event</td>
-                            <td style="width: 30%; text-align: right; border: none; padding: 8px;">₹ ${(lead.grossIncome || 0).toLocaleString('en-IN')}</td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
-    </div>
+        
+                <div style="margin-top:15px; text-align:right;">
+                    <b>Total Business from event:</b> ₹ ${totalBusiness.toLocaleString('en-IN')}<br>
+                    <b>Gross Income from event:</b> ₹ ${(lead.grossIncome || 0).toLocaleString('en-IN')}
+                </div>
+        
+            </body>
+            </html>`;
 
-    <br style="clear: both;">
-
-  </body>
-  </html>`;
-
-        // Standard printing logic (no change needed here)
+        // --- Print Logic ---
         const iframe = document.createElement("iframe");
         iframe.style.position = "fixed";
         iframe.style.right = "0";
@@ -1207,10 +1110,13 @@ const BookingLeadsTable = () => {
         iframe.contentDocument.open();
         iframe.contentDocument.write(printHTML);
         iframe.contentDocument.close();
-
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
     };
+
+
+
+
 
     useEffect(() => {
         const term = searchTerm.toLowerCase().replace(/\//g, "-").trim();
