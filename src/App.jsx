@@ -12,8 +12,6 @@ import BookingLeadsTable from './Lead/AllLeads/BookingLeadsTable';
 import DroppedLeads from './Lead/AllLeads/LeadsTabs/DroppedLeads';
 
 import Booking from './Book/Booking';
-
-
 import BookingTable from './Book/AllLeads/BookingLeadsTable';
 
 import GSTSummary from './GSTSummary/GSTSummary';
@@ -22,7 +20,6 @@ import MoneyReceipts from './MoneyReceipt/MoneyReceipts';
 import Receipts from './MoneyReceipt/Receipts';
 import LeadsTabContainer from './Lead/AllLeads/LeadsTabContainer';
 import PastLeadsTabContainer from './Lead/AllLeads/PastLeadsTabContainer';
-
 
 import PrivateRoute from "./auth/PrivateRoute";
 import ReceiverCollectionsPage from './pages/ReceiverCollectionsPage';
@@ -51,7 +48,6 @@ import EnquiryForm from "./Enquiry/EnquiryForm";
 import EnquiryDetails from "./Enquiry/EnquiryDetails";
 import PastEnquiry from "./Enquiry/pastEnquiry/pastEnquiry";
 
-
 import CateringAssign from "./Catering/CateringAssign";
 import CateringAssigned from "./Catering/CateringAssigned";
 
@@ -60,6 +56,8 @@ import StatsPage from './pages/Stats';
 
 import MenuItems from './pages/MenuItems';
 import AdminProfile from './pages/AdminProfile';
+
+import SaveBackup from './SaveBackup/SaveBackup';
 
 function AppRoutes() {
   const navigate = useNavigate();
@@ -139,6 +137,8 @@ function AppRoutes() {
 
         <Route path="/MenuItems" element={<PrivateRoute><MenuItems /></PrivateRoute>} />
         <Route path="/AdminProfile" element={<PrivateRoute><AdminProfile /></PrivateRoute>} />
+
+        <Route path="/SaveBackup" element={<PrivateRoute><SaveBackup /></PrivateRoute>} />
 
         <Route path="/login" element={<LoginPage />} />
       </Routes>
