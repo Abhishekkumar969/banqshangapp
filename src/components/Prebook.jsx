@@ -5,7 +5,6 @@ import { getAuth, signOut } from 'firebase/auth';
 import CalendarPopup from '../pages/CalendarPopup';
 import { doc, collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebaseConfig";
-import DownloadPopup from '../pages/DownloadPopup'
 import BackButton from "../components/BackButton";
 import BottomNavigationBar from './BottomNavigationBar';
 import DailyReport from "./DailyReport";
@@ -15,7 +14,6 @@ const bannerImages = ["/assets/1.jpeg", "/assets/2.jpeg", "/assets/3.jpeg", "/as
 const Prebook = () => {
   const navigate = useNavigate();
   const [showCalendar, setShowCalendar] = useState(false);
-  const [showDownload, setShowDownload] = useState(false);
   const [userAppType, setUserAppType] = useState(null);
   const [userName, setUserName] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -23,9 +21,6 @@ const Prebook = () => {
   const [decoration, setDecoration] = useState(null);
   const [panelAccess, setPanelAccess] = useState({});
   const [showDailyReport, setShowDailyReport] = useState(false);
-
-
-
 
   // 🔒 AUTO LOGOUT WHEN TAB IS CLOSED OR REFRESHED
   // useEffect(() => {
@@ -42,8 +37,6 @@ const Prebook = () => {
   //   window.addEventListener("beforeunload", handleBeforeUnload);
   //   return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   // }, []);
-
-
 
 
 
@@ -382,7 +375,7 @@ const Prebook = () => {
               <div className="service-grid">
                 {hasAccess("Settings", "Business") && <ServiceBox label="Business" onClick={() => navigate('/StatsPage')} icon="📈" />}
                 {hasAccess("Settings", "Access") && <ServiceBox label="Access" onClick={() => navigate('/UserAccessPanel')} icon="🔐" />}
-                {hasAccess("Settings", "SaveBackup") && <ServiceBox label="Save & BackUp" onClick={() => setShowDownload(true)} icon="📇" />}
+                {hasAccess("Settings", "SaveBackup") && <ServiceBox label="Save & Backup" onClick={() => navigate('/SaveBackup')} icon="📇" />}
               </div>
             </div>
           )}
@@ -391,8 +384,6 @@ const Prebook = () => {
         </div>
 
         <CalendarPopup isOpen={showCalendar} onClose={() => setShowCalendar(false)} />
-        <DownloadPopup isOpen={showDownload} onClose={() => setShowDownload(false)} />
-
       </div>
       <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
     </>

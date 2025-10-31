@@ -1,0 +1,111 @@
+.save-backup-page {
+  padding: 30px;
+  font-family: "Poppins", sans-serif;
+  background: linear-gradient(to bottom right, #f8f9fa, #eef5f5);
+  min-height: 100vh;
+}
+
+.backup-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  justify-content: center;
+  padding: 10px;
+}
+
+.collection-box {
+  border: 1px solid #e0e0e0;
+  border-radius: 14px;
+  padding: 18px;
+  width: 360px;
+  background-color: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.collection-box:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+.collection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.collection-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.select-all-btn {
+  background: #00a8a8;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.select-all-btn:hover {
+  background: #02c8a7;
+  transform: scale(1.03);
+}
+
+.doc-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.doc-item:hover {
+  background-color: #00a8a822;
+  border-color: #00a8a855;
+}
+
+.doc-item.selected {
+  background-color: #00a8a8;
+  color: #fff;
+  border-color: #009090;
+}
+
+.doc-number {
+  font-size: 0.9rem;
+  font-weight: 500;
+  opacity: 0.8;
+  user-select: none;
+}
+
+.doc-name {
+  flex: 1;
+  font-size: 0.9rem;
+  word-break: break-word;
+}
+
+.empty-text {
+  color: #999;
+  font-style: italic;
+  text-align: center;
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .collection-box {
+    width: 100%;
+    max-width: 95%;
+  }
+}

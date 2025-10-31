@@ -1066,9 +1066,6 @@ const BookingLeadsTable = () => {
                     <tr><td colspan="3">Received Amount</td><td style="text-align:right;">${totalReceived.toLocaleString('en-IN')}</td></tr>
                     <tr class="highlight-red"><td colspan="3">Outstanding Amount</td><td style="text-align:right;">${outstandingAmount.toLocaleString('en-IN')}</td></tr>
                 </table>
-        
-
-
 
                 <table style="width:49.5%; float:left;">
                     <tr><td colspan="3" class="section" style="text-align:center;">List of Expenses</td></tr>
@@ -1087,14 +1084,9 @@ const BookingLeadsTable = () => {
                     </tr>
                 </table>
                 
-                
-
                 <div style="clear:both; margin-top:15px; text-align:right;">
                     <b>Total Business from event ( Grand Total - Net Expense + Total Royalty ) :</b> <b style="color:green;"> ₹ ${totalBusiness.toLocaleString('en-IN')} </b> <br>
                 </div>
-                
-
-
 
             </body>
             </html>`;
