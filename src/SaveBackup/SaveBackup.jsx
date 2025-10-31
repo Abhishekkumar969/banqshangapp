@@ -4,18 +4,14 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import styles from "./SaveBackup.module.css";
 
-const collectionNames = [
-    "enquiry", "bookingLeads", "prebookings", "pastEnquiry", "dropLeads",
-    "cancelledBookings", "moneyReceipts", "accountant", "events", "expenses",
-    "vendor", "catering", "decoration", "ledger", "settings",
-    "otherMoneyReceipts", "menu", "usersAccess", "pannelAccess", "accessRequests"
-];
+const collectionNames = ["enquiry", "bookingLeads", "prebookings", "pastEnquiry", "dropLeads", "cancelledBookings", "moneyReceipts", "accountant", "events", "expenses", "vendor", "catering", "decoration", "ledger", "otherMoneyReceipts"];
 
 const SaveBackup = () => {
     const [collectionsData, setCollectionsData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [selectedDocs, setSelectedDocs] = useState({});
+    const [isOpen, setIsOpen] = useState(false); // 🔥 new state for collapse
 
     useEffect(() => {
         const fetchCollectionsAndDocs = async () => {
@@ -87,17 +83,14 @@ const SaveBackup = () => {
         });
     };
 
-    // ✅ Global Select/Unselect All button
     const toggleSelectAllGlobal = () => {
         const allSelected = collectionsData.every(
             (col) => selectedDocs[col.name]?.length === col.documents.length
         );
 
         if (allSelected) {
-            // Unselect all
             setSelectedDocs({});
         } else {
-            // Select all
             const newSelections = {};
             collectionsData.forEach((col) => {
                 newSelections[col.name] = [...col.documents];
@@ -112,69 +105,75 @@ const SaveBackup = () => {
 
     return (
         <div className={styles["save-backup-page"]}>
-            <div style={{ marginBottom: "55px" }}>
+            <div style={{ marginBottom: "65px" }}>
                 <BackButton />
             </div>
 
-            <h2 style={{ textAlign: "center", marginBottom: "20px", marginTop: "60px" }}>
+            <h3
+                className={styles["toggle-header"]}
+                onClick={() => setIsOpen(!isOpen)}
+            >
                 Save & Backup Data
-            </h2>
+                <span className={styles["arrow"]}>
+                    {isOpen ? "▲" : "▼"}
+                </span>
+            </h3>
 
-            {/* ✅ Global Select/Unselect All Button */}
-            {!loading && !error && collectionsData.length > 0 && (
-                <div style={{ textAlign: "right", marginBottom: "0px" }}>
-                    <button
-                        className={styles["select-all-btn"]}
-                        onClick={toggleSelectAllGlobal}
-                    >
-                        {allSelected ? "Unselect All Collections" : "Select All Collections"}
-                    </button>
-                </div>
-            )}
-
-            {loading && <p style={{ textAlign: "center" }}>Loading collections...</p>}
-            {error && <p style={{ color: "red", textAlign: "center" }}>{error}</p>}
-
-            {!loading && !error && (
-                <div className={styles["backup-container"]}>
-                    {collectionsData.length === 0 ? (
-                        <p>No collections found in Firestore.</p>
-                    ) : (
-                        collectionsData.map((col) => (
-                            <div key={col.name} className={styles["collection-box"]}>
-                                <div className={styles["collection-header"]}>
-                                    <h3>{col.name}</h3>
-                                    <button
-                                        className={styles["select-all-btn"]}
-                                        onClick={() => toggleSelectAll(col.name, col.documents)}
-                                    >
-                                        {selectedDocs[col.name]?.length === col.documents.length
-                                            ? "Unselect All"
-                                            : "Select All"}
-                                    </button>
-                                </div>
-
-                                <ul>
-                                    {col.documents.map((docId, index) => (
-                                        <li
-                                            key={docId}
-                                            className={`${styles["doc-item"]} ${selectedDocs[col.name]?.includes(docId)
-                                                ? styles["selected"]
-                                                : ""
-                                                }`}
-                                            onClick={() => toggleDocSelection(col.name, docId)}
-                                        >
-                                            <span>{docId}</span>
-                                            <span className={styles["doc-number"]}>
-                                                {index + 1}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        ))
+            {isOpen && (
+                <>
+                    {!loading && !error && collectionsData.length > 0 && (
+                        <div style={{ textAlign: "right", marginBottom: "0px" }}>
+                            <button
+                                className={styles["select-all-btn"]}
+                                onClick={toggleSelectAllGlobal}
+                            >
+                                {allSelected ? "Unselect All Collections" : "Select All Collections"}
+                            </button>
+                        </div>
                     )}
-                </div>
+
+                    {loading && <p style={{ textAlign: "center" }}>Loading collections...</p>}
+                    {error && <p style={{ color: "red", textAlign: "center" }}>{error}</p>}
+
+                    {!loading && !error && (
+                        <div className={styles["backup-container"]}>
+                            {collectionsData.length === 0 ? (
+                                <p>No collections found in Firestore.</p>
+                            ) : (
+                                collectionsData.map((col) => (
+                                    <div key={col.name} className={styles["collection-box"]}>
+                                        <div className={styles["collection-header"]}>
+                                            <h3>{col.name}</h3>
+                                            <button
+                                                className={styles["select-all-btn"]}
+                                                onClick={() => toggleSelectAll(col.name, col.documents)}
+                                            >
+                                                {selectedDocs[col.name]?.length === col.documents.length
+                                                    ? "Unselect All"
+                                                    : "Select All"}
+                                            </button>
+                                        </div>
+
+                                        <ul>
+                                            {col.documents.map((docId, index) => (
+                                                <li
+                                                    key={docId}
+                                                    className={`${styles["doc-item"]} ${selectedDocs[col.name]?.includes(docId)
+                                                        ? styles["selected"]
+                                                        : ""
+                                                        }`}
+                                                    onClick={() => toggleDocSelection(col.name, docId)}
+                                                >
+                                                    <span>{docId}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );
