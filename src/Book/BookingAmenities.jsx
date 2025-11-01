@@ -3,7 +3,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import '../styles/BookingAmenities.css';
 
-const BookingAmenities = ({ selectedItems, setSelectedItems }) => {
+const BookingAmenities = ({ selectedItems, setSelectedItems, venueType, functionType }) => {
     const [defaultAmenities, setDefaultAmenities] = useState([]);
     const [toAddAmenities, setToAddAmenities] = useState([]);
     const [customAmenities, setCustomAmenities] = useState([]);
@@ -11,7 +11,10 @@ const BookingAmenities = ({ selectedItems, setSelectedItems }) => {
     const [suggestions, setSuggestions] = useState([]);
     const [amenities, setAmenities] = useState([]);
 
-    // Fetch amenities from Firestore
+    // 🔹 Early check — but no early return before hooks
+    const shouldHide = venueType === "Luxury Rooms" || functionType === "Luxury Rooms";
+
+    // 🔹 Fetch amenities
     const fetchAmenities = useCallback(async () => {
         try {
             const q = query(collection(db, "usersAccess"), where("accessToApp", "==", "A"));
@@ -33,9 +36,7 @@ const BookingAmenities = ({ selectedItems, setSelectedItems }) => {
                 setDefaultAmenities(uniqueDefault);
                 setToAddAmenities(uniqueToAdd);
 
-                // Preselect only default amenities
                 if (selectedItems.length === 0) setSelectedItems(uniqueDefault);
-
             } else {
                 console.warn("No usersAccess doc found with accessToApp: 'A'");
             }
@@ -44,21 +45,29 @@ const BookingAmenities = ({ selectedItems, setSelectedItems }) => {
         }
     }, [selectedItems.length, setSelectedItems]);
 
+    // 🔹 Effects (always run — even if component will later return null)
     useEffect(() => {
-        fetchAmenities();
-    }, [fetchAmenities]);
+        if (!shouldHide) fetchAmenities();
+    }, [fetchAmenities, shouldHide]);
 
-    // Merge all amenities for display
     useEffect(() => {
-        const merged = [...new Set([...defaultAmenities, ...toAddAmenities, ...customAmenities])];
-        setAmenities(merged);
-    }, [defaultAmenities, toAddAmenities, customAmenities]);
+        if (!shouldHide) {
+            const merged = [...new Set([...defaultAmenities, ...toAddAmenities, ...customAmenities])];
+            setAmenities(merged);
+        }
+    }, [defaultAmenities, toAddAmenities, customAmenities, shouldHide]);
 
-    // Load previous suggestions
     useEffect(() => {
-        const storedSuggestions = JSON.parse(localStorage.getItem("customAmenitySuggestions") || "[]");
-        setSuggestions(storedSuggestions);
-    }, []);
+        if (!shouldHide) {
+            const storedSuggestions = JSON.parse(localStorage.getItem("customAmenitySuggestions") || "[]");
+            setSuggestions(storedSuggestions);
+        }
+    }, [shouldHide]);
+
+    // 🔹 If hidden, return null (after all hooks)
+    if (shouldHide) {
+        return null;
+    }
 
     const handleCheckboxChange = (item) => {
         setSelectedItems(prev =>
@@ -72,8 +81,6 @@ const BookingAmenities = ({ selectedItems, setSelectedItems }) => {
         if (!amenities.includes(trimmed)) {
             setCustomAmenities(prev => [...prev, trimmed]);
             setSelectedItems(prev => [...prev, trimmed]);
-
-            // Save suggestion to localStorage
             const updatedSuggestions = [...new Set([...suggestions, trimmed])];
             setSuggestions(updatedSuggestions);
             localStorage.setItem("customAmenitySuggestions", JSON.stringify(updatedSuggestions));

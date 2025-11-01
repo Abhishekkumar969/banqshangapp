@@ -106,8 +106,29 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
     };
 
     const grandTotalSum = leads.reduce((sum, lead) => sum + Number(lead.grandTotal || 0), 0);
+
+
     const allAdvancePayments = leads.flatMap(lead => lead.advancePayments || []);
     const advanceSum = allAdvancePayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+    const discountSum = leads.reduce((sum, lead) => sum + Number(lead.discount || 0), 0);
+
+    const commissionSum = leads.reduce((sum, lead) => sum + Number(lead.commission || 0), 0);
+
+
+    const cashSum = leads.reduce((sum, lead) => {
+        const cashPayments = (lead.advancePayments || [])
+            .filter(payment => payment.mode === "Cash")
+            .reduce((subSum, payment) => subSum + Number(payment.amount || 0), 0);
+        return sum + cashPayments;
+    }, 0);
+
+    const bankSum = leads.reduce((sum, lead) => {
+        const cashPayments = (lead.advancePayments || [])
+            .filter(payment => payment.mode !== "Cash")
+            .reduce((subSum, payment) => subSum + Number(payment.amount || 0), 0);
+        return sum + cashPayments;
+    }, 0);
+
     const remainingSum = grandTotalSum - advanceSum;
 
     const formatDate = (dateStr) => {
@@ -143,7 +164,6 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                 <tr >
                     <td style={{ backgroundColor: 'white' }} colSpan={10} ></td>
 
-                    {/* Collapsed Hall/GST section */}
                     <td colSpan={3} style={{ textAlign: 'center', color: 'red', backgroundColor: '#61ffeaff', fontWeight: '800', fontSize: '14px' }}>
                         A. Hall Services
                     </td>
@@ -152,19 +172,36 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                         B. Food Services
                     </td>
 
-                    <td style={{ backgroundColor: 'white' }} colSpan={2} ></td>
+                    <td style={{ backgroundColor: 'white' }} colSpan={1} ></td>
 
-                    <td style={{ color: 'black', backgroundColor: '#04ff42ff', fontSize: '15px', fontWeight: '800', whiteSpace: 'nowrap' }}>
-                        A+B Total Sales
+                    <td style={{ color: 'black', backgroundColor: '#00ff40ff', fontSize: '15px', fontWeight: '800', whiteSpace: 'nowrap' }}>
+                        Total Sales (A+B+C)
                     </td>
 
-                    <td style={{ color: 'black', backgroundColor: '#4beefaff', fontSize: '15px', fontWeight: '800', whiteSpace: 'nowrap' }}>
-                        Total Advance
-                    </td>
+
+
+                    {['Cash', 'Cheque/A/C.', 'Payment Received', 'Discount'].map(header => (
+                        <th key={header}>{header}</th>
+                    ))}
+
                     <td style={{ color: 'black', backgroundColor: '#ff7272ff', fontSize: '15px', fontWeight: '800', whiteSpace: 'nowrap' }}>
                         Total Dues
                     </td>
-                    <td style={{ backgroundColor: 'white' }} colSpan={17} ></td>
+
+                    <td style={{ backgroundColor: 'white' }} colSpan={8} ></td>
+
+                    <td colSpan={2} style={{ textAlign: 'center', backgroundColor: '#e2bbf0ff', color: 'red', fontWeight: '800', fontSize: '15px', whiteSpace: 'nowrap' }}>
+                        C. Other Chargeable Items
+                    </td>
+
+                    <td style={{ backgroundColor: 'white' }} colSpan={3} ></td>
+
+                    <td style={{ color: 'white', backgroundColor: '#016eb6ff', fontSize: '15px', fontWeight: '800', whiteSpace: 'nowrap' }}>
+                        Commission
+                    </td>
+
+                    <td style={{ backgroundColor: 'white' }} colSpan={1} ></td>
+
                 </tr>
             </thead>
 
@@ -180,26 +217,41 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
 
                     {['Month', 'Venue type', 'Event', 'Day/Night', 'Start Time',
                         'Finish Time', 'Contact Number', 'Hall Charges',
-                        'Applied GST', 'GST', 'Menu', 'Meals', 'Sub Total', 'Discount'
+                        'Applied GST', 'GST', 'Menu', 'Meals', 'Sub Total (Menu + Meal)'
                     ].map(header => (
                         <th key={header}>{header}</th>
                     ))}
 
                     <td style={{ backgroundColor: '#04ff42', color: 'black', fontSize: '14px', fontWeight: '800' }}>
-                        ₹{formatAmount(grandTotalSum)}
+                        {(() => {
+                            const grandTotalSum = leads.reduce((sum, lead) => {
+                                const grandTotal = Number(lead.grandTotal || 0);
+                                const discount = Number(lead.discount || 0);
+                                return sum + (grandTotal + discount); // ✅ adds discount
+                            }, 0);
+                            return grandTotalSum.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+                        })()}
                     </td>
 
-                    <td style={{ color: 'black', backgroundColor: '#72ffe7ff', fontSize: '14px', fontWeight: '800' }}>
+                    <th>
+                        ₹{formatAmount(cashSum)}
+                    </th>
+
+                    <th>
+                        ₹{formatAmount(bankSum)}
+                    </th>
+
+                    <th>
                         ₹{formatAmount(advanceSum)}
-                    </td>
+                    </th>
+
+                    <th>
+                        ₹{formatAmount(discountSum)}
+                    </th>
 
                     <td style={{ color: 'black', backgroundColor: '#ff7272ff', fontSize: '14px', fontWeight: '800' }}>
                         ₹{formatAmount(remainingSum)}
                     </td>
-
-                    {['Cash', 'Bank'].map(header => (
-                        <th key={header}>{header}</th>
-                    ))}
 
                     {['Source'
                     ].map(header => (
@@ -208,16 +260,6 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
 
                     <th style={{ fontSize: '21px' }}>
                         <div style={{ display: 'flex', justifyContent: 'center' }} >  {'✏️'} </div>
-                    </th>
-
-                    <th>
-                        <button style={{ backgroundColor: "#66363606", color: "#fff", border: "none", borderRadius: "4px", margin: '0 auto', display: 'flex', padding: '0px', justifyContent: 'center' }}>
-                            <img
-                                src="../../assets/whatsappp.png"
-                                alt=""
-                                style={{ width: '28px', height: '28px' }}
-                            />
-                        </button>
                     </th>
 
                     <th style={{ fontSize: '21px' }}>
@@ -242,9 +284,16 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                         <th key={header}>{header}</th>
                     ))}
 
-                    {[
-                        'Complimentary Items', 'Chargeable Items', 'Custom Menu Items', ' Event Booked By', 'commission', 'Drop'
+                    {['Chargeable Items', 'Custom Menu Items', 'Complimentary Items', ' Event Booked By'
                     ].map(header => (
+                        <th key={header}>{header}</th>
+                    ))}
+
+                    <th>
+                        ₹{formatAmount(commissionSum)}
+                    </th>
+
+                    {['Drop'].map(header => (
                         <th key={header}>{header}</th>
                     ))}
                 </tr>
@@ -694,22 +743,106 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                         <td key={`${lead.id}-subtotal`}>
                             {lead.selectedMenus || lead.meals
                                 ? (() => {
+                                    // ---- Menu Total ----
                                     const menuTotal = lead.selectedMenus
-                                        ? Object.values(lead.selectedMenus).reduce(
-                                            (sum, menu) => sum + (Number(lead.noOfPlates || 0) + Number(lead.extraPlates || 0)) * Number(menu.rate || 0),
-                                            0
-                                        )
+                                        ? Object.values(lead.selectedMenus).reduce((sum, menu) => {
+                                            const plates = Number(menu.noOfPlates || 0) + Number(menu.extraPlates || 0);
+                                            const rate = Number(menu.rate || 0);
+                                            return sum + plates * rate;
+                                        }, 0)
                                         : 0;
 
+                                    // ---- Meals Total ----
                                     const mealsTotal = lead.meals
-                                        ? Object.values(lead.meals)
-                                            .filter(meal => meal.total)
-                                            .reduce((sum, meal) => sum + Number(meal.total), 0)
+                                        ? Object.values(lead.meals).reduce((sum, dayData) => {
+                                            return (
+                                                sum +
+                                                Object.entries(dayData)
+                                                    .filter(([mealName]) => mealName !== "date")
+                                                    .reduce((daySum, [, mealInfo]) => {
+                                                        const plates = Number(mealInfo.pax || 0) + Number(mealInfo.extraPlates || 0);
+                                                        const rate = Number(mealInfo.rate || 0);
+                                                        return daySum + plates * rate;
+                                                    }, 0)
+                                            );
+                                        }, 0)
                                         : 0;
 
-                                    return (menuTotal + mealsTotal).toLocaleString('en-IN', { style: 'currency', currency: 'INR' });
+                                    const total = menuTotal + mealsTotal;
+                                    return total.toLocaleString("en-IN", { style: "currency", currency: "INR" });
                                 })()
-                                : ''}
+                                : ""}
+                        </td>
+
+                        {['grandTotal'].map(field => {
+                            const total = Number(lead.grandTotal) || 0;
+                            const discount = Number(lead.discount) || 0;
+                            const finalTotal = total + discount; // 👈 add discount directly to total
+
+                            return (
+                                <td
+                                    key={`${lead.id}-${field}`}
+                                    style={{
+                                        backgroundColor: '#04ff42ff',
+                                        fontWeight: '800',
+                                    }}
+                                >
+                                    ₹
+                                    {isEditing(lead.id, field) ? (
+                                        <input
+                                            key={`${lead.id}-${field}-input`}
+                                            type="number"
+                                            value={getLocalValue(lead.id, field, lead[field] || '')}
+                                            onChange={(e) => handleLocalChange(lead.id, field, e.target.value)}
+                                            onBlur={() => handleBlur(lead.id, field)}
+                                            autoFocus
+                                            style={{
+                                                width: '100%',
+                                                boxSizing: 'border-box',
+                                                padding: '4px',
+                                                fontSize: 'inherit',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                            }}
+                                        />
+                                    ) : (
+                                        Math.floor(finalTotal).toLocaleString('en-IN')
+                                    )}
+                                </td>
+                            );
+                        })}
+
+                        <td>
+                            ₹{(
+                                lead.advancePayments
+                                    ?.filter(adv => adv.mode === "Cash")
+                                    .reduce((sum, adv) => sum + Number(adv.amount || 0), 0) || 0
+                            ).toLocaleString("en-IN")}
+                        </td>
+
+                        <td>
+                            ₹{(
+                                lead.advancePayments
+                                    ?.filter(adv => adv.mode !== "Cash")
+                                    .reduce((sum, adv) => sum + Number(adv.amount || 0), 0) || 0
+                            ).toLocaleString("en-IN")}
+                        </td>
+
+                        < td >
+                            <div>
+                                ₹{lead.advancePayments?.reduce((sum, adv) => sum + Number(adv.amount || 0), 0) || 0}
+                            </div>
+                            <div>
+                                <button
+                                    style={{
+                                        padding: "4px 8px", cursor: "pointer",
+                                        background: "linear-gradient(180deg, #2359b6ff, #78a9ffff)",
+                                    }}
+                                    onClick={() => setSelectedAdvances(lead.advancePayments || [])}
+                                >
+                                    View Details
+                                </button>
+                            </div>
                         </td>
 
                         {['discount'].map(field => (
@@ -739,72 +872,12 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                             </td>
                         ))}
 
-                        {['grandTotal'].map(field => (
-                            <td key={`${lead.id}-${field}`} style={{ backgroundColor: '#04ff42ff', fontWeight: '800' }}>
-                                ₹{isEditing(lead.id, field) ? (
-                                    <input
-                                        key={`${lead.id}-${field}-input`}
-                                        type={typeof lead[field] === 'number' ? 'number' : 'text'}
-                                        value={getLocalValue(lead.id, field, lead[field] || '')}
-                                        onChange={(e) => handleLocalChange(lead.id, field, e.target.value)}
-                                        onBlur={() => handleBlur(lead.id, field)}
-                                        autoFocus
-                                        style={{
-                                            width: '100%',
-                                            boxSizing: 'border-box',
-                                            padding: '4px',
-                                            fontSize: 'inherit',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                        }}
-                                    />
-                                ) : (
-                                    lead[field] !== undefined && lead[field] !== null
-                                        ? Math.floor(Number(lead[field])).toLocaleString('en-IN')
-                                        : '-'
-                                )}
-                            </td>
-                        ))}
-
-                        < td >
-                            <div>
-                                ₹{lead.advancePayments?.reduce((sum, adv) => sum + Number(adv.amount || 0), 0) || 0}
-                            </div>
-                            <div>
-                                <button
-                                    style={{
-                                        padding: "4px 8px", cursor: "pointer",
-                                        background: "linear-gradient(180deg, #2359b6ff, #78a9ffff)",
-                                    }}
-                                    onClick={() => setSelectedAdvances(lead.advancePayments || [])}
-                                >
-                                    View Advances
-                                </button>
-                            </div>
-                        </td>
-
                         <td style={{ color: 'black', backgroundColor: '#ff7272ff' }}>
                             ₹{Math.floor(
                                 (Number(lead.grandTotal) || 0) -
                                 (lead.advancePayments?.reduce((sum, adv) => sum + Number(adv.amount || 0), 0) || 0) +
                                 (lead.refundPayments?.reduce((sum, adv) => sum + Number(adv.amount || 0), 0) || 0)
                             ).toLocaleString('en-IN')}
-                        </td>
-
-                        <td>
-                            ₹{(
-                                lead.advancePayments
-                                    ?.filter(adv => adv.mode === "Cash")
-                                    .reduce((sum, adv) => sum + Number(adv.amount || 0), 0) || 0
-                            ).toLocaleString("en-IN")}
-                        </td>
-
-                        <td>
-                            ₹{(
-                                lead.advancePayments
-                                    ?.filter(adv => adv.mode !== "Cash")
-                                    .reduce((sum, adv) => sum + Number(adv.amount || 0), 0) || 0
-                            ).toLocaleString("en-IN")}
                         </td>
 
                         {['source'].map(field => (
@@ -862,16 +935,6 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                                 </button>) : (
                                 ''
                             )}
-                        </td>
-
-                        <td>
-                            <button onClick={() => sendToWhatsApp(lead)} style={{ backgroundColor: "transparent", border: "none", margin: '0px', display: 'flex', justifyContent: 'center' }}>
-                                <img
-                                    src="../../assets/whatsappp.png"
-                                    alt=""
-                                    style={{ width: '30px', height: '30px' }}
-                                />
-                            </button>
                         </td>
 
                         <td>
@@ -958,6 +1021,30 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                             ).toLocaleString("en-IN")}
                         </td>
 
+                        <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }} >
+                            {Array.isArray(lead.customItems)
+                                ? lead.customItems
+                                    .filter(item => item.selected)
+                                    .map((item, index) => (
+                                        <div key={index}>
+                                            {item.name}- @ ₹{item.rate} × {item.qty} = ₹{item.total}
+                                        </div>
+                                    ))
+                                : '-'}
+                        </td>
+
+                        <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }} >
+                            {Array.isArray(lead.customMenuCharges)
+                                ? lead.customMenuCharges
+                                    .filter(item => item.selected)
+                                    .map((item, index) => (
+                                        <div key={index}>
+                                            {item.name}- @ ₹{item.rate} × {item.qty} = ₹{item.total}
+                                        </div>
+                                    ))
+                                : ' '}
+                        </td>
+
                         <td key={`${lead.id}-bookingAmenities`}
                             title={Array.isArray(lead.bookingAmenities) ? lead.bookingAmenities.join(', ') : ''}
                             style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }}
@@ -991,30 +1078,6 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                             ) : (
                                 Array.isArray(lead.bookingAmenities) ? lead.bookingAmenities.join(', ') : '-'
                             )}
-                        </td>
-
-                        <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }} >
-                            {Array.isArray(lead.customItems)
-                                ? lead.customItems
-                                    .filter(item => item.selected)
-                                    .map((item, index) => (
-                                        <div key={index}>
-                                            {item.name}- @ ₹{item.rate} × {item.qty} = ₹{item.total}
-                                        </div>
-                                    ))
-                                : '-'}
-                        </td>
-
-                        <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '9000px' }} >
-                            {Array.isArray(lead.customMenuCharges)
-                                ? lead.customMenuCharges
-                                    .filter(item => item.selected)
-                                    .map((item, index) => (
-                                        <div key={index}>
-                                            {item.name}- @ ₹{item.rate} × {item.qty} = ₹{item.total}
-                                        </div>
-                                    ))
-                                : ' '}
                         </td>
 
                         {['eventBookedBy'].map((field, index) => (
@@ -1104,7 +1167,7 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                             </button>
                         </td>
 
-                        <td>{lead.id}</td>
+                        {/* <td>{lead.id}</td> */}
 
                     </tr >
                 ))}
@@ -1141,7 +1204,7 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                             textAlign: "center",
                             textShadow: "1px 1px 2px rgba(0,0,0,0.15)"
                         }}>
-                            💰 Advance Payments
+                            💰 Payment Received
                         </h3>
 
                         {selectedAdvances.length > 0 ? (
@@ -1166,7 +1229,7 @@ const Tbody = ({ leads, isEditing, handleFieldChange, startEdit, sendToPrintPaym
                                 </div>
                             ))
                         ) : (
-                            <p style={{ textAlign: "center", color: "#666" }}>No advance payments</p>
+                            <p style={{ textAlign: "center", color: "#666" }}>No Payment Received </p>
                         )}
 
                         <button

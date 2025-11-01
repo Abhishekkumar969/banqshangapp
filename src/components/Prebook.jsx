@@ -298,12 +298,17 @@ const Prebook = () => {
           {/* VENDOR */}
           {Object.keys(panelAccess.Vendor || {}).some(item => hasAccess("Vendor", item)) && (
             <div className="service-section">
-              <h3 className="service-section-text">Vendor</h3>
-              <div className="service-grid">
-                {hasAccess("Vendor", "Form") && <ServiceBox label="Form" onClick={() => navigate('/VendorOtherForm')} icon="📝" />}
-                {hasAccess("Vendor", "UpComings") && <ServiceBox label="UpComings" onClick={() => navigate('/VendorTable')} icon="🪩" />}
-                {hasAccess("Vendor", "Booked") && <ServiceBox label="Booked" onClick={() => navigate('/VendorBookedTable')} icon="🗂️" />}
-                {hasAccess("Vendor", "Dropped") && <ServiceBox label="Dropped" onClick={() => navigate('/VendorDeoppedTable')} icon="🗑️" />}
+              <h3 className="service-section-text">Event</h3>
+              <div className="service-section">
+                <h3 className="service-section-text">Shangri-La Palace</h3>
+                <div className="service-grid">
+                  {hasAccess("Vendor", "UpComings") && <ServiceBox label="UpComings" onClick={() => navigate('/VendorTable')} icon="🪩" />}
+                  {hasAccess("Vendor", "VendorTableAll") && <ServiceBox label="All" onClick={() => navigate('/VendorTableAll')} icon="📝" />}
+                  {hasAccess("Vendor", "Form") && <ServiceBox label="Form" onClick={() => navigate('/VendorOtherForm')} icon="📝" />}
+                  {hasAccess("Vendor", "Booked") && <ServiceBox label="Booked" onClick={() => navigate('/VendorBookedTable')} icon="🗂️" />}
+                  {hasAccess("Vendor", "Dropped") && <ServiceBox label="Dropped" onClick={() => navigate('/VendorDeoppedTable')} icon="🗑️" />}
+                </div>
+
               </div>
             </div>
           )}
@@ -311,7 +316,7 @@ const Prebook = () => {
           {/* VENDOR */}
           {userAppType === 'C' && (
             <div className="service-section">
-              <h3 className="service-section-text">Vendor</h3>
+              <h3 className="service-section-text">Event</h3>
               <div className="service-grid">
                 <ServiceBox label="Profile" onClick={() => navigate('/VendorProfile')} icon="🧑‍💼" />
                 {vendor?.functionTypes?.length > 0 && (

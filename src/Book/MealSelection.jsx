@@ -5,7 +5,7 @@ import "../styles/MealSelection.css";
 
 const mealOptions = ["Breakfast", "Lunch", "Dinner"];
 
-const MealSelection = forwardRef(({ meals, setMeals, functionDate, dayNight }, ref) => {
+const MealSelection = forwardRef(({ meals, setMeals, functionDate, dayNight, venueType, functionType }, ref) => {
     const [numDays, setNumDays] = useState(1);
     const [showMealModal, setShowMealModal] = useState(false);
     const [currentDayKey, setCurrentDayKey] = useState(null);
@@ -122,6 +122,10 @@ const MealSelection = forwardRef(({ meals, setMeals, functionDate, dayNight }, r
         if (meal === "Lunch" && dayDate === functionDate && dayNight === "Day") return [];
         return Object.keys(menuData[meal]?.categories || {});
     };
+
+    if (venueType === "Luxury Rooms" || functionType === "Luxury Rooms") {
+        return null;
+    }
 
     return (
         <div className="meal-selection">

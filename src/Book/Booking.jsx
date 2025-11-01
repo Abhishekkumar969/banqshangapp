@@ -308,17 +308,27 @@ const BookingLead = () => {
                 <h2>EVENT BOOKING ESTIMATE</h2>
                 <form className="form-section" onSubmit={handleSubmit}>
                     <LeadForm currentUserEmail={currentUser?.email} ref={leadFormRef} form={form} handleChange={handleChange} setForm={setForm} />
-                    <BookingAmenities selectedItems={selectedItems} setSelectedItems={setSelectedItems} />
+                    <BookingAmenities
+                        selectedItems={selectedItems}
+                        setSelectedItems={setSelectedItems}
+                        venueType={form.venueType}
+                        functionType={form.functionType}
+                    />
+
                     <CustomChargeItems
                         ref={customItemsRef}
                         customItems={customItems}
                         setCustomItems={setCustomItems}
+                        venueType={form.venueType}
+                        functionType={form.functionType}
                     />
 
                     <CustomMenuCharges
                         ref={customMenuRef}
                         menuCharges={customMenuCharges}
                         setMenuCharges={setCustomMenuCharges}
+                        venueType={form.venueType}
+                        functionType={form.functionType}
                     />
 
                     <FoodMenuSelection
@@ -327,6 +337,8 @@ const BookingLead = () => {
                         noOfPlates={form.noOfPlates}
                         extraPlates={form.extraPlates}
                         editingMode={editingMode}
+                        venueType={form.venueType}
+                        functionType={form.functionType}
                     />
 
                     <MealSelection
@@ -335,6 +347,8 @@ const BookingLead = () => {
                         setMeals={setMeals}
                         functionDate={form.functionDate}
                         dayNight={form.dayNight || "Night"}
+                        venueType={form.venueType}
+                        functionType={form.functionType}
                     />
 
                     <LeadSummary
@@ -379,7 +393,7 @@ const BookingLead = () => {
                     </div>
                 )}
             </div>
-            
+
             <div style={{ marginBottom: "50px" }}></div>
             <BottomNavigationBar navigate={navigate} userAppType={userAppType} />
         </>

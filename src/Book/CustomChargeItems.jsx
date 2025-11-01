@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
 import debounce from 'lodash.debounce';
 import { getDocs, where, query, collection } from 'firebase/firestore';
-// import { getAuth } from 'firebase/auth';
 import { db } from '../firebaseConfig';
 import '../styles/CustomChargeItems.css';
 
@@ -30,15 +29,12 @@ const mergeWithDbItems = (dbItems = [], selected = []) => {
     return merged;
 };
 
-
-
-
-const CustomChargeItems = forwardRef(({ customItems, setCustomItems }, ref) => {
+const CustomChargeItems = forwardRef(({ customItems, setCustomItems, venueType, functionType }, ref) => {
     const [dbItems, setDbItems] = useState([]);
     const [localItems, setLocalItems] = useState([]);
     const [errors, setErrors] = useState({});
 
-    // Fetch user's Add-Ons from Firestore
+    // ✅ Fetch Add-Ons — always runs, but filters later based on venueType/functionType
     useEffect(() => {
         const fetchAddons = async () => {
             try {
@@ -61,13 +57,25 @@ const CustomChargeItems = forwardRef(({ customItems, setCustomItems }, ref) => {
 
                 const uniqueAddons = [...new Set(allAddons)];
 
-                const items = uniqueAddons.map((addon, idx) => ({
-                    id: idx + 1,
-                    name: addon || '',
-                    qty: '',
-                    rate: '',
-                    selected: false
-                }));
+                // ✅ If it's Luxury Rooms, limit to 2 items
+                let items;
+                if (venueType === "Luxury Rooms" || functionType === "Luxury Rooms") {
+                    items = ["Luxury Rooms", "Water Bottle"].map((addon, idx) => ({
+                        id: idx + 1,
+                        name: addon,
+                        qty: '',
+                        rate: '',
+                        selected: false
+                    }));
+                } else {
+                    items = uniqueAddons.map((addon, idx) => ({
+                        id: idx + 1,
+                        name: addon || '',
+                        qty: '',
+                        rate: '',
+                        selected: false
+                    }));
+                }
 
                 setDbItems(items);
 
@@ -77,10 +85,9 @@ const CustomChargeItems = forwardRef(({ customItems, setCustomItems }, ref) => {
         };
 
         fetchAddons();
-    }, []);
+    }, [venueType, functionType]); // ✅ re-run if type changes
 
-
-    // Merge selected items whenever dbItems or customItems change
+    // ✅ Merge selected items
     useEffect(() => {
         if (dbItems.length) {
             setLocalItems(mergeWithDbItems(dbItems, customItems));
@@ -152,7 +159,7 @@ const CustomChargeItems = forwardRef(({ customItems, setCustomItems }, ref) => {
 
     return (
         <div className="custom-items-section">
-            <h4>2. Extra items / Add-Ons Charges</h4>
+            <h4>2. Extra Items / Add-Ons Charges</h4>
 
             {localItems.map((item, idx) => (
                 <div key={item.id} className="custom-item-card">

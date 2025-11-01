@@ -51,10 +51,11 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
             ...prev,
             enquiryDate: prev.enquiryDate || getTodayIST(),
             startTime: prev.startTime || '11:00',
-            finishTime: prev.finishTime || '21:00', // 09:00 PM
+            finishTime: prev.finishTime || '21:00',
         }));
     }, [setForm]);
 
+    // ---------------------- Fetch Venue Options ----------------------
     useEffect(() => {
         const fetchVenueTypes = async () => {
             try {
@@ -62,10 +63,8 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
                     collection(db, "usersAccess"),
                     where("accessToApp", "==", "A")
                 );
-
                 const snapshot = await getDocs(q);
                 if (!snapshot.empty) {
-                    // assuming you only want the first admin with access "A"
                     const adminData = snapshot.docs[0].data();
                     setVenueOptions(adminData.venueTypes || []);
                 }
@@ -73,9 +72,18 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
                 console.error("Error fetching venue types:", error);
             }
         };
-
         fetchVenueTypes();
     }, []);
+
+    // ---------------------- Auto-set FunctionType if Venue = Luxury Rooms ----------------------
+    useEffect(() => {
+        if (form.venueType === "Luxury Rooms") {
+            setForm(prev => ({
+                ...prev,
+                functionType: "Luxury Rooms",
+            }));
+        }
+    }, [form.venueType, setForm]);
 
     // ---------------------- Form Validation ----------------------
     useImperativeHandle(ref, () => ({
@@ -86,19 +94,24 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
             if (!form.source) newErrors.source = true;
             if (!form.venueType) newErrors.venueType = true;
             if (!form.functionType) newErrors.functionType = true;
-            if (!form.noOfPlates) newErrors.noOfPlates = true;
             if (!form.enquiryDate) newErrors.enquiryDate = true;
             if (!form.functionDate) newErrors.functionDate = true;
             if (!form.startTime) newErrors.startTime = true;
             if (!form.finishTime) newErrors.finishTime = true;
-            if (!form.hallCharges) newErrors.hallCharges = true;
             if (form.source === 'Reference' && !form.referredBy) newErrors.referredBy = true;
+
+            // Only validate these if NOT luxury rooms
+            if (form.venueType !== "Luxury Rooms") {
+                if (!form.noOfPlates) newErrors.noOfPlates = true;
+                if (!form.hallCharges) newErrors.hallCharges = true;
+            }
 
             setErrors(newErrors);
             return Object.keys(newErrors).length === 0;
         }
     }));
 
+    // ---------------------- UI ----------------------
     return (
         <>
             {/* Customer Name */}
@@ -199,14 +212,13 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
                 {errors.venueType && <span className="error">Required</span>}
             </div>
 
-
             <div className="form-group">
                 <label>Function Type</label>
                 <FunctionTypeSelector selectedType={form.functionType} setForm={setForm} />
                 {errors.functionType && <span className="error">Required</span>}
             </div>
 
-            {/* Day/Night & Pax */}
+            {/* Day/Night */}
             <div className="form-group">
                 <label>Day / Night</label>
                 <select name="dayNight" value={form.dayNight || ""} onChange={handleChange}>
@@ -216,32 +228,37 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
                 </select>
             </div>
 
-            <div className="form-group">
-                <label>No. of Pax</label>
-                <input
-                    type="text"
-                    inputMode="numeric"
-                    name="noOfPlates"
-                    value={form.noOfPlates || ""}
-                    onChange={(e) => handleChange({ target: { name: "noOfPlates", value: e.target.value.replace(/[^0-9]/g, "") } })}
-                />
-                {errors.noOfPlates && <span className="error">Required</span>}
-            </div>
+            {/* No. of Plates & Extra Plates (hide for Luxury Rooms) */}
+            {form.venueType !== "Luxury Rooms" && (
+                <>
+                    <div className="form-group">
+                        <label>No. of Pax</label>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            name="noOfPlates"
+                            value={form.noOfPlates || ""}
+                            onChange={(e) => handleChange({ target: { name: "noOfPlates", value: e.target.value.replace(/[^0-9]/g, "") } })}
+                        />
+                        {errors.noOfPlates && <span className="error">Required</span>}
+                    </div>
 
-            <div className="form-group">
-                <label>Extra Plate</label>
-                <input
-                    type="text"
-                    inputMode="numeric"
-                    name="extraPlates"
-                    value={form.extraPlates || ""}
-                    onChange={(e) => handleChange({ target: { name: "extraPlates", value: e.target.value.replace(/[^0-9]/g, "") } })}
-                />
-            </div>
+                    <div className="form-group">
+                        <label>Extra Plate</label>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            name="extraPlates"
+                            value={form.extraPlates || ""}
+                            onChange={(e) => handleChange({ target: { name: "extraPlates", value: e.target.value.replace(/[^0-9]/g, "") } })}
+                        />
+                    </div>
+                </>
+            )}
 
-            {/* Function Date */}
+            {/* Function Date (label changes dynamically) */}
             <div className="form-group">
-                <label>Date of Function</label>
+                <label>{form.venueType === "Luxury Rooms" ? "Date for Room Booking" : "Date of Function"}</label>
                 <button
                     type="button"
                     onClick={() => setShowCalendar(true)}
@@ -284,28 +301,30 @@ const LeadForm = forwardRef(({ form, handleChange, setForm }, ref) => {
                 {errors.finishTime && <span className="error">Required</span>}
             </div>
 
-            {/* Event Booked By */}
+            {/* Event Booked By (hidden) */}
             <div className="form-group" style={{ display: 'none' }}>
                 <label>Event Booked By</label>
                 <input type="text" name="eventBookedBy" value={form.eventBookedBy || ''} readOnly />
             </div>
 
-            {/* Hall Charges */}
-            <div className="form-group">
-                <label>1. Hall Charges</label>
-                <input
-                    type="text"
-                    inputMode="decimal"
-                    name="hallCharges"
-                    value={form.hallCharges || ""}
-                    onChange={(e) => {
-                        let val = e.target.value.replace(/[^0-9.]/g, "");
-                        if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
-                        handleChange({ target: { name: "hallCharges", value: val } });
-                    }}
-                />
-                {errors.hallCharges && <span className="error">Required</span>}
-            </div>
+            {/* Hall Charges (hidden for Luxury Rooms) */}
+            {form.venueType !== "Luxury Rooms" && (
+                <div className="form-group">
+                    <label>1. Hall Charges</label>
+                    <input
+                        type="text"
+                        inputMode="decimal"
+                        name="hallCharges"
+                        value={form.hallCharges || ""}
+                        onChange={(e) => {
+                            let val = e.target.value.replace(/[^0-9.]/g, "");
+                            if ((val.match(/\./g) || []).length > 1) val = val.slice(0, -1);
+                            handleChange({ target: { name: "hallCharges", value: val } });
+                        }}
+                    />
+                    {errors.hallCharges && <span className="error">Required</span>}
+                </div>
+            )}
 
             {/* Note */}
             <div className="form-group">

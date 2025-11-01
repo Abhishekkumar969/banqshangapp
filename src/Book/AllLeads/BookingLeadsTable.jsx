@@ -622,14 +622,24 @@ const BookingLeadsTable = () => {
         <tr class="highlight"><td>1</td><td>${lead.venueType} Booking Charge (Complimentary Details as below)</td><td colspan="3">₹ ${lead.hallCharges}</td></tr>
         ${amenitiesList || '<tr><td colspan="5">No complimentary amenities listed</td></tr>'}
 
-        <tr><td>2</td><td class="highlight">Facilities as Chargeable</td><td class="highlight">Qty</td><td class="highlight">Rate</td><td class="highlight">Total</td></tr>
-        ${customItems || '<tr><td colspan="5">None</td></tr>'}
+       ${customItems
+                ? `
+        <tr>
+          <td class="highlight">2</td>
+          <td class="highlight">Facilities as Chargeable</td>
+          <td class="highlight">Qty</td>
+          <td class="highlight">Rate</td>
+          <td class="highlight">Total</td>
+        </tr>
+        ${customItems}
+        `
+                : ''
+            }
+ 
 
-        <tr><td></td><th class="highlight">GST: On ₹ ${lead.gstBase || '0'} @18% </th><th  class="highlight" colspan="3">₹ ${lead.gstAmount || '0'}</th></tr>
-        
         <tr><td></td><td colspan="5"><strong>Notes:</strong> ${lead.note}</td></tr>
 
-        <tr><td>3</td><td class="highlight">Food Menu</td><td colspan="3">${menuName}</td></tr>
+        <tr><td class="highlight">3</td><td class="highlight">Food Menu</td><td colspan="3">${menuName}</td></tr>
         
       ${lead.meals
                 ? Object.entries(lead.meals)
@@ -704,7 +714,23 @@ const BookingLeadsTable = () => {
             </td>
           </tr>` : ''}
         
-        <tr><td colspan="2" class="highlight">Total Estimate</td><td class="highlight"  colspan="3"><strong  class="highlight">₹${(lead.grandTotal || 0).toLocaleString()}</strong></td></tr>
+
+        ${Number(lead.discount) > 0 ? `
+            <tr>
+              <td></td>
+              <th class="highlight">Discount:</th>
+              <th class="highlight" colspan="3">₹ ${lead.discount}</th>
+            </tr>` : ''}
+            
+        ${Number(lead.gstAmount) > 0 ? `
+            <tr>
+              <td></td>
+              <th class="highlight">GST: On ₹ ${lead.gstBase || '0'} @18%</th>
+              <th class="highlight" colspan="3">₹ ${lead.gstAmount}</th>
+            </tr>` : ''}
+
+            
+        <tr> <td class="highlight"></td> <td class="highlight">Total Estimate</td><td class="highlight"  colspan="3"><strong  class="highlight">₹${(lead.grandTotal || 0).toLocaleString()}</strong></td></tr>
 
     </table>
 
@@ -748,6 +774,7 @@ const BookingLeadsTable = () => {
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
     };
+
 
 
 
@@ -1044,7 +1071,7 @@ const BookingLeadsTable = () => {
         
                 <table>
                     <tr><td colspan="2" class="section" style="text-align:center;">Total Payment Settlement</td></tr>
-                    <tr><td>Customer Name</td><td>${lead.name || ''}</td></tr>
+                    <tr><td>Customer Name</td><td> ${lead.prefix || ''} ${lead.name || ''}</td></tr>
                     <tr><td>Contact No.</td><td>${lead.mobile1 || ''}</td></tr>
                     <tr><td>Event Type</td><td>${lead.functionType || ''}</td></tr>
                     <tr><td>Event Date</td><td>${fmtDateIST(lead.functionDate)}</td></tr>

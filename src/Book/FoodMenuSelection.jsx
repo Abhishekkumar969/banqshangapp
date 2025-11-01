@@ -3,7 +3,7 @@ import '../styles/BookingAmenities.css';
 import { db } from "../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 
-const FoodMenuSelection = ({ selectedMenus, setSelectedMenus, noOfPlates, extraPlates }) => {
+const FoodMenuSelection = ({ selectedMenus, setSelectedMenus, noOfPlates, extraPlates, venueType, functionType }) => {
     const [newItemName, setNewItemName] = useState("");
     const [popupMenu, setPopupMenu] = useState(null);
     const [categories, setCategories] = useState({});
@@ -122,6 +122,10 @@ const FoodMenuSelection = ({ selectedMenus, setSelectedMenus, noOfPlates, extraP
         });
         setNewItemName("");
     };
+
+    if (venueType === "Luxury Rooms" || functionType === "Luxury Rooms") {
+        return null;
+    }
 
     if (loading) return <p>Loading menu...</p>;
 
@@ -447,7 +451,7 @@ const FoodMenuSelection = ({ selectedMenus, setSelectedMenus, noOfPlates, extraP
                         <button
                             type='button'
                             onClick={() => setPopupMenu(null)}
-                             style={{
+                            style={{
                                 marginTop: "16px",
                                 padding: "8px 14px",
                                 borderRadius: "12px",

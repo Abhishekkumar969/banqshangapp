@@ -29,53 +29,51 @@ const mergeWithDbItems = (dbItems = [], selected = []) => {
     return merged;
 };
 
-const CustomMenuCharges = forwardRef(({ menuCharges, setMenuCharges }, ref) => {
+const CustomMenuCharges = forwardRef(({ menuCharges, setMenuCharges, venueType, functionType }, ref) => {
     const [dbItems, setDbItems] = useState([]);
     const [localItems, setLocalItems] = useState([]);
     const [errors, setErrors] = useState({});
 
-    // Fetch user's Menu Items from Firestore
-useEffect(() => {
-    const fetchMenuItems = async () => {
-        try {
-            const q = query(collection(db, "usersAccess"), where("accessToApp", "==", "A"));
-            const snap = await getDocs(q);
+    // ✅ Run all hooks normally (no early return above this line)
+    useEffect(() => {
+        const fetchMenuItems = async () => {
+            try {
+                const q = query(collection(db, "usersAccess"), where("accessToApp", "==", "A"));
+                const snap = await getDocs(q);
 
-            if (snap.empty) {
-                console.warn("No usersAccess document found with accessToApp: 'A'");
-                return;
-            }
-
-            const allMenus = [];
-
-            snap.forEach(docSnap => {
-                const data = docSnap.data();
-                if (data.menuItems && Array.isArray(data.menuItems)) {
-                    allMenus.push(...data.menuItems);
+                if (snap.empty) {
+                    console.warn("No usersAccess document found with accessToApp: 'A'");
+                    return;
                 }
-            });
 
-            const uniqueMenus = [...new Set(allMenus)];
+                const allMenus = [];
 
-            const items = uniqueMenus.map((menu, idx) => ({
-                id: idx + 1,
-                name: menu || '',
-                qty: '',
-                rate: '',
-                selected: false
-            }));
+                snap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (data.menuItems && Array.isArray(data.menuItems)) {
+                        allMenus.push(...data.menuItems);
+                    }
+                });
 
-            setDbItems(items);
-        } catch (err) {
-            console.error("Error fetching menuItems:", err);
-        }
-    };
+                const uniqueMenus = [...new Set(allMenus)];
 
-    fetchMenuItems();
-}, []);
+                const items = uniqueMenus.map((menu, idx) => ({
+                    id: idx + 1,
+                    name: menu || '',
+                    qty: '',
+                    rate: '',
+                    selected: false
+                }));
 
+                setDbItems(items);
+            } catch (err) {
+                console.error("Error fetching menuItems:", err);
+            }
+        };
 
-    // Merge selected items whenever dbItems or menuCharges change
+        fetchMenuItems();
+    }, []);
+
     useEffect(() => {
         if (dbItems.length) {
             setLocalItems(mergeWithDbItems(dbItems, menuCharges));
@@ -144,6 +142,11 @@ useEffect(() => {
             return next;
         });
     };
+
+    // ✅ Hide after hooks
+    if (venueType === "Luxury Rooms" || functionType === "Luxury Rooms") {
+        return null;
+    }
 
     return (
         <div className="custom-items-section">
