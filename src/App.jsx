@@ -31,6 +31,8 @@ import VendorProfile from './Vendor/VendorProfile';
 import Vendor from './Vendor/Vendor';
 import VendorOtherForm from './Vendor/VendorOtherForm';
 import VendorTable from './Vendor/VendorTable';
+import VendorTableAll from './Vendor/VendorTableAll';
+
 import VendorBookedTable from './Vendor/VendorBookedTable';
 import VendorDeoppedTable from './Vendor/VendorDeoppedTable';
 
@@ -114,6 +116,9 @@ function AppRoutes() {
         <Route path="/Vendor" element={<PrivateRoute><Vendor /></PrivateRoute>} />
         <Route path="/VendorOtherForm" element={<PrivateRoute><VendorOtherForm /></PrivateRoute>} />
         <Route path="/VendorTable" element={<PrivateRoute><VendorTable /></PrivateRoute>} />
+        
+        <Route path="/VendorTableAll" element={<PrivateRoute><VendorTableAll /></PrivateRoute>} />
+
         <Route path="/VendorBookedTable" element={<PrivateRoute><VendorBookedTable /></PrivateRoute>} />
         <Route path="/VendorDeoppedTable" element={<PrivateRoute><VendorDeoppedTable /></PrivateRoute>} />
 

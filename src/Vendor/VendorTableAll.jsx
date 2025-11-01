@@ -43,6 +43,7 @@ const VendorTable = () => {
         const vendorCollection = collection(db, "vendor");
         const prebookingsCollection = collection(db, "prebookings");
 
+        // Real-time listeners
         const unsubscribeVendor = onSnapshot(
             vendorCollection,
             (vendorSnap) => {
@@ -64,21 +65,14 @@ const VendorTable = () => {
                 const makeKey = (name, contact, eventType, date) =>
                     `${(name || "").trim().toLowerCase()}|${(contact || "")
                         .replace(/\s+/g, "")
-                        .replace(/[^\d]/g, "")}|${(eventType || "")
-                            .trim()
-                            .toLowerCase()}|${date ? new Date(date).toISOString().split("T")[0] : ""
-                    }`;
+                        .replace(/[^\d]/g, "")}|${(eventType || "").trim().toLowerCase()}|${date ? new Date(date).toISOString().split("T")[0] : ""}`;
 
                 vendors.forEach((v) => {
-                    const key = makeKey(
-                        v.customerName,
-                        v.contactNo,
-                        v.eventType || v.typeOfEvent,
-                        v.finalDate
-                    );
+                    const key = makeKey(v.customerName, v.contactNo, v.eventType || v.typeOfEvent, v.finalDate);
                     vendorKeys.add(key);
                 });
 
+                // Now listen to prebookings
                 const unsubscribePre = onSnapshot(
                     prebookingsCollection,
                     (preSnap) => {
@@ -95,33 +89,12 @@ const VendorTable = () => {
                             });
                         });
 
-                        // ✅ Get "today" in IST (00:00 IST)
-                        const now = new Date();
-                        const istOffset = 5.5 * 60 * 60 * 1000; // +5:30
-                        const istNow = new Date(now.getTime() + istOffset);
-                        istNow.setHours(0, 0, 0, 0);
-
-                        // Filter prebookings not in vendors + only upcoming (IST)
+                        // Filter prebookings not in vendors
                         const filteredPre = prebookings
                             .filter((pre) => {
                                 const contact = [pre.mobile1, pre.mobile2].find(Boolean) || "";
-                                const key = makeKey(
-                                    pre.name,
-                                    contact,
-                                    pre.functionType,
-                                    pre.functionDate
-                                );
-
-                                if (!pre.functionDate) return false;
-
-                                // Convert functionDate to IST comparison base
-                                const eventDate = new Date(pre.functionDate);
-                                const eventIST = new Date(
-                                    eventDate.getTime() + istOffset
-                                );
-                                eventIST.setHours(0, 0, 0, 0);
-
-                                return !vendorKeys.has(key) && eventIST >= istNow;
+                                const key = makeKey(pre.name, contact, pre.functionType, pre.functionDate);
+                                return !vendorKeys.has(key);
                             })
                             .map((pre) => ({
                                 id: pre.id,
@@ -138,24 +111,22 @@ const VendorTable = () => {
                             }));
 
                         // Sort latest first
-                        filteredPre.sort(
-                            (a, b) => new Date(b.finalDate || 0) - new Date(a.finalDate || 0)
-                        );
+                        filteredPre.sort((a, b) => new Date(b.finalDate || 0) - new Date(a.finalDate || 0));
 
                         setAllBookings(filteredPre);
                     },
                     (error) => console.error("❌ Error fetching prebookings real-time:", error)
                 );
 
+                // Cleanup prebookings listener
                 return () => unsubscribePre();
             },
             (error) => console.error("❌ Error fetching vendor real-time:", error)
         );
 
+        // Cleanup vendor listener
         return () => unsubscribeVendor();
     }, []);
-
-
 
     const sortedBookings = [...allBookings].sort((a, b) => {
         const dateA = new Date(a.finalDate || 0);
